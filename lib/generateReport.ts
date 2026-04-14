@@ -18,7 +18,7 @@ export interface Recommendation { title: string; detail: string; priority: "high
 export interface TrendSeries { name: string; values: number[]; }
 export interface TrendData { label: string; series: TrendSeries[]; labels: string[]; }
 export interface IndustryComparison { metric: string; yourValue: string; industryAverage: string; topQuartile: string; status: string; }
-export interface CaseStudy { organization: string; challenge: string; solution: string; outcome: string; }
+export interface CaseStudy { organization: string; challenge: string; solution: string; outcome: string; source?: string; }
 export interface Scenarios { optimistic: string; base: string; pessimistic: string; }
 export interface RiskMatrixItem { risk: string; likelihood: "high" | "medium" | "low"; impact: "high" | "medium" | "low"; mitigation: string; }
 export interface ActionPlan { immediate: string[]; shortTerm: string[]; longTerm: string[]; }
@@ -311,10 +311,11 @@ export function generatePDF(data: ReportData): Uint8Array {
 
     for (const cs of data.analysis.caseStudies) {
       if (y > 250) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+      const cardH = cs.source ? 42 : 36;
       doc.setFillColor(...DARK);
-      doc.roundedRect(margin, y, W - margin * 2, 36, 2, 2, "F");
+      doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "F");
       doc.setFillColor(...ORANGE);
-      doc.rect(margin, y, 2, 36, "F");
+      doc.rect(margin, y, 2, cardH, "F");
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
@@ -336,7 +337,15 @@ export function generatePDF(data: ReportData): Uint8Array {
         const wrapped = doc.splitTextToSize(texts[i], cols - 4);
         doc.text(wrapped, cx, y + 20);
       });
-      y += 42;
+
+      if (cs.source) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7);
+        doc.setTextColor(...MUTED);
+        doc.text(`Source: ${cs.source}`, margin + 6, y + cardH - 4);
+      }
+
+      y += cardH + 6;
     }
   }
 

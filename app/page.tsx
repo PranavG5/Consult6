@@ -286,10 +286,19 @@ export default function Home() {
 
         {/* Card */}
         <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 12, padding: 28 }}>
+          {/* New Analysis button at top when done */}
+          {state === "done" && (
+            <div style={{ marginBottom: 20 }}>
+              <button onClick={reset} style={{ width: "100%", background: "#1e1e1e", border: "1px solid #444", color: "#ccc", borderRadius: 9, padding: "11px 0", fontSize: 14, fontWeight: 600 }}>
+                ← New Analysis
+              </button>
+            </div>
+          )}
+
           {/* Org name */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Organization name</label>
-            <input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Acme Corp, Sunrise Foundation" disabled={isRunning} />
+            <input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Acme Corp, Sunrise Foundation" disabled={isRunning || state === "done"} />
           </div>
 
           {/* Additional context (advanced only) */}
@@ -366,14 +375,14 @@ export default function Home() {
                   <span style={{ fontSize: 13, color: "#f0f0f0" }}>{f.name}</span>
                   <span style={{ fontSize: 12, color: "#666" }}>{(f.size / 1024).toFixed(1)} KB</span>
                 </div>
-                {!isRunning && (
+                {!isRunning && state !== "done" && (
                   <button onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
                     style={{ background: "none", border: "none", color: "#666", fontSize: 18, padding: "0 4px" }}>×</button>
                 )}
               </div>
             ))}
 
-            {files.length < (mode === "advanced" ? 3 : 1) && !isRunning && (
+            {files.length < (mode === "advanced" ? 3 : 1) && !isRunning && state !== "done" && (
               <div
                 onDrop={handleDrop}
                 onDragOver={e => { e.preventDefault(); setDragging(true); }}
@@ -507,6 +516,9 @@ export default function Home() {
                           </div>
                         ))}
                       </div>
+                      {cs.source && (
+                        <p style={{ fontSize: 11, color: "#555", margin: "10px 0 0", fontStyle: "italic" }}>Source: {cs.source}</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -592,7 +604,11 @@ export default function Home() {
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 10 }}>
-            {state !== "done" ? (
+            {state === "done" ? (
+              <button onClick={downloadPDF} style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
+                Download PDF Report
+              </button>
+            ) : (
               <button
                 onClick={runAnalysis}
                 disabled={isRunning || !files.length}
@@ -603,15 +619,6 @@ export default function Home() {
                   <>Generate {mode === "advanced" ? "Advanced " : ""}Report →</>
                 )}
               </button>
-            ) : (
-              <>
-                <button onClick={downloadPDF} style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
-                  Download PDF Report
-                </button>
-                <button onClick={reset} style={{ background: "#333", color: "#ccc", border: "none", borderRadius: 9, padding: "14px 20px", fontSize: 14, fontWeight: 600 }}>
-                  New Analysis
-                </button>
-              </>
             )}
           </div>
         </div>
