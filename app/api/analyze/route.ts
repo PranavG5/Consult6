@@ -23,13 +23,13 @@ function summarize(rawText: string, mode: string = "basic"): string {
   return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
 }
 
-const SYSTEM_BASIC = `You are a financial analyst. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
+Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each that are realistic for this specific organization. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
 
-const SYSTEM_ADVANCED = `You are an expert financial analyst. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+const SYSTEM_ADVANCED = `You are an expert financial analyst. Tailor every section — flags, recommendations, benchmarks, case studies, scenarios, risks, and action plan — specifically to the organization's size, industry, and constraints provided. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string","trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each. Summary 2 sentences. trajectoryNote 1-2 sentences. trendData: exactly 6 labels and 6 values per series, 2 series. industryComparisons: 3 entries. caseStudies: 1-2 entries, each field under 20 words. scenarios: 1-2 sentences each. riskMatrix: 3 risks under 25 words each. actionPlan: 2 items per phase, each under 20 words.`;
+Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each. Summary 2 sentences. trajectoryNote 1-2 sentences. trendData: exactly 6 labels and 6 values per series, 2 series. industryComparisons: 3 entries benchmarked against the organization's specific industry. caseStudies: 1-2 entries of comparable organizations in the same industry/size. scenarios: 1-2 sentences each. riskMatrix: 3 risks under 25 words each. actionPlan: 2 items per phase, each under 20 words.`;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   let rawText: string, fileName: string, orgName: string, mode: string;
+  let companySize: string, industry: string, constraints: string, extraContext: string;
   const ct = req.headers.get("content-type") ?? "";
 
   if (ct.includes("multipart/form-data")) {
@@ -49,12 +50,20 @@ export async function POST(req: NextRequest) {
     fileName = (fd.get("files") as File)?.name ?? "upload";
     orgName = (fd.get("orgName") as string) ?? "";
     mode = (fd.get("mode") as string) ?? "basic";
+    companySize = (fd.get("companySize") as string) ?? "";
+    industry = (fd.get("industry") as string) ?? "";
+    constraints = (fd.get("constraints") as string) ?? "";
+    extraContext = (fd.get("extraContext") as string) ?? "";
   } else {
     const body = await req.json();
     rawText = body.rawText ?? body.data ?? "";
     fileName = body.fileName ?? "upload";
     orgName = body.orgName ?? "";
     mode = body.mode ?? "basic";
+    companySize = body.companySize ?? "";
+    industry = body.industry ?? "";
+    constraints = body.constraints ?? "";
+    extraContext = body.extraContext ?? "";
   }
 
   if (!rawText) {
@@ -86,7 +95,13 @@ export async function POST(req: NextRequest) {
   }
 
   const summary = summarize(rawText, mode);
-  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}\n\nData:\n${summary}`;
+  const contextLines = [
+    companySize && `Company Size: ${companySize}`,
+    industry && `Industry/Sector: ${industry}`,
+    constraints && `Key Constraints: ${constraints}`,
+    extraContext && `Additional Context: ${extraContext}`,
+  ].filter(Boolean).join("\n");
+  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nData:\n${summary}`;
   const system = mode === "advanced" ? SYSTEM_ADVANCED : SYSTEM_BASIC;
 
   const enc = new TextEncoder();

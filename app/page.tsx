@@ -45,6 +45,11 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>("basic");
   const [files, setFiles] = useState<File[]>([]);
   const [orgName, setOrgName] = useState("");
+  const [companySize, setCompanySize] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [constraints, setConstraints] = useState("");
+  const [extraContext, setExtraContext] = useState("");
+  const [contextOpen, setContextOpen] = useState(false);
   const [state, setState] = useState<State>("idle");
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
@@ -132,6 +137,12 @@ export default function Home() {
       fd.append("files", files[0]);
       fd.append("orgName", orgName);
       fd.append("mode", mode);
+      if (mode === "advanced") {
+        if (companySize) fd.append("companySize", companySize);
+        if (industry) fd.append("industry", industry);
+        if (constraints) fd.append("constraints", constraints);
+        if (extraContext) fd.append("extraContext", extraContext);
+      }
 
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
 
@@ -204,6 +215,11 @@ export default function Home() {
     setAnalysis(null);
     setPdfBytes(null);
     setFiles([]);
+    setCompanySize("");
+    setIndustry("");
+    setConstraints("");
+    setExtraContext("");
+    setContextOpen(false);
   }
 
   const isRunning = state === "uploading" || state === "analyzing";
@@ -275,6 +291,67 @@ export default function Home() {
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Organization name</label>
             <input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Acme Corp, Sunrise Foundation" disabled={isRunning} />
           </div>
+
+          {/* Additional context (advanced only) */}
+          {mode === "advanced" && (
+            <div style={{ marginBottom: 20 }}>
+              <button
+                onClick={() => setContextOpen(o => !o)}
+                disabled={isRunning}
+                style={{ width: "100%", background: contextOpen ? "#2a1800" : "#1e1e1e", border: `1px solid ${contextOpen ? "#CC5500" : "#333"}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: contextOpen ? "#CC5500" : "#aaa" }}>Additional context <span style={{ fontWeight: 400, color: "#666" }}>(optional)</span></span>
+                <span style={{ color: contextOpen ? "#CC5500" : "#555", fontSize: 14, fontWeight: 700 }}>{contextOpen ? "▲" : "▼"}</span>
+              </button>
+              {contextOpen && (
+                <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ gridColumn: "1" }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Company size</label>
+                    <select
+                      value={companySize}
+                      onChange={e => setCompanySize(e.target.value)}
+                      disabled={isRunning}
+                      style={{ width: "100%", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: companySize ? "#f0f0f0" : "#666" }}>
+                      <option value="">Select size</option>
+                      <option value="< 50 employees">&lt; 50 employees</option>
+                      <option value="50–200 employees">50–200 employees</option>
+                      <option value="200–1,000 employees">200–1,000 employees</option>
+                      <option value="1,000–10,000 employees">1,000–10,000 employees</option>
+                      <option value="> 10,000 employees">&gt; 10,000 employees</option>
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: "2" }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Industry / sector</label>
+                    <input
+                      value={industry}
+                      onChange={e => setIndustry(e.target.value)}
+                      placeholder="e.g. SaaS, Healthcare, Manufacturing"
+                      disabled={isRunning}
+                      style={{ width: "100%", boxSizing: "border-box" }} />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Key constraints</label>
+                    <textarea
+                      value={constraints}
+                      onChange={e => setConstraints(e.target.value)}
+                      placeholder="e.g. Limited hiring budget, must maintain 6-month cash runway, no new debt"
+                      disabled={isRunning}
+                      rows={2}
+                      style={{ width: "100%", boxSizing: "border-box", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Other notes</label>
+                    <textarea
+                      value={extraContext}
+                      onChange={e => setExtraContext(e.target.value)}
+                      placeholder="e.g. Recently acquired a competitor, planning Series B, seasonality in Q4 revenue"
+                      disabled={isRunning}
+                      rows={2}
+                      style={{ width: "100%", boxSizing: "border-box", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* File upload */}
           <div style={{ marginBottom: 20 }}>
