@@ -20,6 +20,8 @@ export interface TrendData { label: string; series: TrendSeries[]; labels: strin
 export interface IndustryComparison { metric: string; yourValue: string; industryAverage: string; topQuartile: string; status: string; }
 export interface CaseStudy { organization: string; challenge: string; solution: string; outcome: string; }
 export interface Scenarios { optimistic: string; base: string; pessimistic: string; }
+export interface RiskMatrixItem { risk: string; likelihood: "high" | "medium" | "low"; impact: "high" | "medium" | "low"; mitigation: string; }
+export interface ActionPlan { immediate: string[]; shortTerm: string[]; longTerm: string[]; }
 
 export interface AnalysisResult {
   summary: string;
@@ -30,6 +32,8 @@ export interface AnalysisResult {
   industryComparisons?: IndustryComparison[];
   caseStudies?: CaseStudy[];
   scenarios?: Scenarios;
+  riskMatrix?: RiskMatrixItem[];
+  actionPlan?: ActionPlan;
 }
 
 export interface ReportData {
@@ -365,6 +369,72 @@ export function generatePDF(data: ReportData): Uint8Array {
       doc.text(wrapped, sx + 4, y + 15);
     });
     y += maxScenH + 6;
+  }
+
+  if (data.mode === "advanced" && data.analysis.riskMatrix?.length) {
+    if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = sectionHeader(doc, "Risk Matrix", y, margin, W);
+
+    const riskColors: Record<string, [number,number,number]> = { high: RED, medium: AMBER, low: [39, 174, 96] };
+    (doc as any).autoTable({
+      startY: y,
+      head: [["Risk", "Likelihood", "Impact", "Mitigation"]],
+      body: data.analysis.riskMatrix.map(r => [r.risk, r.likelihood.toUpperCase(), r.impact.toUpperCase(), r.mitigation]),
+      theme: "plain",
+      headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
+      bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8 },
+      alternateRowStyles: { fillColor: [32, 32, 32] },
+      columnStyles: {
+        1: { halign: "center" as const, fontStyle: "bold" },
+        2: { halign: "center" as const, fontStyle: "bold" },
+      },
+      didDrawCell: (hookData: any) => {
+        if (hookData.section === "body" && (hookData.column.index === 1 || hookData.column.index === 2)) {
+          const val = hookData.cell.raw?.toString().toLowerCase();
+          const col = riskColors[val] ?? MUTED;
+          hookData.doc.setTextColor(...col);
+          hookData.doc.setFont("helvetica", "bold");
+          hookData.doc.text(hookData.cell.raw, hookData.cell.x + hookData.cell.width / 2, hookData.cell.y + hookData.cell.height / 2 + 1.5, { align: "center" });
+        }
+      },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  if (data.mode === "advanced" && data.analysis.actionPlan) {
+    if (y > 200) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = sectionHeader(doc, "Action Plan", y, margin, W);
+
+    const phases = [
+      { label: "IMMEDIATE (0–30 days)", items: data.analysis.actionPlan.immediate, color: RED },
+      { label: "SHORT-TERM (30–90 days)", items: data.analysis.actionPlan.shortTerm, color: AMBER },
+      { label: "LONG-TERM (90+ days)", items: data.analysis.actionPlan.longTerm, color: [39, 174, 96] as [number,number,number] },
+    ];
+
+    for (const phase of phases) {
+      if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...phase.color);
+      doc.text(phase.label, margin, y + 4);
+      y += 8;
+      for (const item of phase.items) {
+        if (y > 265) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+        const wrapped = doc.splitTextToSize(`• ${item}`, W - margin * 2 - 6);
+        doc.setFillColor(...DARK);
+        const cardH = wrapped.length * 5 + 8;
+        doc.roundedRect(margin, y, W - margin * 2, cardH, 1.5, 1.5, "F");
+        doc.setFillColor(...phase.color);
+        doc.rect(margin, y, 2, cardH, "F");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...WHITE);
+        doc.text(wrapped, margin + 6, y + 6);
+        y += cardH + 3;
+      }
+      y += 4;
+    }
   }
 
   // Add footers to all pages

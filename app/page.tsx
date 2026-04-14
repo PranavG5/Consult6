@@ -452,6 +452,64 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {analysis.riskMatrix?.length && (
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RISK MATRIX</p>
+                  <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, overflow: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "#2a2a2a" }}>
+                          {["Risk", "Likelihood", "Impact", "Mitigation"].map(h => (
+                            <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#CC5500", fontWeight: 700, fontSize: 11 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analysis.riskMatrix.map((r, i) => {
+                          const levelColor = (v: string) => v === "high" ? "#e74c3c" : v === "medium" ? "#d4a017" : "#27ae60";
+                          return (
+                            <tr key={i} style={{ borderTop: "1px solid #2a2a2a" }}>
+                              <td style={{ padding: "10px 12px", color: "#f0f0f0", fontWeight: 600, maxWidth: 160 }}>{r.risk}</td>
+                              <td style={{ padding: "10px 12px" }}>
+                                <span style={{ color: levelColor(r.likelihood), fontWeight: 700, fontSize: 11 }}>{r.likelihood.toUpperCase()}</span>
+                              </td>
+                              <td style={{ padding: "10px 12px" }}>
+                                <span style={{ color: levelColor(r.impact), fontWeight: 700, fontSize: 11 }}>{r.impact.toUpperCase()}</span>
+                              </td>
+                              <td style={{ padding: "10px 12px", color: "#aaa", fontSize: 12 }}>{r.mitigation}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {analysis.actionPlan && (
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ACTION PLAN</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                    {[
+                      { label: "IMMEDIATE", sub: "0–30 days", items: analysis.actionPlan.immediate, color: "#e74c3c", border: "#5c1a1a" },
+                      { label: "SHORT-TERM", sub: "30–90 days", items: analysis.actionPlan.shortTerm, color: "#d4a017", border: "#4a3500" },
+                      { label: "LONG-TERM", sub: "90+ days", items: analysis.actionPlan.longTerm, color: "#27ae60", border: "#1e5c32" },
+                    ].map(phase => (
+                      <div key={phase.label} style={{ background: "#1e1e1e", border: `1px solid ${phase.border}`, borderTop: `3px solid ${phase.color}`, borderRadius: 8, padding: "12px 14px" }}>
+                        <p style={{ fontSize: 10, fontWeight: 800, color: phase.color, margin: "0 0 2px", letterSpacing: 1 }}>{phase.label}</p>
+                        <p style={{ fontSize: 10, color: "#666", margin: "0 0 10px" }}>{phase.sub}</p>
+                        {phase.items.map((item, j) => (
+                          <div key={j} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                            <span style={{ color: phase.color, fontWeight: 700, flexShrink: 0, fontSize: 12 }}>→</span>
+                            <p style={{ fontSize: 12, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{item}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

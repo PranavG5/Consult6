@@ -12,21 +12,40 @@ const LIMITS = {
   admin: { basic: 999999, advanced: 999999 },
 };
 
-function summarize(rawText: string): string {
+function summarize(rawText: string, mode: string = "basic"): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
   if (!lines.length) return "No data.";
-  const headers = lines[0].split(",").slice(0, 10).join(",");
-  const rows = lines.slice(1, 10).map(r => r.split(",").slice(0, 10).join(",")).join("\n");
-  return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, 900);
+  const maxCols = mode === "advanced" ? 20 : 10;
+  const maxRows = mode === "advanced" ? 25 : 9;
+  const charLimit = mode === "advanced" ? 2500 : 900;
+  const headers = lines[0].split(",").slice(0, maxCols).join(",");
+  const rows = lines.slice(1, maxRows).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
+  return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
 }
 
 const SYSTEM_BASIC = `You are a financial analyst. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 2-4 flags, 2-3 recommendations, all strings under 25 words.`;
+Rules:
+- summary: 2-3 sentences with specific observations referencing actual figures from the data
+- flags: 3-5 flags; each description must cite a specific number, ratio, or trend from the data, under 45 words
+- metric: include the actual value or calculated ratio (e.g. "Debt-to-equity: 2.4x", "Revenue growth: -12%")
+- recommendations: 3-4 concrete, actionable recommendations with a specific implementation step, each under 45 words
+- trajectoryNote: 2-3 sentences describing the likely financial direction with a quantified outlook`;
 
 const SYSTEM_ADVANCED = `You are an expert financial analyst. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string","trendData":{"label":"string","series":[{"name":"string","values":[0,0,0]}],"labels":["string","string","string"]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"}}
-Rules: 2-3 flags, 2-3 recommendations, 1 case study, 2 industry comparisons, values arrays exactly 3 numbers, all strings under 20 words.`;
+{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string","trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
+Rules:
+- summary: 3-5 sentences with deep analysis referencing multiple specific data points and their interplay
+- flags: 5-7 flags; each description must cite specific metrics, explain root cause, and state consequences, under 65 words each
+- metric: include the actual calculated value and context (e.g. "Current ratio: 0.8 vs 1.5 benchmark — 47% below safe threshold")
+- recommendations: 4-6 recommendations with detailed implementation steps, owner, timeline, and expected outcome, each under 65 words
+- trajectoryNote: 3-4 sentences with quantified projections and key assumptions
+- trendData: exactly 6 labels and 6 values per series, 2-3 series reflecting actual data patterns; use realistic scaled numbers
+- industryComparisons: 4-5 comparisons using realistic sector benchmarks with precise values
+- caseStudies: 2-3 comparable real or realistic organizations; outcomes must include specific measurable results (%, $, timeframe), each field under 40 words
+- scenarios: 3-4 sentences each with quantified projections and the key drivers behind each scenario
+- riskMatrix: 4-5 risks with specific, actionable mitigation strategies, each under 45 words
+- actionPlan: 3-4 items per phase (immediate=0-30 days, shortTerm=30-90 days, longTerm=90+ days); each item under 30 words and tied to a specific flag or recommendation`;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -82,7 +101,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const summary = summarize(rawText);
+  const summary = summarize(rawText, mode);
   const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}\n\nData:\n${summary}`;
   const system = mode === "advanced" ? SYSTEM_ADVANCED : SYSTEM_BASIC;
 
@@ -93,7 +112,7 @@ export async function POST(req: NextRequest) {
       try {
         const s = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: mode === "advanced" ? 1400 : 800,
+          max_tokens: mode === "advanced" ? 3500 : 1200,
           system,
           messages: [{ role: "user", content: userMessage }],
         });
