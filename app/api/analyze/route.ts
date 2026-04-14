@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       try {
         const s = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: mode === "advanced" ? 1800 : 900,
+          max_tokens: mode === "advanced" ? 2500 : 900,
           system,
           messages: [{ role: "user", content: userMessage }],
         });
