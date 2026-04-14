@@ -15,9 +15,9 @@ const LIMITS = {
 function summarize(rawText: string, mode: string = "basic"): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
   if (!lines.length) return "No data.";
-  const maxCols = mode === "advanced" ? 20 : 10;
-  const maxRows = mode === "advanced" ? 25 : 9;
-  const charLimit = mode === "advanced" ? 2500 : 900;
+  const maxCols = mode === "advanced" ? 12 : 10;
+  const maxRows = mode === "advanced" ? 12 : 9;
+  const charLimit = mode === "advanced" ? 1200 : 900;
   const headers = lines[0].split(",").slice(0, maxCols).join(",");
   const rows = lines.slice(1, maxRows).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
   return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
@@ -25,27 +25,11 @@ function summarize(rawText: string, mode: string = "basic"): string {
 
 const SYSTEM_BASIC = `You are a financial analyst. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules:
-- summary: 2-3 sentences with specific observations referencing actual figures from the data
-- flags: 3-5 flags; each description must cite a specific number, ratio, or trend from the data, under 45 words
-- metric: include the actual value or calculated ratio (e.g. "Debt-to-equity: 2.4x", "Revenue growth: -12%")
-- recommendations: 3-4 concrete, actionable recommendations with a specific implementation step, each under 45 words
-- trajectoryNote: 2-3 sentences describing the likely financial direction with a quantified outlook`;
+Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
 
 const SYSTEM_ADVANCED = `You are an expert financial analyst. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string","trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Rules:
-- summary: 3-5 sentences with deep analysis referencing multiple specific data points and their interplay
-- flags: 5-7 flags; each description must cite specific metrics, explain root cause, and state consequences, under 65 words each
-- metric: include the actual calculated value and context (e.g. "Current ratio: 0.8 vs 1.5 benchmark — 47% below safe threshold")
-- recommendations: 4-6 recommendations with detailed implementation steps, owner, timeline, and expected outcome, each under 65 words
-- trajectoryNote: 3-4 sentences with quantified projections and key assumptions
-- trendData: exactly 6 labels and 6 values per series, 2-3 series reflecting actual data patterns; use realistic scaled numbers
-- industryComparisons: 4-5 comparisons using realistic sector benchmarks with precise values
-- caseStudies: 2-3 comparable real or realistic organizations; outcomes must include specific measurable results (%, $, timeframe), each field under 40 words
-- scenarios: 3-4 sentences each with quantified projections and the key drivers behind each scenario
-- riskMatrix: 4-5 risks with specific, actionable mitigation strategies, each under 45 words
-- actionPlan: 3-4 items per phase (immediate=0-30 days, shortTerm=30-90 days, longTerm=90+ days); each item under 30 words and tied to a specific flag or recommendation`;
+Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each. Summary 2 sentences. trajectoryNote 1-2 sentences. trendData: exactly 6 labels and 6 values per series, 2 series. industryComparisons: 3 entries. caseStudies: 1-2 entries, each field under 20 words. scenarios: 1-2 sentences each. riskMatrix: 3 risks under 25 words each. actionPlan: 2 items per phase, each under 20 words.`;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -112,7 +96,7 @@ export async function POST(req: NextRequest) {
       try {
         const s = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: mode === "advanced" ? 3500 : 1200,
+          max_tokens: mode === "advanced" ? 1800 : 900,
           system,
           messages: [{ role: "user", content: userMessage }],
         });
