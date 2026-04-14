@@ -187,7 +187,7 @@ export default function Home() {
 
   function downloadPDF() {
     if (!pdfBytes) return;
-    const blob = new Blob([pdfBytes.buffer], { type: "application/pdf" });
+    const blob = new Blob([new Uint8Array(pdfBytes) as unknown as BlobPart], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -484,4 +484,5 @@ export default function Home() {
     </div>
   );
 }
+
 
