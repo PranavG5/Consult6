@@ -7,19 +7,26 @@ export default function Icon() {
   return new ImageResponse(
     <div
       style={{
+        width: 32,
+        height: 32,
         background: "#CC5500",
-        width: "100%",
-        height: "100%",
+        borderRadius: 7,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 7,
-        fontSize: 32,
-        fontWeight: 900,
-        color: "white",
+        overflow: "hidden",
       }}
     >
-      6
+      <div
+        style={{
+          color: "#fff",
+          fontSize: 42,
+          fontWeight: 800,
+          lineHeight: 1,
+        }}
+      >
+        6
+      </div>
     </div>,
     { ...size }
   );
