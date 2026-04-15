@@ -27,9 +27,21 @@ const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifica
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
 Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each that are realistic for this specific organization. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
 
-const SYSTEM_ADVANCED = `You are an expert financial analyst. Tailor every section — flags, recommendations, benchmarks, case studies, scenarios, risks, and action plan — specifically to the organization's size, industry, and constraints provided. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string","trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each. Summary 2 sentences. trajectoryNote 1-2 sentences. trendData: exactly 6 labels and 6 values per series, 2 series. industryComparisons: 3 entries benchmarked against the organization's specific industry. caseStudies: 1-2 real, documented organizations with publicly known financial challenges — each field under 20 words; source must be a real, specific citation (e.g. "Harvard Business Review, 2018", "Bloomberg, 2021 earnings report", "WSJ, March 2020") that evidences the case. scenarios: 1-2 sentences each. riskMatrix: 3 risks under 25 words each. actionPlan: 2 items per phase, each under 20 words.`;
+// Advanced is split into two parallel calls to double the effective token budget.
+const SYSTEM_ADVANCED_CORE = `You are an expert financial analyst. Tailor all analysis to the organization's size, industry, and constraints. Return ONLY valid JSON. No explanation, no markdown.
+{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
+Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each tailored to this specific organization. Summary 2 sentences. trajectoryNote 1-2 sentences.`;
+
+const SYSTEM_ADVANCED_CONTEXT = `You are an expert financial analyst. Tailor all sections to the organization's industry, size, and constraints. Return ONLY valid JSON. No explanation, no markdown.
+{"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
+Rules: trendData exactly 6 labels/values per series, 2 series reflecting data patterns. industryComparisons 3 entries benchmarked to org's specific industry. caseStudies 1-2 real documented orgs, each field under 20 words, source must be a real specific citation (e.g. "HBR, 2019", "Bloomberg, March 2021"). scenarios 1-2 sentences each. riskMatrix 3 risks under 25 words each. actionPlan 2 items per phase under 20 words each.`;
+
+function extractJson(text: string): object {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1) return {};
+  return JSON.parse(text.slice(start, end + 1));
+}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -102,25 +114,46 @@ export async function POST(req: NextRequest) {
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
   const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nData:\n${summary}`;
-  const system = mode === "advanced" ? SYSTEM_ADVANCED : SYSTEM_BASIC;
 
   const enc = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const s = anthropic.messages.stream({
-          model: "claude-sonnet-4-6",
-          max_tokens: mode === "advanced" ? 2500 : 900,
-          system,
-          messages: [{ role: "user", content: userMessage }],
-        });
+        let resultJson: object;
 
-        for await (const chunk of s) {
-          if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
-            controller.enqueue(enc.encode(chunk.delta.text));
-          }
+        if (mode === "advanced") {
+          // Two parallel calls: core analysis + context sections
+          const [coreMsg, contextMsg] = await Promise.all([
+            anthropic.messages.create({
+              model: "claude-sonnet-4-6",
+              max_tokens: 1200,
+              system: SYSTEM_ADVANCED_CORE,
+              messages: [{ role: "user", content: userMessage }],
+            }),
+            anthropic.messages.create({
+              model: "claude-sonnet-4-6",
+              max_tokens: 1800,
+              system: SYSTEM_ADVANCED_CONTEXT,
+              messages: [{ role: "user", content: userMessage }],
+            }),
+          ]);
+
+          const coreText = coreMsg.content[0].type === "text" ? coreMsg.content[0].text : "{}";
+          const contextText = contextMsg.content[0].type === "text" ? contextMsg.content[0].text : "{}";
+          resultJson = { ...extractJson(coreText), ...extractJson(contextText) };
+        } else {
+          const msg = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 900,
+            system: SYSTEM_BASIC,
+            messages: [{ role: "user", content: userMessage }],
+          });
+          const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+          resultJson = extractJson(text);
         }
+
+        controller.enqueue(enc.encode(JSON.stringify(resultJson)));
 
         // Update usage count
         try {

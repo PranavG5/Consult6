@@ -1,630 +1,192 @@
-"use client";
-import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase-browser";
-import { generatePDF, type AnalysisResult } from "@/lib/generateReport";
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import Link from "next/link";
 
-type Mode = "basic" | "advanced";
-type State = "idle" | "uploading" | "analyzing" | "done" | "error";
+const features = [
+  {
+    icon: "⚑",
+    title: "Financial Flags",
+    desc: "Automatically surface critical issues, warnings, and key observations from your raw data — no manual review needed.",
+  },
+  {
+    icon: "◎",
+    title: "Smart Recommendations",
+    desc: "Get prioritized, actionable next steps tailored to your organization's size, industry, and stated constraints.",
+  },
+  {
+    icon: "▲",
+    title: "Industry Benchmarks",
+    desc: "Compare your key metrics against sector averages and top-quartile performers to understand where you actually stand.",
+    badge: "Advanced",
+  },
+  {
+    icon: "◈",
+    title: "Scenario Planning",
+    desc: "Optimistic, base, and pessimistic 12-month financial forecasts based on your current trajectory and risk profile.",
+    badge: "Advanced",
+  },
+  {
+    icon: "◉",
+    title: "Risk Matrix",
+    desc: "Assess the likelihood and impact of key risks, with specific mitigation strategies for each.",
+    badge: "Advanced",
+  },
+  {
+    icon: "↓",
+    title: "PDF Reports",
+    desc: "Download a professional, branded report — ready to share with stakeholders, boards, or investors.",
+  },
+];
 
-interface UsageData {
-  accountType: string;
-  basicUsed: number;
-  advancedUsed: number;
-  basicLimit: number;
-  advancedLimit: number;
-}
+const freeFeatures = [
+  "5 basic analyses per day",
+  "2 advanced analyses per day",
+  "Financial flags & recommendations",
+  "Trajectory note",
+  "PDF report download",
+  "Single file upload (CSV / Excel)",
+];
 
-function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
-  const result = Papa.parse(text, { header: true, skipEmptyLines: true });
-  return { headers: result.meta.fields ?? [], rows: result.data as Record<string, string>[] };
-}
+const proFeatures = [
+  "15 basic analyses per day",
+  "5 advanced analyses per day",
+  "Everything in Free",
+  "Up to 3 files per analysis",
+  "Industry benchmarks & case studies",
+  "Scenario planning",
+  "Risk matrix & action plan",
+  "Additional context inputs",
+];
 
-function parseXLSX(buf: ArrayBuffer): { headers: string[]; rows: Record<string, string>[] } {
-  const wb = XLSX.read(buf, { type: "array" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const json = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
-  const headers = json.length > 0 ? Object.keys(json[0]) : [];
-  return { headers, rows: json };
-}
-
-async function parseFile(file: File): Promise<{ rawText: string; headers: string[]; rows: Record<string, string>[] }> {
-  if (file.name.endsWith(".csv") || file.type === "text/csv") {
-    const text = await file.text();
-    const parsed = parseCSV(text);
-    return { rawText: text, ...parsed };
-  }
-  const buf = await file.arrayBuffer();
-  const parsed = parseXLSX(buf);
-  const rawText = parsed.headers.join(",") + "\n" + parsed.rows.map(r => parsed.headers.map(h => r[h] ?? "").join(",")).join("\n");
-  return { rawText, ...parsed };
-}
-
-export default function Home() {
-  const [mode, setMode] = useState<Mode>("basic");
-  const [files, setFiles] = useState<File[]>([]);
-  const [orgName, setOrgName] = useState("");
-  const [companySize, setCompanySize] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [constraints, setConstraints] = useState("");
-  const [extraContext, setExtraContext] = useState("");
-  const [contextOpen, setContextOpen] = useState(false);
-  const [state, setState] = useState<State>("idle");
-  const [progress, setProgress] = useState(0);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
-  const [usage, setUsage] = useState<UsageData | null>(null);
-  const [user, setUser] = useState<{ email: string } | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser({ email: data.user.email ?? "" });
-    });
-    fetchUsage();
-  }, []);
-
-  async function fetchUsage() {
-    try {
-      const res = await fetch("/api/usage");
-      if (res.ok) setUsage(await res.json());
-    } catch {}
-  }
-
-  function startProgress(from: number, to: number, ms: number) {
-    if (progressRef.current) clearInterval(progressRef.current);
-    setProgress(from);
-    const steps = 60;
-    const stepMs = ms / steps;
-    let step = 0;
-    progressRef.current = setInterval(() => {
-      step++;
-      const t = step / steps;
-      const eased = 1 - Math.pow(1 - t, 2);
-      setProgress(from + (to - from) * eased);
-      if (step >= steps) clearInterval(progressRef.current!);
-    }, stepMs);
-  }
-
-  function stopProgress() {
-    if (progressRef.current) clearInterval(progressRef.current);
-    progressRef.current = null;
-  }
-
-  function handleFiles(newFiles: File[]) {
-    const maxFiles = mode === "advanced" ? 3 : 1;
-    const valid = newFiles.filter(f =>
-      f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls")
-    );
-    setFiles(prev => [...prev, ...valid].slice(0, maxFiles));
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragging(false);
-    handleFiles(Array.from(e.dataTransfer.files));
-  }
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/auth/login";
-  }
-
-  async function runAnalysis() {
-    if (!files.length) return;
-    setState("uploading");
-    setErrorMsg("");
-    setAnalysis(null);
-    setPdfBytes(null);
-    startProgress(0, 15, 2000);
-
-    try {
-      const parsed = await Promise.all(files.map(f => parseFile(f)));
-      const combinedRawText = parsed.map((p, i) =>
-        files.length > 1 ? `=== File ${i + 1}: ${files[i].name} ===\n${p.rawText}` : p.rawText
-      ).join("\n\n");
-
-      setState("analyzing");
-      startProgress(15, 90, mode === "advanced" ? 30000 : 10000);
-
-      const fd = new FormData();
-      fd.append("data", combinedRawText);
-      fd.append("files", files[0]);
-      fd.append("orgName", orgName);
-      fd.append("mode", mode);
-      if (mode === "advanced") {
-        if (companySize) fd.append("companySize", companySize);
-        if (industry) fd.append("industry", industry);
-        if (constraints) fd.append("constraints", constraints);
-        if (extraContext) fd.append("extraContext", extraContext);
-      }
-
-      const res = await fetch("/api/analyze", { method: "POST", body: fd });
-
-      // Handle non-streaming error responses
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Analysis failed" }));
-        throw new Error(err.error ?? "Analysis failed");
-      }
-
-      // Read stream
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let raw = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        raw += decoder.decode(value, { stream: true });
-      }
-      raw += decoder.decode();
-
-      if (raw.includes("__STREAM_ERROR__")) throw new Error("Analysis failed on server.");
-
-      // Extract JSON
-      const jsonStart = raw.indexOf("{");
-      const jsonEnd = raw.lastIndexOf("}");
-      if (jsonStart === -1 || jsonEnd === -1) throw new Error("Invalid response from server.");
-
-      const result: AnalysisResult = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
-      setAnalysis(result);
-
-      const now = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
-      const pdf = generatePDF({
-        orgName: orgName || "Your Organization",
-        fileName: files.map(f => f.name).join(", "),
-        generatedAt: now,
-        mode,
-        analysis: result,
-      });
-      setPdfBytes(pdf);
-
-      stopProgress();
-      setProgress(100);
-      setState("done");
-      fetchUsage();
-    } catch (err) {
-      stopProgress();
-      setProgress(0);
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
-      setState("error");
-    }
-  }
-
-  function downloadPDF() {
-    if (!pdfBytes) return;
-    const blob = new Blob([new Uint8Array(pdfBytes) as unknown as BlobPart], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `consult6-${mode}-report-${Date.now()}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function reset() {
-    stopProgress();
-    setProgress(0);
-    setState("idle");
-    setErrorMsg("");
-    setAnalysis(null);
-    setPdfBytes(null);
-    setFiles([]);
-    setCompanySize("");
-    setIndustry("");
-    setConstraints("");
-    setExtraContext("");
-    setContextOpen(false);
-  }
-
-  const isRunning = state === "uploading" || state === "analyzing";
-  const basicLeft = usage ? usage.basicLimit - usage.basicUsed : null;
-  const advancedLeft = usage ? usage.advancedLimit - usage.advancedUsed : null;
-
-  // Severity colors
-  const sevStyle: Record<string, { bg: string; border: string; label: string; labelBg: string }> = {
-    critical: { bg: "#2d1010", border: "#c0392b", label: "CRITICAL", labelBg: "#c0392b" },
-    warning: { bg: "#2d2000", border: "#d4a017", label: "WARNING", labelBg: "#d4a017" },
-    info: { bg: "#0f1e30", border: "#2980b9", label: "INFO", labelBg: "#2980b9" },
-  };
-
+export default function LandingPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#1a1a1a" }}>
+    <div style={{ minHeight: "100vh", background: "#111", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Navbar */}
-      <nav style={{ background: "#111", borderBottom: "1px solid #2a2a2a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ borderBottom: "1px solid #1e1e1e", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#111", zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
         </div>
-        {usage && (
-          <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13 }}>
-            <span style={{ color: "#aaa" }}>Basic <span style={{ color: "#f0f0f0", fontWeight: 600 }}>{usage.basicUsed}/{usage.basicLimit}</span></span>
-            <span style={{ color: "#aaa" }}>Advanced <span style={{ color: "#f0f0f0", fontWeight: 600 }}>{usage.advancedUsed}/{usage.advancedLimit}</span></span>
-            {usage.accountType === "admin" && (
-              <span style={{ background: "#6b21a8", color: "#f0f0f0", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>ADMIN</span>
-            )}
-            {usage.accountType === "paid" && (
-              <span style={{ background: "#CC5500", color: "#fff", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>PRO</span>
-            )}
-            {usage.accountType === "free" && (
-              <span style={{ background: "#333", color: "#aaa", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>FREE</span>
-            )}
-            <span style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
-            <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/auth/login" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "8px 14px" }}>Sign in</Link>
+          <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Get Started Free</Link>
+        </div>
       </nav>
 
-      {/* Main */}
-      <main style={{ maxWidth: 760, margin: "40px auto", padding: "0 20px" }}>
-        {/* Mode selector */}
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {(["basic", "advanced"] as Mode[]).map(m => (
-              <button key={m} onClick={() => { setMode(m); reset(); }}
-                style={{ background: mode === m ? "#2a1800" : "#242424", border: `2px solid ${mode === m ? "#CC5500" : "#333"}`, borderRadius: 10, padding: "14px 16px", textAlign: "left", cursor: "pointer", transition: "all 0.15s" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>{m === "basic" ? "Basic" : "Advanced"}</span>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {m === "advanced" && <span style={{ background: "#CC5500", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>AI+</span>}
-                    {usage && <span style={{ fontSize: 12, color: "#888" }}>{m === "basic" ? basicLeft : advancedLeft}/{m === "basic" ? usage.basicLimit : usage.advancedLimit} left</span>}
-                  </div>
-                </div>
-                <p style={{ fontSize: 12, color: "#888", margin: 0 }}>
-                  {m === "basic" ? "Single file · Standard flags & recommendations · PDF report" : "Up to 3 files · Trend charts · Industry benchmarks · Case studies · Scenarios"}
-                </p>
-              </button>
+      {/* Hero */}
+      <section style={{ maxWidth: 720, margin: "0 auto", padding: "96px 24px 80px", textAlign: "center" }}>
+        <div style={{ display: "inline-block", background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 20, padding: "4px 14px", fontSize: 12, fontWeight: 600, color: "#CC5500", letterSpacing: 1, marginBottom: 28 }}>
+          AI-POWERED · INSTANT · ACTIONABLE
+        </div>
+        <h1 style={{ fontSize: 52, fontWeight: 800, lineHeight: 1.1, margin: "0 0 24px", letterSpacing: -1 }}>
+          Financial health analysis<br />
+          <span style={{ color: "#CC5500" }}>that actually helps.</span>
+        </h1>
+        <p style={{ fontSize: 18, color: "#888", lineHeight: 1.7, margin: "0 auto 40px", maxWidth: 560 }}>
+          Upload your financial data and get instant AI-generated flags, benchmarks, and tailored recommendations — in under 30 seconds.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 16, fontWeight: 700, textDecoration: "none", padding: "14px 32px", borderRadius: 9, display: "inline-block" }}>
+            Get Started Free →
+          </Link>
+          <Link href="/auth/login" style={{ background: "#1e1e1e", color: "#ccc", fontSize: 16, fontWeight: 600, textDecoration: "none", padding: "14px 32px", borderRadius: 9, border: "1px solid #333", display: "inline-block" }}>
+            Sign In
+          </Link>
+        </div>
+        <p style={{ marginTop: 20, fontSize: 13, color: "#555" }}>Free tier available · No credit card required</p>
+      </section>
+
+      {/* Features */}
+      <section style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px 96px" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 2, textAlign: "center", marginBottom: 12 }}>FEATURES</p>
+        <h2 style={{ fontSize: 32, fontWeight: 800, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5 }}>Everything you need to understand your finances</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          {features.map(f => (
+            <div key={f.title} style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 22px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span style={{ fontSize: 20, color: "#CC5500" }}>{f.icon}</span>
+                <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>{f.title}</span>
+                {f.badge && (
+                  <span style={{ background: "#2a1800", color: "#CC5500", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }}>{f.badge}</span>
+                )}
+              </div>
+              <p style={{ fontSize: 13, color: "#777", lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section style={{ borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a", background: "#141414", padding: "80px 24px" }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 2, marginBottom: 12 }}>HOW IT WORKS</p>
+          <h2 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 48px", letterSpacing: -0.5 }}>Three steps to clarity</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
+            {[
+              { step: "1", title: "Upload your data", desc: "Drop in a CSV or Excel file. Basic supports one file; Advanced supports up to three." },
+              { step: "2", title: "Add context (optional)", desc: "Tell the AI your company size, industry, and any constraints for more tailored results." },
+              { step: "3", title: "Get your report", desc: "In under 30 seconds, receive flags, recommendations, benchmarks, and a downloadable PDF." },
+            ].map(s => (
+              <div key={s.step} style={{ textAlign: "left" }}>
+                <div style={{ width: 36, height: 36, background: "#CC5500", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff", marginBottom: 14 }}>{s.step}</div>
+                <p style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0", margin: "0 0 8px" }}>{s.title}</p>
+                <p style={{ fontSize: 13, color: "#666", lineHeight: 1.65, margin: 0 }}>{s.desc}</p>
+              </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Card */}
-        <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 12, padding: 28 }}>
-          {/* New Analysis button at top when done */}
-          {state === "done" && (
-            <div style={{ marginBottom: 20 }}>
-              <button onClick={reset} style={{ width: "100%", background: "#1e1e1e", border: "1px solid #444", color: "#ccc", borderRadius: 9, padding: "11px 0", fontSize: 14, fontWeight: 600 }}>
-                ← New Analysis
-              </button>
+      {/* Pricing */}
+      <section style={{ maxWidth: 760, margin: "0 auto", padding: "96px 24px" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 2, textAlign: "center", marginBottom: 12 }}>PRICING</p>
+        <h2 style={{ fontSize: 32, fontWeight: 800, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5 }}>Simple, transparent pricing</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          {/* Free */}
+          <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 14, padding: 28 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#888", margin: "0 0 8px", letterSpacing: 0.5 }}>FREE</p>
+            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$0</p>
+            <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
+            <div style={{ borderTop: "1px solid #222", paddingTop: 20, marginBottom: 28 }}>
+              {freeFeatures.map(f => (
+                <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
+                  <span style={{ color: "#27ae60", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span style={{ fontSize: 13, color: "#aaa" }}>{f}</span>
+                </div>
+              ))}
             </div>
-          )}
-
-          {/* Org name */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Organization name</label>
-            <input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Acme Corp, Sunrise Foundation" disabled={isRunning || state === "done"} />
+            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#1e1e1e", border: "1px solid #333", color: "#ccc", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
+              Get Started Free
+            </Link>
           </div>
 
-          {/* Additional context (advanced only) */}
-          {mode === "advanced" && (
-            <div style={{ marginBottom: 20 }}>
-              <button
-                onClick={() => setContextOpen(o => !o)}
-                disabled={isRunning}
-                style={{ width: "100%", background: contextOpen ? "#2a1800" : "#1e1e1e", border: `1px solid ${contextOpen ? "#CC5500" : "#333"}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: contextOpen ? "#CC5500" : "#aaa" }}>Additional context <span style={{ fontWeight: 400, color: "#666" }}>(optional)</span></span>
-                <span style={{ color: contextOpen ? "#CC5500" : "#555", fontSize: 14, fontWeight: 700 }}>{contextOpen ? "▲" : "▼"}</span>
-              </button>
-              {contextOpen && (
-                <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ gridColumn: "1" }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Company size</label>
-                    <select
-                      value={companySize}
-                      onChange={e => setCompanySize(e.target.value)}
-                      disabled={isRunning}
-                      style={{ width: "100%", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: companySize ? "#f0f0f0" : "#666" }}>
-                      <option value="">Select size</option>
-                      <option value="< 50 employees">&lt; 50 employees</option>
-                      <option value="50–200 employees">50–200 employees</option>
-                      <option value="200–1,000 employees">200–1,000 employees</option>
-                      <option value="1,000–10,000 employees">1,000–10,000 employees</option>
-                      <option value="> 10,000 employees">&gt; 10,000 employees</option>
-                    </select>
-                  </div>
-                  <div style={{ gridColumn: "2" }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Industry / sector</label>
-                    <input
-                      value={industry}
-                      onChange={e => setIndustry(e.target.value)}
-                      placeholder="e.g. SaaS, Healthcare, Manufacturing"
-                      disabled={isRunning}
-                      style={{ width: "100%", boxSizing: "border-box" }} />
-                  </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Key constraints</label>
-                    <textarea
-                      value={constraints}
-                      onChange={e => setConstraints(e.target.value)}
-                      placeholder="e.g. Limited hiring budget, must maintain 6-month cash runway, no new debt"
-                      disabled={isRunning}
-                      rows={2}
-                      style={{ width: "100%", boxSizing: "border-box", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
-                  </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Other notes</label>
-                    <textarea
-                      value={extraContext}
-                      onChange={e => setExtraContext(e.target.value)}
-                      placeholder="e.g. Recently acquired a competitor, planning Series B, seasonality in Q4 revenue"
-                      disabled={isRunning}
-                      rows={2}
-                      style={{ width: "100%", boxSizing: "border-box", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
-                  </div>
+          {/* Pro */}
+          <div style={{ background: "#1e1000", border: "2px solid #CC5500", borderRadius: 14, padding: 28, position: "relative" }}>
+            <div style={{ position: "absolute", top: -12, right: 20, background: "#CC5500", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 20, letterSpacing: 0.5 }}>MOST POPULAR</div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#CC5500", margin: "0 0 8px", letterSpacing: 0.5 }}>PRO</p>
+            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$29</p>
+            <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
+            <div style={{ borderTop: "1px solid #2a1800", paddingTop: 20, marginBottom: 28 }}>
+              {proFeatures.map(f => (
+                <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
+                  <span style={{ color: "#CC5500", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span style={{ fontSize: 13, color: "#aaa" }}>{f}</span>
                 </div>
-              )}
+              ))}
             </div>
-          )}
-
-          {/* File upload */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>
-              Financial data{mode === "advanced" ? " (up to 3 files)" : ""}
-            </label>
-
-            {files.map((f, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ color: "#CC5500", fontSize: 18 }}>📄</span>
-                  <span style={{ fontSize: 13, color: "#f0f0f0" }}>{f.name}</span>
-                  <span style={{ fontSize: 12, color: "#666" }}>{(f.size / 1024).toFixed(1)} KB</span>
-                </div>
-                {!isRunning && state !== "done" && (
-                  <button onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
-                    style={{ background: "none", border: "none", color: "#666", fontSize: 18, padding: "0 4px" }}>×</button>
-                )}
-              </div>
-            ))}
-
-            {files.length < (mode === "advanced" ? 3 : 1) && !isRunning && state !== "done" && (
-              <div
-                onDrop={handleDrop}
-                onDragOver={e => { e.preventDefault(); setDragging(true); }}
-                onDragLeave={() => setDragging(false)}
-                onClick={() => fileInputRef.current?.click()}
-                style={{ border: `2px dashed ${dragging ? "#CC5500" : "#333"}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", transition: "border-color 0.2s", background: dragging ? "#2a1800" : "transparent" }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>↑</div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>{files.length > 0 ? "Add another file" : "Upload financial data"}</p>
-                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to 50 MB</p>
-                <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple style={{ display: "none" }}
-                  onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
-              </div>
-            )}
-          </div>
-
-          {/* Progress bar */}
-          {isRunning && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ height: 6, background: "#333", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", background: "#CC5500", borderRadius: 3, width: `${progress}%`, transition: "width 0.3s ease" }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "#666" }}>
-                <span>{state === "uploading" ? "Parsing files..." : "Analyzing with AI..."}</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
-          {state === "error" && (
-            <div style={{ background: "#2d1010", border: "1px solid #c0392b", borderRadius: 8, padding: "12px 16px", color: "#e74c3c", fontSize: 13, marginBottom: 20 }}>
-              ⚠ {errorMsg}
-            </div>
-          )}
-
-          {/* Results */}
-          {state === "done" && analysis && (
-            <div style={{ marginBottom: 20 }}>
-              {/* Summary */}
-              <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, marginBottom: 8 }}>EXECUTIVE SUMMARY</p>
-                <p style={{ fontSize: 14, color: "#e0e0e0", lineHeight: 1.6, margin: 0 }}>{analysis.summary}</p>
-              </div>
-
-              {/* Flags */}
-              {analysis.flags.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>FINANCIAL FLAGS</p>
-                  {analysis.flags.map((flag, i) => {
-                    const s = sevStyle[flag.severity] ?? sevStyle.info;
-                    return (
-                      <div key={i} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                          <span style={{ background: s.labelBg, color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 3 }}>{s.label}</span>
-                          <span style={{ fontWeight: 700, fontSize: 13, color: "#f0f0f0" }}>{flag.title}</span>
-                        </div>
-                        <p style={{ fontSize: 13, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{flag.description}</p>
-                        {flag.metric && <p style={{ fontSize: 12, color: s.border, margin: "6px 0 0", fontWeight: 600 }}>Metric: {flag.metric}</p>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Recommendations */}
-              {analysis.recommendations.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RECOMMENDATIONS</p>
-                  {analysis.recommendations.map((rec, i) => (
-                    <div key={i} style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "12px 14px", marginBottom: 8, display: "flex", gap: 12 }}>
-                      <div style={{ minWidth: 24, height: 24, background: "#CC5500", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, color: "#fff", flexShrink: 0 }}>{i + 1}</div>
-                      <div>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: "#f0f0f0", margin: "0 0 4px" }}>{rec.title}</p>
-                        <p style={{ fontSize: 13, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{rec.detail}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Trajectory */}
-              <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 6 }}>FINANCIAL TRAJECTORY</p>
-                <p style={{ fontSize: 13, color: "#ccc", margin: 0, fontStyle: "italic", lineHeight: 1.5 }}>{analysis.trajectoryNote}</p>
-              </div>
-
-              {/* Advanced sections */}
-              {analysis.industryComparisons?.length && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>INDUSTRY BENCHMARKS</p>
-                  <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                      <thead>
-                        <tr style={{ background: "#2a2a2a" }}>
-                          {["Metric", "Your Value", "Industry Avg", "Top 25%", "Status"].map(h => (
-                            <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#CC5500", fontWeight: 700, fontSize: 11 }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analysis.industryComparisons.map((c, i) => (
-                          <tr key={i} style={{ borderTop: "1px solid #2a2a2a" }}>
-                            <td style={{ padding: "10px 12px", color: "#f0f0f0", fontWeight: 600 }}>{c.metric}</td>
-                            <td style={{ padding: "10px 12px", color: "#ccc" }}>{c.yourValue}</td>
-                            <td style={{ padding: "10px 12px", color: "#ccc" }}>{c.industryAverage}</td>
-                            <td style={{ padding: "10px 12px", color: "#ccc" }}>{c.topQuartile}</td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <span style={{ color: c.status === "above_average" ? "#27ae60" : c.status === "below_average" ? "#e74c3c" : "#f0f0f0", fontWeight: 600 }}>
-                                {c.status === "above_average" ? "▲ Above" : c.status === "below_average" ? "▼ Below" : "◆ Average"}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {analysis.caseStudies?.length && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>CASE STUDIES</p>
-                  {analysis.caseStudies.map((cs, i) => (
-                    <div key={i} style={{ background: "#1e1e1e", border: "1px solid #333", borderLeft: "3px solid #CC5500", borderRadius: 8, padding: "14px 16px", marginBottom: 8 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14, color: "#CC5500", margin: "0 0 10px" }}>{cs.organization}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                        {[["Challenge", cs.challenge], ["Solution", cs.solution], ["Outcome", cs.outcome]].map(([label, text]) => (
-                          <div key={label}>
-                            <p style={{ fontSize: 10, fontWeight: 700, color: "#666", letterSpacing: 1, margin: "0 0 4px" }}>{label?.toString().toUpperCase()}</p>
-                            <p style={{ fontSize: 12, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{text?.toString()}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {cs.source && (
-                        <p style={{ fontSize: 11, color: "#555", margin: "10px 0 0", fontStyle: "italic" }}>Source: {cs.source}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {analysis.scenarios && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>12-MONTH SCENARIOS</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                    {[
-                      { label: "OPTIMISTIC", text: analysis.scenarios.optimistic, color: "#27ae60", border: "#1e5c32" },
-                      { label: "BASE CASE", text: analysis.scenarios.base, color: "#2980b9", border: "#1a3a5c" },
-                      { label: "PESSIMISTIC", text: analysis.scenarios.pessimistic, color: "#e74c3c", border: "#5c1a1a" },
-                    ].map(s => (
-                      <div key={s.label} style={{ background: "#1e1e1e", border: `1px solid ${s.border}`, borderTop: `3px solid ${s.color}`, borderRadius: 8, padding: "12px 14px" }}>
-                        <p style={{ fontSize: 10, fontWeight: 800, color: s.color, margin: "0 0 6px", letterSpacing: 1 }}>{s.label}</p>
-                        <p style={{ fontSize: 12, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{s.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {analysis.riskMatrix?.length && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RISK MATRIX</p>
-                  <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                      <thead>
-                        <tr style={{ background: "#2a2a2a" }}>
-                          {["Risk", "Likelihood", "Impact", "Mitigation"].map(h => (
-                            <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#CC5500", fontWeight: 700, fontSize: 11 }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analysis.riskMatrix.map((r, i) => {
-                          const levelColor = (v: string) => v === "high" ? "#e74c3c" : v === "medium" ? "#d4a017" : "#27ae60";
-                          return (
-                            <tr key={i} style={{ borderTop: "1px solid #2a2a2a" }}>
-                              <td style={{ padding: "10px 12px", color: "#f0f0f0", fontWeight: 600, maxWidth: 160 }}>{r.risk}</td>
-                              <td style={{ padding: "10px 12px" }}>
-                                <span style={{ color: levelColor(r.likelihood), fontWeight: 700, fontSize: 11 }}>{r.likelihood.toUpperCase()}</span>
-                              </td>
-                              <td style={{ padding: "10px 12px" }}>
-                                <span style={{ color: levelColor(r.impact), fontWeight: 700, fontSize: 11 }}>{r.impact.toUpperCase()}</span>
-                              </td>
-                              <td style={{ padding: "10px 12px", color: "#aaa", fontSize: 12 }}>{r.mitigation}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {analysis.actionPlan && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ACTION PLAN</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                    {[
-                      { label: "IMMEDIATE", sub: "0–30 days", items: analysis.actionPlan.immediate, color: "#e74c3c", border: "#5c1a1a" },
-                      { label: "SHORT-TERM", sub: "30–90 days", items: analysis.actionPlan.shortTerm, color: "#d4a017", border: "#4a3500" },
-                      { label: "LONG-TERM", sub: "90+ days", items: analysis.actionPlan.longTerm, color: "#27ae60", border: "#1e5c32" },
-                    ].map(phase => (
-                      <div key={phase.label} style={{ background: "#1e1e1e", border: `1px solid ${phase.border}`, borderTop: `3px solid ${phase.color}`, borderRadius: 8, padding: "12px 14px" }}>
-                        <p style={{ fontSize: 10, fontWeight: 800, color: phase.color, margin: "0 0 2px", letterSpacing: 1 }}>{phase.label}</p>
-                        <p style={{ fontSize: 10, color: "#666", margin: "0 0 10px" }}>{phase.sub}</p>
-                        {phase.items.map((item, j) => (
-                          <div key={j} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-                            <span style={{ color: phase.color, fontWeight: 700, flexShrink: 0, fontSize: 12 }}>→</span>
-                            <p style={{ fontSize: 12, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{item}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div style={{ display: "flex", gap: 10 }}>
-            {state === "done" ? (
-              <button onClick={downloadPDF} style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
-                Download PDF Report
-              </button>
-            ) : (
-              <button
-                onClick={runAnalysis}
-                disabled={isRunning || !files.length}
-                style={{ flex: 1, background: isRunning || !files.length ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: isRunning || !files.length ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {isRunning ? (
-                  <>{state === "uploading" ? "Parsing files..." : "Generating analysis..."}</>
-                ) : (
-                  <>Generate {mode === "advanced" ? "Advanced " : ""}Report →</>
-                )}
-              </button>
-            )}
+            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
+              Get Started with Pro
+            </Link>
           </div>
         </div>
-      </main>
+      </section>
+
+      {/* Footer */}
+      <footer style={{ borderTop: "1px solid #1a1a1a", padding: "32px 24px", textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+          <div style={{ width: 24, height: 24, background: "#CC5500", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, color: "#fff" }}>6</div>
+          <span style={{ fontWeight: 700, fontSize: 14, color: "#888" }}>Consult6</span>
+        </div>
+        <p style={{ fontSize: 13, color: "#444", margin: 0 }}>© {new Date().getFullYear()} Consult6 · AI-powered financial health analysis · Built with Claude</p>
+      </footer>
     </div>
   );
 }
-
-
