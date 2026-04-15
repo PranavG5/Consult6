@@ -14,20 +14,12 @@ export default function Icon() {
         alignItems: "center",
         justifyContent: "center",
         borderRadius: 7,
-        overflow: "hidden",
+        fontSize: 16,
+        fontWeight: 800,
+        color: "white",
       }}
     >
-      <div
-        style={{
-          fontSize: 42,
-          color: "white",
-          fontWeight: 900,
-          lineHeight: 1,
-          marginTop: 6,
-        }}
-      >
-        6
-      </div>
+      6
     </div>,
     { ...size }
   );
