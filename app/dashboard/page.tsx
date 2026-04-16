@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { generatePDF, type AnalysisResult } from "@/lib/generateReport";
+import Link from "next/link";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -81,6 +82,8 @@ export default function Home() {
   const [extraContext, setExtraContext] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
   const [state, setState] = useState<State>("idle");
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [profileContext, setProfileContext] = useState<{ about_me: string; other_context: string; disable_pdf_history: boolean; disable_analysis_memory: boolean } | null>(null);
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -104,22 +107,37 @@ export default function Home() {
       if (pending) {
         try {
           const p = JSON.parse(pending);
-          const acctType = "free"; // new accounts start as free
-          const limit = 5;
           const newItem = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             created_at: p.createdAt ?? new Date().toISOString(),
-            label: p.label,
-            mode: p.mode,
-            org_name: p.orgName ?? "",
-            file_name: p.fileName ?? "",
+            label: p.label, mode: p.mode, org_name: p.orgName ?? "", file_name: p.fileName ?? "",
             analysis_result: p.analysisResult,
           };
           const existing = loadHistoryFromStorage(data.user.id);
-          const updated = [newItem, ...existing].slice(0, limit);
-          saveHistoryToStorage(data.user.id, updated);
+          saveHistoryToStorage(data.user.id, [newItem, ...existing].slice(0, 5));
         } catch {}
         localStorage.removeItem("consult6_guest_pending");
+      }
+
+      // Load profile settings
+      const { data: prof } = await supabase.from("profiles").select("about_me,industry,company_size,other_context,disable_pdf_history,disable_analysis_memory,settings_popup_shown").eq("id", data.user.id).single();
+      if (prof) {
+        setProfileContext({
+          about_me: prof.about_me ?? "",
+          other_context: prof.other_context ?? "",
+          disable_pdf_history: prof.disable_pdf_history ?? false,
+          disable_analysis_memory: prof.disable_analysis_memory ?? false,
+        });
+        // Pre-fill industry/company_size if memory not disabled
+        if (!prof.disable_analysis_memory) {
+          if (prof.industry) setIndustry(prof.industry);
+          if (prof.company_size) setCompanySize(prof.company_size);
+        }
+        // First-time settings popup
+        if (!prof.settings_popup_shown) {
+          setShowSettingsPopup(true);
+          supabase.from("profiles").update({ settings_popup_shown: true }).eq("id", data.user.id).then(() => {});
+        }
       }
     });
     fetchUsage();
@@ -261,7 +279,12 @@ export default function Home() {
         if (companySize) fd.append("companySize", companySize);
         if (industry) fd.append("industry", industry);
         if (constraints) fd.append("constraints", constraints);
-        if (extraContext) fd.append("extraContext", extraContext);
+        // Merge user-typed context with saved profile context (if memory not disabled)
+        const profileExtra = profileContext && !profileContext.disable_analysis_memory
+          ? [profileContext.about_me, profileContext.other_context].filter(Boolean).join("\n")
+          : "";
+        const combinedExtra = [extraContext, profileExtra].filter(Boolean).join("\n");
+        if (combinedExtra) fd.append("extraContext", combinedExtra);
       }
 
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
@@ -306,7 +329,9 @@ export default function Home() {
 
       const historyLabel = orgName.trim() || files[0]?.name || "Unnamed Analysis";
       const fileNames = files.map(f => f.name).join(", ");
-      saveToHistory(result, historyLabel, mode, orgName, fileNames);
+      if (!profileContext?.disable_pdf_history) {
+        saveToHistory(result, historyLabel, mode, orgName, fileNames);
+      }
 
       stopProgress();
       setProgress(100);
@@ -379,6 +404,7 @@ export default function Home() {
               <span style={{ background: "#333", color: "#aaa", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>FREE</span>
             )}
             <span style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
+            <Link href="/settings" style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
             <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
           </div>
         )}
@@ -798,6 +824,27 @@ export default function Home() {
         </div>
       </aside>
       </div>
+
+      {/* First-time settings popup */}
+      {showSettingsPopup && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 16, padding: 36, maxWidth: 420, width: "100%", textAlign: "center" }}>
+            <div style={{ width: 48, height: 48, background: "#CC5500", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, color: "#fff", margin: "0 auto 20px" }}>6</div>
+            <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>Welcome to Consult6!</p>
+            <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px", lineHeight: 1.6 }}>
+              Set up your profile to save your industry, company context, and preferences — so you never have to re-enter them for each analysis.
+            </p>
+            <Link href="/settings" onClick={() => setShowSettingsPopup(false)}
+              style={{ display: "block", background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 0", borderRadius: 9, marginBottom: 10 }}>
+              Set Up Profile →
+            </Link>
+            <button onClick={() => setShowSettingsPopup(false)}
+              style={{ background: "none", border: "none", color: "#555", fontSize: 13, cursor: "pointer" }}>
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
