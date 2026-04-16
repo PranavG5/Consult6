@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 const LIMITS = {
-  free: { basic: 5, advanced: 2 },
-  paid: { basic: 15, advanced: 5 },
+  free: { basic: 3, advanced: 1 },
+  paid: { basic: 10, advanced: 3 },
+  enterprise: { basic: 50, advanced: 20 },
   admin: { basic: 999999, advanced: 999999 },
 };
 

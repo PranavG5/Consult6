@@ -37,8 +37,8 @@ const features = [
 ];
 
 const freeFeatures = [
-  "5 basic analyses per day",
-  "2 advanced analyses per day",
+  "3 basic analyses per day",
+  "1 advanced analysis per day",
   "Financial flags & recommendations",
   "Trajectory note",
   "PDF report download",
@@ -46,14 +46,23 @@ const freeFeatures = [
 ];
 
 const proFeatures = [
-  "15 basic analyses per day",
-  "5 advanced analyses per day",
+  "10 basic analyses per day",
+  "3 advanced analyses per day",
   "Everything in Free",
   "Up to 3 files per analysis",
   "Industry benchmarks & case studies",
   "Scenario planning",
   "Risk matrix & action plan",
   "Additional context inputs",
+];
+
+const enterpriseFeatures = [
+  "50 basic analyses per day",
+  "20 advanced analyses per day",
+  "Everything in Pro",
+  "Priority support",
+  "Team-ready usage limits",
+  "Dedicated onboarding",
 ];
 
 export default function LandingPage() {
@@ -136,10 +145,11 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section style={{ maxWidth: 760, margin: "0 auto", padding: "96px 24px" }}>
+      <section style={{ maxWidth: 1060, margin: "0 auto", padding: "96px 24px" }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 2, textAlign: "center", marginBottom: 12 }}>PRICING</p>
         <h2 style={{ fontSize: 32, fontWeight: 800, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5 }}>Simple, transparent pricing</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+
           {/* Free */}
           <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 14, padding: 28 }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#888", margin: "0 0 8px", letterSpacing: 0.5 }}>FREE</p>
@@ -160,9 +170,9 @@ export default function LandingPage() {
 
           {/* Pro */}
           <div style={{ background: "#1e1000", border: "2px solid #CC5500", borderRadius: 14, padding: 28, position: "relative" }}>
-            <div style={{ position: "absolute", top: -12, right: 20, background: "#CC5500", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 20, letterSpacing: 0.5 }}>MOST POPULAR</div>
+            <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#CC5500", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 12px", borderRadius: 20, letterSpacing: 0.5, whiteSpace: "nowrap" }}>BEST VALUE</div>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#CC5500", margin: "0 0 8px", letterSpacing: 0.5 }}>PRO</p>
-            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$29</p>
+            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$10</p>
             <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
             <div style={{ borderTop: "1px solid #2a1800", paddingTop: 20, marginBottom: 28 }}>
               {proFeatures.map(f => (
@@ -176,6 +186,25 @@ export default function LandingPage() {
               Get Started with Pro
             </Link>
           </div>
+
+          {/* Enterprise */}
+          <div style={{ background: "#0a160e", border: "2px solid #16a34a", borderRadius: 14, padding: 28, position: "relative" }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#16a34a", margin: "0 0 8px", letterSpacing: 0.5 }}>ENTERPRISE</p>
+            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$40</p>
+            <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
+            <div style={{ borderTop: "1px solid #16a34a33", paddingTop: 20, marginBottom: 28 }}>
+              {enterpriseFeatures.map(f => (
+                <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
+                  <span style={{ color: "#16a34a", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span style={{ fontSize: 13, color: "#aaa" }}>{f}</span>
+                </div>
+              ))}
+            </div>
+            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
+              Get Started with Enterprise
+            </Link>
+          </div>
+
         </div>
       </section>
 
