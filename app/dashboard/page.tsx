@@ -91,29 +91,60 @@ export default function Home() {
 
   async function fetchHistory() {
     try {
-      const res = await fetch("/api/history");
-      if (res.ok) {
-        const json = await res.json();
-        setHistory(json.history ?? []);
-        setHistoryAccountType(json.accountType ?? "free");
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("account_type")
+        .eq("id", user.id)
+        .single();
+
+      const acctType: string = profile?.account_type ?? "free";
+      setHistoryAccountType(acctType);
+      const limit = acctType === "free" ? 5 : 20;
+
+      const { data } = await supabase
+        .from("analysis_history")
+        .select("id, created_at, label, mode, org_name, file_name, analysis_result")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      setHistory((data as HistoryItem[]) ?? []);
     } catch {}
   }
 
-  async function saveToHistory(result: AnalysisResult, label: string) {
+  async function saveToHistory(result: AnalysisResult, label: string, currentMode: Mode, currentOrgName: string, currentFileNames: string) {
     try {
-      await fetch("/api/history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          label,
-          mode,
-          orgName,
-          fileName: files.map(f => f.name).join(", "),
-          analysisResult: result,
-        }),
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const acctType: string = historyAccountType || "free";
+      const limit = acctType === "free" ? 5 : 20;
+
+      await supabase.from("analysis_history").insert({
+        user_id: user.id,
+        label,
+        mode: currentMode,
+        org_name: currentOrgName,
+        file_name: currentFileNames,
+        analysis_result: result,
       });
-      fetchHistory();
+
+      // Prune old entries beyond the limit
+      const { data: allEntries } = await supabase
+        .from("analysis_history")
+        .select("id, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (allEntries && allEntries.length > limit) {
+        const toDelete = allEntries.slice(limit).map((e: { id: string }) => e.id);
+        await supabase.from("analysis_history").delete().in("id", toDelete);
+      }
+
+      await fetchHistory();
     } catch {}
   }
 
@@ -244,7 +275,8 @@ export default function Home() {
       setPdfBytes(pdf);
 
       const historyLabel = orgName.trim() || files[0]?.name || "Unnamed Analysis";
-      saveToHistory(result, historyLabel);
+      const fileNames = files.map(f => f.name).join(", ");
+      saveToHistory(result, historyLabel, mode, orgName, fileNames);
 
       stopProgress();
       setProgress(100);
