@@ -47,6 +47,7 @@ export default function TryPage() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [dragging, setDragging] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [modalReason, setModalReason] = useState<"pdf" | "advanced">("pdf");
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -140,7 +141,13 @@ export default function TryPage() {
     }
   }
 
+  function handleAdvancedClick() {
+    setModalReason("advanced");
+    setShowModal(true);
+  }
+
   function handleDownloadClick() {
+    setModalReason("pdf");
     // Save pending analysis to localStorage for post-signup transfer
     if (analysis) {
       const label = orgName.trim() || files[0]?.name || "Guest Analysis";
@@ -187,6 +194,33 @@ export default function TryPage() {
       </nav>
 
       <main style={{ maxWidth: 760, margin: "40px auto", padding: "0 20px" }}>
+        {/* Mode selector */}
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {/* Basic — active */}
+            <div style={{ background: "#2a1800", border: "2px solid #CC5500", borderRadius: 10, padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Basic</span>
+                <span style={{ background: "#CC5500", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>TRIAL</span>
+              </div>
+              <p style={{ fontSize: 12, color: "#888", margin: 0 }}>Single file · Standard flags & recommendations · PDF report</p>
+            </div>
+            {/* Advanced — locked */}
+            <button onClick={handleAdvancedClick}
+              style={{ background: "#242424", border: "2px solid #333", borderRadius: 10, padding: "14px 16px", textAlign: "left", cursor: "pointer", position: "relative" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 15, color: "#666" }}>Advanced</span>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <span style={{ background: "#2a1800", color: "#CC5500", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>AI+</span>
+                  <span style={{ fontSize: 12, color: "#555" }}>🔒</span>
+                </div>
+              </div>
+              <p style={{ fontSize: 12, color: "#555", margin: 0 }}>Up to 3 files · Trend charts · Industry benchmarks · Case studies · Scenarios</p>
+            </button>
+          </div>
+        </div>
+
         <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 12, padding: 28 }}>
           {state === "done" && (
             <div style={{ marginBottom: 20 }}>
@@ -310,9 +344,13 @@ export default function TryPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 16, padding: 36, maxWidth: 400, width: "100%", textAlign: "center" }}>
             <div style={{ width: 48, height: 48, background: "#CC5500", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, color: "#fff", margin: "0 auto 20px" }}>6</div>
-            <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>Create an account to download</p>
+            <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>
+              {modalReason === "advanced" ? "Unlock Advanced Analysis" : "Create an account to download"}
+            </p>
             <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px", lineHeight: 1.6 }}>
-              Your report is ready! Create a free account and it will be saved directly to your report history.
+              {modalReason === "advanced"
+                ? "Advanced analysis — trend charts, industry benchmarks, risk matrix, and more — is available on free and paid accounts."
+                : "Your report is ready! Create a free account and it will be saved directly to your report history."}
             </p>
             <Link href="/auth/signup" style={{ display: "block", background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 0", borderRadius: 9, marginBottom: 10 }}>
               Create Free Account →
