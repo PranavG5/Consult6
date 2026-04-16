@@ -69,23 +69,21 @@ export default function LandingPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#111", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Navbar */}
-      <div style={{ position: "sticky", top: 16, zIndex: 100, display: "flex", justifyContent: "center", padding: "0 24px", pointerEvents: "none" }}>
-        <nav style={{ pointerEvents: "all", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#161616", border: "1px solid #2a2a2a", borderRadius: 999, padding: "10px 20px", width: "100%", maxWidth: 860, boxShadow: "0 4px 32px rgba(0,0,0,0.5)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ width: 30, height: 30, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>6</div>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Consult6</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <a href="#features" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px", borderRadius: 999, transition: "color 0.15s" }}>Features</a>
-            <a href="#how-it-works" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px", borderRadius: 999, transition: "color 0.15s" }}>How it Works</a>
-            <a href="#pricing" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px", borderRadius: 999, transition: "color 0.15s" }}>Pricing</a>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Link href="/auth/login" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "7px 16px" }}>Sign in</Link>
-            <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "8px 18px", borderRadius: 999 }}>Get Started Free</Link>
-          </div>
-        </nav>
-      </div>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "#111", borderBottom: "1px solid #1e1e1e", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ width: 30, height: 30, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>6</div>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Consult6</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <a href="#features" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>Features</a>
+          <a href="#how-it-works" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>How it Works</a>
+          <a href="#pricing" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>Pricing</a>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Link href="/auth/login" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "7px 16px" }}>Sign in</Link>
+          <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Get Started Free</Link>
+        </div>
+      </nav>
 
       {/* Hero */}
       <section style={{ maxWidth: 720, margin: "0 auto", padding: "96px 24px 80px", textAlign: "center" }}>
@@ -112,8 +110,8 @@ export default function LandingPage() {
 
       {/* Features */}
       <section id="features" style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px 96px" }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 16 }}>FEATURES</p>
-        <h2 style={{ fontSize: 42, fontWeight: 800, textAlign: "center", margin: "0 0 56px", letterSpacing: -1, lineHeight: 1.15 }}>Everything you need to understand your finances</h2>
+        <p style={{ fontSize: 22, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>FEATURES</p>
+        <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5, lineHeight: 1.3, color: "#ccc" }}>Everything you need to understand your finances</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {features.map(f => (
             <div key={f.title} style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 22px" }}>
@@ -133,8 +131,8 @@ export default function LandingPage() {
       {/* How it works */}
       <section id="how-it-works" style={{ borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a", background: "#141414", padding: "96px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 16 }}>HOW IT WORKS</p>
-          <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 56px", letterSpacing: -1, lineHeight: 1.15 }}>Three steps to clarity</h2>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 10 }}>HOW IT WORKS</p>
+          <h2 style={{ fontSize: 28, fontWeight: 700, margin: "0 0 48px", letterSpacing: -0.5, lineHeight: 1.3, color: "#ccc" }}>Three steps to clarity</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
             {[
               { step: "1", title: "Upload your data", desc: "Drop in a CSV or Excel file. Basic supports one file; Advanced supports up to three." },
@@ -153,8 +151,8 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section id="pricing" style={{ maxWidth: 1060, margin: "0 auto", padding: "96px 24px" }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 16 }}>PRICING</p>
-        <h2 style={{ fontSize: 42, fontWeight: 800, textAlign: "center", margin: "0 0 56px", letterSpacing: -1, lineHeight: 1.15 }}>Simple, transparent pricing</h2>
+        <p style={{ fontSize: 22, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>PRICING</p>
+        <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5, lineHeight: 1.3, color: "#ccc" }}>Simple, transparent pricing</h2>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
 
           {/* Free */}
