@@ -204,10 +204,11 @@ export default function SettingsPage() {
                     <select value={profile.company_size} onChange={e => setProfile(p => ({ ...p, company_size: e.target.value }))}
                       style={{ width: "100%", background: "#2a2a2a", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: profile.company_size ? "#f0f0f0" : "#666", boxSizing: "border-box" }}>
                       <option value="">Select size</option>
-                      <option value="< 50 employees">&lt; 50 employees</option>
-                      <option value="50–200 employees">50–200 employees</option>
-                      <option value="200–1,000 employees">200–1,000 employees</option>
-                      <option value="1,000–10,000 employees">1,000–10,000 employees</option>
+                      <option value="≤ 10 employees">≤ 10 employees</option>
+                      <option value="11–50 employees">11–50 employees</option>
+                      <option value="51–200 employees">51–200 employees</option>
+                      <option value="201–1,000 employees">201–1,000 employees</option>
+                      <option value="1,001–10,000 employees">1,001–10,000 employees</option>
                       <option value="> 10,000 employees">&gt; 10,000 employees</option>
                     </select>
                   </div>

@@ -236,9 +236,13 @@ export default function Home() {
 
   function handleFiles(newFiles: File[]) {
     const maxFiles = mode === "advanced" ? 3 : 1;
-    const valid = newFiles.filter(f =>
-      f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls")
-    );
+    const maxBytes = mode === "advanced" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const valid = newFiles.filter(f => {
+      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls");
+      const validSize = f.size <= maxBytes;
+      if (validType && !validSize) setErrorMsg(`"${f.name}" exceeds the ${mode === "advanced" ? "10 MB" : "5 MB"} limit for ${mode} analyses.`);
+      return validType && validSize;
+    });
     setFiles(prev => [...prev, ...valid].slice(0, maxFiles));
   }
 
@@ -472,10 +476,11 @@ export default function Home() {
                       disabled={isRunning}
                       style={{ width: "100%", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: companySize ? "#f0f0f0" : "#666" }}>
                       <option value="">Select size</option>
-                      <option value="< 50 employees">&lt; 50 employees</option>
-                      <option value="50–200 employees">50–200 employees</option>
-                      <option value="200–1,000 employees">200–1,000 employees</option>
-                      <option value="1,000–10,000 employees">1,000–10,000 employees</option>
+                      <option value="≤ 10 employees">≤ 10 employees</option>
+                      <option value="11–50 employees">11–50 employees</option>
+                      <option value="51–200 employees">51–200 employees</option>
+                      <option value="201–1,000 employees">201–1,000 employees</option>
+                      <option value="1,001–10,000 employees">1,001–10,000 employees</option>
                       <option value="> 10,000 employees">&gt; 10,000 employees</option>
                     </select>
                   </div>
@@ -542,7 +547,7 @@ export default function Home() {
                 style={{ border: `2px dashed ${dragging ? "#CC5500" : "#333"}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", transition: "border-color 0.2s", background: dragging ? "#2a1800" : "transparent" }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>↑</div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>{files.length > 0 ? "Add another file" : "Upload financial data"}</p>
-                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to 50 MB</p>
+                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to {mode === "advanced" ? "10 MB" : "5 MB"}</p>
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple style={{ display: "none" }}
                   onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
               </div>

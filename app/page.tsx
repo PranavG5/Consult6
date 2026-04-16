@@ -214,12 +214,21 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid #1a1a1a", padding: "32px 24px", textAlign: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12 }}>
-          <div style={{ width: 24, height: 24, background: "#CC5500", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, color: "#fff" }}>6</div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#888" }}>Consult6</span>
+      <footer style={{ borderTop: "1px solid #1a1a1a", padding: "24px 40px" }}>
+        <div style={{ maxWidth: 1060, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 26, height: 26, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff" }}>6</div>
+              <span style={{ fontWeight: 700, fontSize: 14, color: "#888" }}>Consult6</span>
+            </div>
+            <span style={{ fontSize: 13, color: "#333" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+            <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
+            <Link href="/privacy" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Privacy</Link>
+            <Link href="/terms" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Terms</Link>
+          </div>
         </div>
-        <p style={{ fontSize: 13, color: "#444", margin: 0 }}>© {new Date().getFullYear()} Consult6 · AI-powered financial health analysis · Built with Claude</p>
       </footer>
     </div>
   );
