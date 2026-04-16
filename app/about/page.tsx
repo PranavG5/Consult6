@@ -23,12 +23,12 @@ export default function AboutPage() {
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>What we do</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 analyses financial spreadsheets — uploaded as CSV or Excel files — and returns structured insights: critical flags, prioritised recommendations, a financial trajectory note, and in advanced mode, industry benchmarks, scenario projections, a risk matrix, and an action plan. Every report is downloadable as a professional PDF.
+          Consult6 analyses financial spreadsheets (uploaded as CSV or Excel files) and returns structured insights: critical flags, prioritised recommendations, a financial trajectory note, and in advanced mode, industry benchmarks, scenario projections, a risk matrix, and an action plan. Every report is downloadable as a professional PDF.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Our approach</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          We believe good financial analysis should be fast, contextual, and actionable. Consult6 takes the context you provide — your industry, company size, constraints, and goals — and tailors every output to your specific situation. Generic advice is not advice; we aim to give you something you can act on today.
+          We believe good financial analysis should be fast, contextual, and actionable. Consult6 takes the context you provide (your industry, company size, constraints, and goals) and tailors every output to your specific situation. Generic advice is not advice; we aim to give you something you can act on today.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Infrastructure</h2>
@@ -43,7 +43,7 @@ export default function AboutPage() {
 
         <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Get in touch</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Questions, feedback, or partnership enquiries — reach us at <span style={{ color: "#CC5500" }}>hello@consult6.com</span></p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Questions, feedback, or partnership enquiries: reach us at <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span></p>
         </div>
       </main>
 

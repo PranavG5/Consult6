@@ -28,7 +28,7 @@ export default function TermsPage() {
           Consult6 is a financial analysis tool that processes spreadsheet data and returns structured insights. The service is actively developed and evolving. We are continuously improving the quality, accuracy, and breadth of the analysis output, and you may encounter limitations or changes as the product matures.
         </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          We are transparent about this because we believe you deserve to know where the product stands. The core functionality — upload, analyse, receive structured output — is stable and available. Newer features may still be refined over time.
+          We are transparent about this because we believe you deserve to know where the product stands. The core functionality (upload, analyse, receive structured output) is stable and available. Newer features may still be refined over time.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Nature of the output</h2>
@@ -36,7 +36,7 @@ export default function TermsPage() {
           The analysis output produced by Consult6 is intended to support your decision-making, not replace professional financial judgement. The insights, flags, recommendations, and projections are generated based on the data you provide and the context you specify. They should be treated as a starting point for review, not as audited or certified financial advice.
         </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 makes no warranties — express or implied — regarding the accuracy, completeness, or fitness for purpose of any analysis output. You remain responsible for verifying the output against your own records and for any decisions made based on it.
+          Consult6 makes no warranties, express or implied, regarding the accuracy, completeness, or fitness for purpose of any analysis output. You remain responsible for verifying the output against your own records and for any decisions made based on it.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Acceptable use</h2>
@@ -75,7 +75,7 @@ export default function TermsPage() {
 
         <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Questions about these terms?</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Contact us at <span style={{ color: "#CC5500" }}>hello@consult6.com</span> and we will get back to you.</p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Contact us at <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will get back to you.</p>
         </div>
       </main>
 

@@ -36,7 +36,7 @@ export default function PrivacyPage() {
           CSV and Excel files you upload are processed in memory on our servers during the analysis and are <strong style={{ color: "#ccc" }}>not permanently stored</strong>. Once the analysis is complete, the raw file data is discarded. We do not retain copies of your spreadsheets.
         </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          The structured output of each analysis — the findings, flags, and recommendations — is stored locally in your browser using <strong style={{ color: "#ccc" }}>localStorage</strong>, keyed to your account. This data never leaves your device unless you explicitly download a PDF. You can clear your analysis history at any time from the Privacy section of your settings.
+          The structured output of each analysis (the findings, flags, and recommendations) is stored locally in your browser using <strong style={{ color: "#ccc" }}>localStorage</strong>, keyed to your account. This data never leaves your device unless you explicitly download a PDF. You can clear your analysis history at any time from the Privacy section of your settings.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Usage data</h2>
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
 
         <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Questions about your data?</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Reach us at <span style={{ color: "#CC5500" }}>hello@consult6.com</span> and we will respond as promptly as possible.</p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Reach us at <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will respond as promptly as possible.</p>
         </div>
       </main>
 
