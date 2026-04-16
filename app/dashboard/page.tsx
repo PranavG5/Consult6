@@ -26,6 +26,26 @@ interface HistoryItem {
   analysis_result: AnalysisResult;
 }
 
+const HISTORY_STORAGE_KEY = "consult6_history";
+
+function loadHistoryFromStorage(userId: string): HistoryItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(`${HISTORY_STORAGE_KEY}_${userId}`);
+    if (!raw) return [];
+    return JSON.parse(raw) as HistoryItem[];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistoryToStorage(userId: string, items: HistoryItem[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`${HISTORY_STORAGE_KEY}_${userId}`, JSON.stringify(items));
+  } catch {}
+}
+
 function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const result = Papa.parse(text, { header: true, skipEmptyLines: true });
   return { headers: result.meta.fields ?? [], rows: result.data as Record<string, string>[] };
@@ -98,20 +118,14 @@ export default function Home() {
         .from("profiles")
         .select("account_type")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       const acctType: string = profile?.account_type ?? "free";
       setHistoryAccountType(acctType);
       const limit = acctType === "free" ? 5 : 20;
 
-      const { data } = await supabase
-        .from("analysis_history")
-        .select("id, created_at, label, mode, org_name, file_name, analysis_result")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(limit);
-
-      setHistory((data as HistoryItem[]) ?? []);
+      const items = loadHistoryFromStorage(user.id).slice(0, limit);
+      setHistory(items);
     } catch {}
   }
 
@@ -123,28 +137,20 @@ export default function Home() {
       const acctType: string = historyAccountType || "free";
       const limit = acctType === "free" ? 5 : 20;
 
-      await supabase.from("analysis_history").insert({
-        user_id: user.id,
+      const newItem: HistoryItem = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        created_at: new Date().toISOString(),
         label,
         mode: currentMode,
         org_name: currentOrgName,
         file_name: currentFileNames,
         analysis_result: result,
-      });
+      };
 
-      // Prune old entries beyond the limit
-      const { data: allEntries } = await supabase
-        .from("analysis_history")
-        .select("id, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (allEntries && allEntries.length > limit) {
-        const toDelete = allEntries.slice(limit).map((e: { id: string }) => e.id);
-        await supabase.from("analysis_history").delete().in("id", toDelete);
-      }
-
-      await fetchHistory();
+      const existing = loadHistoryFromStorage(user.id);
+      const updated = [newItem, ...existing].slice(0, limit);
+      saveHistoryToStorage(user.id, updated);
+      setHistory(updated);
     } catch {}
   }
 
