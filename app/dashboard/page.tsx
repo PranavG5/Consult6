@@ -16,6 +16,16 @@ interface UsageData {
   advancedLimit: number;
 }
 
+interface HistoryItem {
+  id: string;
+  created_at: string;
+  label: string;
+  mode: string;
+  org_name: string;
+  file_name: string;
+  analysis_result: AnalysisResult;
+}
+
 function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const result = Papa.parse(text, { header: true, skipEmptyLines: true });
   return { headers: result.meta.fields ?? [], rows: result.data as Record<string, string>[] };
@@ -58,6 +68,8 @@ export default function Home() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyAccountType, setHistoryAccountType] = useState<string>("free");
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -67,6 +79,7 @@ export default function Home() {
       if (data.user) setUser({ email: data.user.email ?? "" });
     });
     fetchUsage();
+    fetchHistory();
   }, []);
 
   async function fetchUsage() {
@@ -74,6 +87,52 @@ export default function Home() {
       const res = await fetch("/api/usage");
       if (res.ok) setUsage(await res.json());
     } catch {}
+  }
+
+  async function fetchHistory() {
+    try {
+      const res = await fetch("/api/history");
+      if (res.ok) {
+        const json = await res.json();
+        setHistory(json.history ?? []);
+        setHistoryAccountType(json.accountType ?? "free");
+      }
+    } catch {}
+  }
+
+  async function saveToHistory(result: AnalysisResult, label: string) {
+    try {
+      await fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label,
+          mode,
+          orgName,
+          fileName: files.map(f => f.name).join(", "),
+          analysisResult: result,
+        }),
+      });
+      fetchHistory();
+    } catch {}
+  }
+
+  function downloadHistoryPDF(item: HistoryItem) {
+    const generatedAt = new Date(item.created_at).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
+    const pdf = generatePDF({
+      orgName: item.org_name || item.label,
+      fileName: item.file_name,
+      generatedAt,
+      mode: item.mode,
+      analysis: item.analysis_result,
+    });
+    const blob = new Blob([new Uint8Array(pdf) as unknown as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `consult6-${item.mode}-report-${item.id.slice(0, 8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function startProgress(from: number, to: number, ms: number) {
@@ -184,6 +243,9 @@ export default function Home() {
       });
       setPdfBytes(pdf);
 
+      const historyLabel = orgName.trim() || files[0]?.name || "Unnamed Analysis";
+      saveToHistory(result, historyLabel);
+
       stopProgress();
       setProgress(100);
       setState("done");
@@ -261,7 +323,8 @@ export default function Home() {
       </nav>
 
       {/* Main */}
-      <main style={{ maxWidth: 760, margin: "40px auto", padding: "0 20px" }}>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 20, padding: "40px 20px" }}>
+      <main style={{ width: "100%", maxWidth: 760, flexShrink: 1 }}>
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
@@ -623,6 +686,56 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* History Sidebar */}
+      <aside style={{ width: 220, flexShrink: 0, position: "sticky", top: 76 }}>
+        <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 12, padding: "16px 14px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 12px" }}>REPORT HISTORY</p>
+          {history.length === 0 ? (
+            <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5 }}>No analyses yet. Run your first report to see history here.</p>
+          ) : (
+            <div style={{
+              overflowY: historyAccountType !== "free" ? "auto" : "visible",
+              maxHeight: historyAccountType !== "free" ? 480 : "none",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}>
+              {history.map(item => {
+                const date = new Date(item.created_at);
+                const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                return (
+                  <div key={item.id} style={{ background: "#1e1e1e", border: "1px solid #2e2e2e", borderRadius: 8, padding: "10px 11px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 800, letterSpacing: 0.5, padding: "1px 5px", borderRadius: 3,
+                        background: item.mode === "advanced" ? "#CC5500" : "#333",
+                        color: item.mode === "advanced" ? "#fff" : "#aaa",
+                      }}>
+                        {item.mode === "advanced" ? "ADV" : "BASIC"}
+                      </span>
+                      <span style={{ fontSize: 10, color: "#555" }}>{dateStr} · {timeStr}</span>
+                    </div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#e0e0e0", margin: "0 0 8px", lineHeight: 1.3, wordBreak: "break-word" }}>
+                      {item.label}
+                    </p>
+                    <button
+                      onClick={() => downloadHistoryPDF(item)}
+                      style={{ width: "100%", background: "#2a2a2a", border: "1px solid #3a3a3a", color: "#CC5500", borderRadius: 5, padding: "5px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      ↓ Download PDF
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p style={{ fontSize: 10, color: "#444", margin: "10px 0 0", textAlign: "center" }}>
+            {historyAccountType === "free" ? "Free: last 5 reports" : "Pro/Admin: last 20 reports"}
+          </p>
+        </div>
+      </aside>
+      </div>
     </div>
   );
 }
