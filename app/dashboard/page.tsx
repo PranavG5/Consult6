@@ -95,8 +95,32 @@ export default function Home() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser({ email: data.user.email ?? "" });
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      setUser({ email: data.user.email ?? "" });
+
+      // Transfer any pending guest analysis into this account's history
+      const pending = localStorage.getItem("consult6_guest_pending");
+      if (pending) {
+        try {
+          const p = JSON.parse(pending);
+          const acctType = "free"; // new accounts start as free
+          const limit = 5;
+          const newItem = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            created_at: p.createdAt ?? new Date().toISOString(),
+            label: p.label,
+            mode: p.mode,
+            org_name: p.orgName ?? "",
+            file_name: p.fileName ?? "",
+            analysis_result: p.analysisResult,
+          };
+          const existing = loadHistoryFromStorage(data.user.id);
+          const updated = [newItem, ...existing].slice(0, limit);
+          saveHistoryToStorage(data.user.id, updated);
+        } catch {}
+        localStorage.removeItem("consult6_guest_pending");
+      }
     });
     fetchUsage();
     fetchHistory();

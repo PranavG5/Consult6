@@ -101,17 +101,17 @@ export default function LandingPage() {
           <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 16, fontWeight: 700, textDecoration: "none", padding: "14px 32px", borderRadius: 9, display: "inline-block" }}>
             Get Started Free →
           </Link>
-          <Link href="/auth/login" style={{ background: "#1e1e1e", color: "#ccc", fontSize: 16, fontWeight: 600, textDecoration: "none", padding: "14px 32px", borderRadius: 9, border: "1px solid #333", display: "inline-block" }}>
-            Sign In
+          <Link href="/try" style={{ background: "#1e1e1e", color: "#ccc", fontSize: 16, fontWeight: 600, textDecoration: "none", padding: "14px 32px", borderRadius: 9, border: "1px solid #333", display: "inline-block" }}>
+            Try Without Account
           </Link>
         </div>
-        <p style={{ marginTop: 20, fontSize: 13, color: "#555" }}>Free tier available · No credit card required</p>
+        <p style={{ marginTop: 20, fontSize: 13, color: "#555" }}>Free tier available · No credit card required · 1 free trial, no account needed</p>
       </section>
 
       {/* Features */}
       <section id="features" style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px 96px" }}>
-        <p style={{ fontSize: 22, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>FEATURES</p>
-        <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5, lineHeight: 1.3, color: "#ccc" }}>Everything you need to understand your finances</h2>
+        <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>FEATURES</p>
+        <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Everything you need to understand your finances</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {features.map(f => (
             <div key={f.title} style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 22px" }}>
@@ -131,8 +131,8 @@ export default function LandingPage() {
       {/* How it works */}
       <section id="how-it-works" style={{ borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a", background: "#141414", padding: "96px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 10 }}>HOW IT WORKS</p>
-          <h2 style={{ fontSize: 28, fontWeight: 700, margin: "0 0 48px", letterSpacing: -0.5, lineHeight: 1.3, color: "#ccc" }}>Three steps to clarity</h2>
+          <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 10 }}>HOW IT WORKS</p>
+          <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Three steps to clarity</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
             {[
               { step: "1", title: "Upload your data", desc: "Drop in a CSV or Excel file. Basic supports one file; Advanced supports up to three." },
@@ -151,8 +151,8 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section id="pricing" style={{ maxWidth: 1060, margin: "0 auto", padding: "96px 24px" }}>
-        <p style={{ fontSize: 22, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>PRICING</p>
-        <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", margin: "0 0 48px", letterSpacing: -0.5, lineHeight: 1.3, color: "#ccc" }}>Simple, transparent pricing</h2>
+        <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>PRICING</p>
+        <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Simple, transparent pricing</h2>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
 
           {/* Free */}

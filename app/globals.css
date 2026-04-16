@@ -16,6 +16,9 @@
 
 html { scroll-behavior: smooth; }
 
+/* offset sticky navbar for anchor links */
+section[id] { scroll-margin-top: 72px; }
+
 body {
   background: var(--bg);
   color: var(--text);
