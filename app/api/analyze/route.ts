@@ -13,29 +13,69 @@ const LIMITS = {
   admin: { basic: 999999, advanced: 999999 },
 };
 
-function summarize(rawText: string, mode: string = "basic"): string {
+const ANALYTICAL_RULES = `You are a senior financial analyst generating a structured consulting report from CSV financial data. Follow these rules without exception:
+Rule 1 — Analyze every column. Before writing anything, enumerate all column headers present in the CSV. Every column must appear in at least one section of the report. Never skip operational KPI columns like churn_rate, nps_score, avg_deal_size, or sales_cycle_days.
+Rule 2 — Compute before you narrate. Calculate YoY revenue growth rates, gross/EBITDA/net margin per period, average churn per year, deal size trend, and sales cycle trend numerically before writing any narrative. Cite the exact computed values in the report. Never describe a trend qualitatively without a number backing it up.
+Rule 3 — Check for cross-metric contradictions before writing flags. A contradiction between two metrics is always more severe than a single-metric observation. Specifically check for: (a) revenue rising while churn is also rising or at period highs — label this "Fragile Growth"; (b) customer count rising while average deal size is falling — label this "Volume vs. Value Divergence"; (c) revenue growing while sales cycle days are increasing — label this "Sales Strain"; (d) NPS improving while net margin is declining — label this "Satisfaction-Monetization Gap"; (e) revenue growing while EBITDA margin is compressing YoY — label this "Profitless Growth". Any confirmed contradiction must be a CRITICAL or WARNING flag and must name the specific periods where it occurs.
+Rule 4 — Classify seasonality correctly. Only label a pattern "recurring seasonal" if it appears in the same calendar period across 3 or more years with similar magnitude. If a seasonal trough is getting worse year-over-year, flag that as an escalating risk separately from the seasonal observation itself.
+Rule 5 — Derive scenarios from the data. The optimistic scenario must use the highest observed YoY growth rate in the dataset. The base case must use the average YoY growth rate. The pessimistic case must use the lowest observed rate or extrapolate the current deceleration trend. Every scenario must state which historical rate it is using and where it comes from. Round numbers not derived from the data are not acceptable.
+Rule 6 — Benchmarks and case studies must be earned. Only include industry benchmarks if you can identify the business model from the data (recurring revenue, deal size, customer count patterns are signals). If you include benchmarks, state the assumed business model. If you cannot identify it, omit the benchmark section entirely rather than fabricating figures. Case studies must be from companies with a comparable business model and must reference a metric that exists in the dataset.
+Rule 7 — Every recommendation must link to a specific flag or contradiction identified earlier in the report. Do not generate generic recommendations.`;
+
+const SYSTEM_BASIC = `${ANALYTICAL_RULES}
+
+Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
+Output rules: 2-4 flags; each description must include a specific computed value and the period it covers; each metric field must be an exact figure from the data. 2-3 recommendations each directly referencing a flag by name. Summary 1-2 sentences with at least one quantified finding. trajectoryNote 1 sentence citing a computed rate.`;
+
+const SYSTEM_ADVANCED_CORE = `${ANALYTICAL_RULES}
+
+Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
+Output rules: 3-6 flags covering all cross-metric contradictions found; each description must include computed values and the specific periods involved; each metric must be an exact figure from the data. 3-5 recommendations each citing the flag it addresses by name. Summary 2 sentences with quantified findings. trajectoryNote 1-2 sentences citing computed rates.`;
+
+const SYSTEM_ADVANCED_CONTEXT = `${ANALYTICAL_RULES}
+
+Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+{"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
+Output rules: trendData exactly 6 labels/values per series using actual columns from the data, 2 series. industryComparisons only if business model is identifiable — state the assumed model; omit this key entirely if uncertain. caseStudies 1-2 real documented companies with comparable business model; source must be a real specific citation. scenarios: optimistic states the highest observed YoY rate and its source period; base states the average YoY rate; pessimistic states the lowest observed rate or deceleration extrapolation and its basis. riskMatrix 3-4 risks linked to flags found in the core analysis. actionPlan 2-3 items per phase each referencing a specific data finding.`;
+
+function extractDateRange(rawText: string): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
-  if (!lines.length) return "No data.";
-  const maxCols = mode === "advanced" ? 12 : 10;
-  const maxRows = mode === "advanced" ? 12 : 9;
-  const charLimit = mode === "advanced" ? 1200 : 900;
-  const headers = lines[0].split(",").slice(0, maxCols).join(",");
-  const rows = lines.slice(1, maxRows).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
-  return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
+  if (lines.length < 2) return "";
+  const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+  const firstRow = lines[1].split(",");
+  const lastRow = lines[lines.length - 1].split(",");
+  const dateIdx = headers.findIndex((h, i) => {
+    const v = (firstRow[i] ?? "").trim();
+    return /date|period|month|year|quarter/i.test(h)
+      || /^\d{4}[-/]\d{1,2}/.test(v)
+      || /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(v);
+  });
+  if (dateIdx === -1) return "";
+  const first = firstRow[dateIdx]?.trim() ?? "";
+  const last = lastRow[dateIdx]?.trim() ?? "";
+  return first && last && first !== last ? `${first} to ${last}` : first;
 }
 
-const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each that are realistic for this specific organization. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
-
-// Advanced is split into two parallel calls to double the effective token budget.
-const SYSTEM_ADVANCED_CORE = `You are an expert financial analyst. Tailor all analysis to the organization's size, industry, and constraints. Return ONLY valid JSON. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each tailored to this specific organization. Summary 2 sentences. trajectoryNote 1-2 sentences.`;
-
-const SYSTEM_ADVANCED_CONTEXT = `You are an expert financial analyst. Tailor all sections to the organization's industry, size, and constraints. Return ONLY valid JSON. No explanation, no markdown.
-{"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Rules: trendData exactly 6 labels/values per series, 2 series reflecting data patterns. industryComparisons 3 entries benchmarked to org's specific industry. caseStudies 1-2 real documented orgs, each field under 20 words, source must be a real specific citation (e.g. "HBR, 2019", "Bloomberg, March 2021"). scenarios 1-2 sentences each. riskMatrix 3 risks under 25 words each. actionPlan 2 items per phase under 20 words each.`;
+function buildUserMessage(rawText: string, orgName: string, fileName: string, contextLines: string): string {
+  const headerRow = rawText.trim().split("\n")[0] ?? "";
+  const dateRange = extractDateRange(rawText);
+  const parts = [
+    `Organization: ${orgName || "Unknown"}`,
+    `File: ${fileName}`,
+    ...(contextLines ? [contextLines] : []),
+    "",
+    `Column headers: ${headerRow}`,
+    ...(dateRange ? [`Date range: ${dateRange}`] : []),
+    "",
+    "Full data:",
+    rawText,
+    "",
+    "Analyze all columns including operational KPIs. Check for all cross-metric contradictions listed in your rules. Derive all scenario assumptions from computed historical rates in this data.",
+  ];
+  return parts.join("\n");
+}
 
 function extractJson(text: string): object {
   const start = text.indexOf("{");
@@ -107,15 +147,14 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const summary = summarize(rawText, mode);
   const contextLines = [
     companySize && `Company Size: ${companySize}`,
     industry && `Industry/Sector: ${industry}`,
     constraints && `Key Constraints: ${constraints}`,
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
-  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nData:\n${summary}`;
 
+  const userMessage = buildUserMessage(rawText, orgName, fileName, contextLines);
   const enc = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -124,17 +163,18 @@ export async function POST(req: NextRequest) {
         let resultJson: object;
 
         if (mode === "advanced") {
-          // Two parallel calls: core analysis + context sections
           const [coreMsg, contextMsg] = await Promise.all([
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1200,
+              max_tokens: 1400,
+              temperature: 0,
               system: SYSTEM_ADVANCED_CORE,
               messages: [{ role: "user", content: userMessage }],
             }),
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1800,
+              max_tokens: 2000,
+              temperature: 0,
               system: SYSTEM_ADVANCED_CONTEXT,
               messages: [{ role: "user", content: userMessage }],
             }),
@@ -146,7 +186,8 @@ export async function POST(req: NextRequest) {
         } else {
           const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 900,
+            max_tokens: 1000,
+            temperature: 0,
             system: SYSTEM_BASIC,
             messages: [{ role: "user", content: userMessage }],
           });
@@ -156,7 +197,6 @@ export async function POST(req: NextRequest) {
 
         controller.enqueue(enc.encode(JSON.stringify(resultJson)));
 
-        // Update usage count
         try {
           if (usage) {
             await supabase.from("daily_usage")
