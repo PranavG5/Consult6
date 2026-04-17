@@ -113,21 +113,7 @@ export async function POST(req: NextRequest) {
     constraints && `Key Constraints: ${constraints}`,
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
-
-  const preAnalysisMsg = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1000,
-    temperature: 0,
-    system: "You are a financial data analyst. Return only raw JSON. No prose, no markdown, no code fences.",
-    messages: [{
-      role: "user",
-      content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the CSV data provided. For fields where a column is not present in the CSV, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nCSV data:\n${rawText}`,
-    }],
-  });
-  const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
-  const preAnalysisJson = extractJson(preAnalysisText);
-
-  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nPre-computed analysis summary — reference these figures directly in your report and do not contradict them:\n${JSON.stringify(preAnalysisJson)}\n\nData:\n${summary}`;
+  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nData:\n${summary}`;
 
   const enc = new TextEncoder();
 
