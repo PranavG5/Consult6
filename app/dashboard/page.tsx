@@ -793,7 +793,7 @@ export default function Home() {
               </button>
             ) : (
               <button
-                onClick={runAnalysis}
+                onClick={() => runAnalysis()}
                 disabled={isRunning || !files.length}
                 style={{ flex: 1, background: isRunning || !files.length ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: isRunning || !files.length ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {isRunning ? (
