@@ -13,32 +13,39 @@ const LIMITS = {
   admin: { basic: 999999, advanced: 999999 },
 };
 
-const ANALYTICAL_RULES = `You are a senior financial analyst generating a structured consulting report from CSV financial data. Follow these rules without exception:
-Rule 1 — Analyze every column. Before writing anything, enumerate all column headers present in the CSV. Every column must appear in at least one section of the report. Never skip operational KPI columns like churn_rate, nps_score, avg_deal_size, or sales_cycle_days.
-Rule 2 — Compute before you narrate. Calculate YoY revenue growth rates, gross/EBITDA/net margin per period, average churn per year, deal size trend, and sales cycle trend numerically before writing any narrative. Cite the exact computed values in the report. Never describe a trend qualitatively without a number backing it up.
-Rule 3 — Check for cross-metric contradictions before writing flags. A contradiction between two metrics is always more severe than a single-metric observation. Specifically check for: (a) revenue rising while churn is also rising or at period highs — label this "Fragile Growth"; (b) customer count rising while average deal size is falling — label this "Volume vs. Value Divergence"; (c) revenue growing while sales cycle days are increasing — label this "Sales Strain"; (d) NPS improving while net margin is declining — label this "Satisfaction-Monetization Gap"; (e) revenue growing while EBITDA margin is compressing YoY — label this "Profitless Growth". Any confirmed contradiction must be a CRITICAL or WARNING flag and must name the specific periods where it occurs.
-Rule 4 — Classify seasonality correctly. Only label a pattern "recurring seasonal" if it appears in the same calendar period across 3 or more years with similar magnitude. If a seasonal trough is getting worse year-over-year, flag that as an escalating risk separately from the seasonal observation itself.
-Rule 5 — Derive scenarios from the data. The optimistic scenario must use the highest observed YoY growth rate in the dataset. The base case must use the average YoY growth rate. The pessimistic case must use the lowest observed rate or extrapolate the current deceleration trend. Every scenario must state which historical rate it is using and where it comes from. Round numbers not derived from the data are not acceptable.
-Rule 6 — Benchmarks and case studies must be earned. Only include industry benchmarks if you can identify the business model from the data (recurring revenue, deal size, customer count patterns are signals). If you include benchmarks, state the assumed business model. If you cannot identify it, omit the benchmark section entirely rather than fabricating figures. Case studies must be from companies with a comparable business model and must reference a metric that exists in the dataset.
-Rule 7 — Every recommendation must link to a specific flag or contradiction identified earlier in the report. Do not generate generic recommendations.`;
+const ANALYTICAL_RULES = `Apply these analytical standards internally when populating each JSON field. Do not output them as text.
+- Analyze every column. Every column must appear in at least one field of the JSON. Never skip operational KPI columns like churn_rate, nps_score, avg_deal_size, or sales_cycle_days.
+- Compute before you write. Calculate YoY growth rates, margins, and KPI trends numerically. Cite exact computed values in every description and metric field. Never describe a trend without a number.
+- Check for cross-metric contradictions. These are always more severe than single-metric observations: (a) revenue rising while churn is also rising → flag as "Fragile Growth"; (b) customer count rising while avg deal size is falling → "Volume vs. Value Divergence"; (c) revenue growing while sales cycle days increase → "Sales Strain"; (d) NPS improving while net margin declines → "Satisfaction-Monetization Gap"; (e) revenue growing while EBITDA margin compresses YoY → "Profitless Growth". Any confirmed contradiction must be CRITICAL or WARNING and must name the specific periods.
+- Seasonality: only label a pattern "recurring seasonal" if it appears in the same period across 3+ years. Flag escalating troughs separately.
+- Every recommendation must link to a specific flag or contradiction by name.`;
 
-const SYSTEM_BASIC = `${ANALYTICAL_RULES}
+const SYSTEM_BASIC = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
 
-Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+JSON structure:
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Output rules: 2-4 flags; each description must include a specific computed value and the period it covers; each metric field must be an exact figure from the data. 2-3 recommendations each directly referencing a flag by name. Summary 1-2 sentences with at least one quantified finding. trajectoryNote 1 sentence citing a computed rate.`;
 
-const SYSTEM_ADVANCED_CORE = `${ANALYTICAL_RULES}
+Field rules: summary is 1-2 sentences with at least one quantified finding. flags has 2-4 entries; each description includes a computed value and the period it covers; metric is an exact figure from the data. recommendations has 2-3 entries each citing the flag it addresses. trajectoryNote is 1 sentence with a computed rate.
 
-Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+${ANALYTICAL_RULES}`;
+
+const SYSTEM_ADVANCED_CORE = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
+
+JSON structure:
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Output rules: 3-6 flags covering all cross-metric contradictions found; each description must include computed values and the specific periods involved; each metric must be an exact figure from the data. 3-5 recommendations each citing the flag it addresses by name. Summary 2 sentences with quantified findings. trajectoryNote 1-2 sentences citing computed rates.`;
 
-const SYSTEM_ADVANCED_CONTEXT = `${ANALYTICAL_RULES}
+Field rules: summary is 2 sentences with quantified findings. flags has 3-6 entries covering all cross-metric contradictions found; each description includes computed values and specific periods; metric is an exact figure. recommendations has 3-5 entries each citing the flag it addresses by name. trajectoryNote is 1-2 sentences with computed rates.
 
-Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
+${ANALYTICAL_RULES}`;
+
+const SYSTEM_ADVANCED_CONTEXT = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
+
+JSON structure:
 {"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Output rules: trendData exactly 6 labels/values per series using actual columns from the data, 2 series. industryComparisons only if business model is identifiable — state the assumed model; omit this key entirely if uncertain. caseStudies 1-2 real documented companies with comparable business model; source must be a real specific citation. scenarios: optimistic states the highest observed YoY rate and its source period; base states the average YoY rate; pessimistic states the lowest observed rate or deceleration extrapolation and its basis. riskMatrix 3-4 risks linked to flags found in the core analysis. actionPlan 2-3 items per phase each referencing a specific data finding.`;
+
+Field rules: trendData has exactly 6 labels/values per series using actual data columns, 2 series. industryComparisons: only include if business model is identifiable from the data — if uncertain omit this key. caseStudies: 1-2 real documented companies with comparable model; source must be a real citation. scenarios: each sentence must state the specific historical YoY rate it uses and the period it comes from. riskMatrix: 3-4 risks linked to flags. actionPlan: 2-3 items per phase referencing specific data findings; all three arrays (immediate, shortTerm, longTerm) must be present even if empty.
+
+${ANALYTICAL_RULES}`;
 
 function extractDateRange(rawText: string): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
