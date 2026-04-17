@@ -147,13 +147,13 @@ export async function POST(req: NextRequest) {
           const [coreMsg, contextMsg] = await Promise.all([
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1200,
+              max_tokens: 2000,
               system: SYSTEM_ADVANCED_CORE,
               messages: [{ role: "user", content: userMessage }],
             }),
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1800,
+              max_tokens: 3000,
               system: SYSTEM_ADVANCED_CONTEXT,
               messages: [{ role: "user", content: userMessage }],
             }),
@@ -161,7 +161,10 @@ export async function POST(req: NextRequest) {
 
           const coreText = coreMsg.content[0].type === "text" ? coreMsg.content[0].text : "{}";
           const contextText = contextMsg.content[0].type === "text" ? contextMsg.content[0].text : "{}";
-          resultJson = { ...extractJson(coreText), ...extractJson(contextText) };
+          let coreJson = {}; let ctxJson = {};
+          try { coreJson = extractJson(coreText); } catch (e) { console.error("core extractJson failed:", e, coreText.slice(0, 200)); }
+          try { ctxJson = extractJson(contextText); } catch (e) { console.error("ctx extractJson failed:", e, contextText.slice(0, 200)); }
+          resultJson = { ...coreJson, ...ctxJson };
         } else {
           const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
