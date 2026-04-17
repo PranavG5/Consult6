@@ -67,9 +67,9 @@ const enterpriseFeatures = [
 
 export default function LandingPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#111", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Navbar */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "#111", borderBottom: "1px solid #1e1e1e", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "#1e1e1e", borderBottom: "1px solid #2d2d2d", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <div style={{ width: 30, height: 30, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Consult6</span>
@@ -87,7 +87,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section style={{ maxWidth: 720, margin: "0 auto", padding: "96px 24px 80px", textAlign: "center" }}>
-        <div style={{ display: "inline-block", background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 20, padding: "4px 14px", fontSize: 12, fontWeight: 600, color: "#CC5500", letterSpacing: 1, marginBottom: 28 }}>
+        <div style={{ display: "inline-block", background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 20, padding: "4px 14px", fontSize: 12, fontWeight: 600, color: "#CC5500", letterSpacing: 1, marginBottom: 28 }}>
           AI-POWERED · INSTANT · ACTIONABLE
         </div>
         <h1 style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.08, margin: "0 0 24px", letterSpacing: -2 }}>
@@ -101,7 +101,7 @@ export default function LandingPage() {
           <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 16, fontWeight: 700, textDecoration: "none", padding: "14px 32px", borderRadius: 9, display: "inline-block" }}>
             Get Started Free →
           </Link>
-          <Link href="/try" style={{ background: "#1e1e1e", color: "#ccc", fontSize: 16, fontWeight: 600, textDecoration: "none", padding: "14px 32px", borderRadius: 9, border: "1px solid #333", display: "inline-block" }}>
+          <Link href="/try" style={{ background: "#2d2d2d", color: "#ccc", fontSize: 16, fontWeight: 600, textDecoration: "none", padding: "14px 32px", borderRadius: 9, border: "1px solid #484848", display: "inline-block" }}>
             Try Without Account
           </Link>
         </div>
@@ -114,7 +114,7 @@ export default function LandingPage() {
         <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Everything you need to understand your finances</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {features.map(f => (
-            <div key={f.title} style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 22px" }}>
+            <div key={f.title} style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 22px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <span style={{ fontSize: 20, color: "#CC5500" }}>{f.icon}</span>
                 <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>{f.title}</span>
@@ -129,7 +129,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" style={{ borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a", background: "#141414", padding: "96px 24px" }}>
+      <section id="how-it-works" style={{ borderTop: "1px solid #272727", borderBottom: "1px solid #272727", background: "#212121", padding: "96px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
           <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 10 }}>HOW IT WORKS</p>
           <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Three steps to clarity</h2>
@@ -156,11 +156,11 @@ export default function LandingPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
 
           {/* Free */}
-          <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 14, padding: 28 }}>
+          <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 14, padding: 28 }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#888", margin: "0 0 8px", letterSpacing: 0.5 }}>FREE</p>
             <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$0</p>
             <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
-            <div style={{ borderTop: "1px solid #222", paddingTop: 20, marginBottom: 28 }}>
+            <div style={{ borderTop: "1px solid #2f2f2f", paddingTop: 20, marginBottom: 28 }}>
               {freeFeatures.map(f => (
                 <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
                   <span style={{ color: "#27ae60", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
@@ -168,7 +168,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#1e1e1e", border: "1px solid #333", color: "#ccc", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
+            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#2d2d2d", border: "1px solid #484848", color: "#ccc", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
               Get Started Free
             </Link>
           </div>
@@ -214,14 +214,14 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid #1a1a1a", padding: "24px 40px" }}>
+      <footer style={{ borderTop: "1px solid #272727", padding: "24px 40px" }}>
         <div style={{ maxWidth: 1060, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 26, height: 26, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff" }}>6</div>
               <span style={{ fontWeight: 700, fontSize: 14, color: "#888" }}>Consult6</span>
             </div>
-            <span style={{ fontSize: 13, color: "#333" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
+            <span style={{ fontSize: 13, color: "#484848" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
             <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>

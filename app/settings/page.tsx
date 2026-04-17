@@ -27,14 +27,14 @@ const TAB_LABELS: { id: Tab; label: string }[] = [
 
 function Toggle({ checked, onChange, label, desc }: { checked: boolean; onChange: (v: boolean) => void; label: string; desc: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "16px 0", borderBottom: "1px solid #2a2a2a" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "16px 0", borderBottom: "1px solid #3a3a3a" }}>
       <div style={{ flex: 1, marginRight: 24 }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: "#f0f0f0", margin: "0 0 4px" }}>{label}</p>
         <p style={{ fontSize: 13, color: "#666", margin: 0, lineHeight: 1.5 }}>{desc}</p>
       </div>
       <button
         onClick={() => onChange(!checked)}
-        style={{ width: 44, height: 24, borderRadius: 12, background: checked ? "#CC5500" : "#333", border: "none", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
+        style={{ width: 44, height: 24, borderRadius: 12, background: checked ? "#CC5500" : "#484848", border: "none", position: "relative", cursor: "pointer", flexShrink: 0, transition: "background 0.2s" }}>
         <span style={{ position: "absolute", top: 3, left: checked ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
       </button>
     </div>
@@ -137,7 +137,7 @@ export default function SettingsPage() {
   }
 
   const badgeStyle: Record<string, { bg: string; color: string }> = {
-    free: { bg: "#333", color: "#aaa" },
+    free: { bg: "#484848", color: "#aaa" },
     paid: { bg: "#CC5500", color: "#fff" },
     enterprise: { bg: "#16a34a", color: "#fff" },
     admin: { bg: "#6b21a8", color: "#f0f0f0" },
@@ -145,16 +145,16 @@ export default function SettingsPage() {
   const badge = badgeStyle[accountType] ?? badgeStyle.free;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#1a1a1a" }}>
+    <div style={{ minHeight: "100vh", background: "#272727" }}>
       {/* Navbar */}
-      <nav style={{ background: "#111", borderBottom: "1px solid #2a2a2a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 13, color: "#888" }}>{user?.email}</span>
-          <Link href="/dashboard" style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>← Dashboard</Link>
+          <Link href="/dashboard" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>← Dashboard</Link>
         </div>
       </nav>
 
@@ -180,7 +180,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, background: "#242424", border: "1px solid #333", borderRadius: 12, padding: 28 }}>
+          <div style={{ flex: 1, background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 28 }}>
 
             {/* ── PROFILE ── */}
             {tab === "profile" && (
@@ -191,7 +191,7 @@ export default function SettingsPage() {
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>About me</label>
                   <textarea value={profile.about_me} onChange={e => setProfile(p => ({ ...p, about_me: e.target.value }))}
                     placeholder="e.g. I'm a CFO at a mid-sized SaaS company focused on unit economics and runway management."
-                    rows={3} style={{ width: "100%", boxSizing: "border-box", background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, resize: "vertical", fontFamily: "inherit" }} />
+                    rows={3} style={{ width: "100%", boxSizing: "border-box", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, resize: "vertical", fontFamily: "inherit" }} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                   <div>
@@ -202,7 +202,7 @@ export default function SettingsPage() {
                   <div>
                     <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Company size</label>
                     <select value={profile.company_size} onChange={e => setProfile(p => ({ ...p, company_size: e.target.value }))}
-                      style={{ width: "100%", background: "#2a2a2a", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: profile.company_size ? "#f0f0f0" : "#666", boxSizing: "border-box" }}>
+                      style={{ width: "100%", background: "#3a3a3a", border: "1px solid #484848", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: profile.company_size ? "#f0f0f0" : "#666", boxSizing: "border-box" }}>
                       <option value="">Select size</option>
                       <option value="≤ 10 employees">≤ 10 employees</option>
                       <option value="11–50 employees">11–50 employees</option>
@@ -217,7 +217,7 @@ export default function SettingsPage() {
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Other relevant context</label>
                   <textarea value={profile.other_context} onChange={e => setProfile(p => ({ ...p, other_context: e.target.value }))}
                     placeholder="e.g. We target Series A startups, have a 12-month runway target, and prioritise gross margin over growth."
-                    rows={3} style={{ width: "100%", boxSizing: "border-box", background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, resize: "vertical", fontFamily: "inherit" }} />
+                    rows={3} style={{ width: "100%", boxSizing: "border-box", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, resize: "vertical", fontFamily: "inherit" }} />
                 </div>
                 <button onClick={saveProfile} disabled={saving}
                   style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 8, padding: "11px 24px", fontSize: 14, fontWeight: 700, opacity: saving ? 0.6 : 1 }}>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
               <div>
                 <p style={{ fontSize: 16, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px" }}>Billing</p>
                 <p style={{ fontSize: 13, color: "#666", margin: "0 0 24px" }}>Manage your subscription and billing history.</p>
-                <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 10, padding: "20px 22px", marginBottom: 20 }}>
+                <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: "20px 22px", marginBottom: 20 }}>
                   <p style={{ fontSize: 12, fontWeight: 600, color: "#666", letterSpacing: 1, margin: "0 0 10px" }}>CURRENT PLAN</p>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -264,14 +264,14 @@ export default function SettingsPage() {
                     {accountType === "free" ? (
                       <Link href="/#pricing" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Upgrade</Link>
                     ) : (
-                      <button style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 13, borderRadius: 7, padding: "8px 16px" }}
+                      <button style={{ background: "none", border: "1px solid #484848", color: "#888", fontSize: 13, borderRadius: 7, padding: "8px 16px" }}
                         onClick={() => flash("Subscription management coming soon. Contact support@consult6.com to cancel.")}>Cancel Plan</button>
                     )}
                   </div>
                 </div>
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 600, color: "#666", letterSpacing: 1, margin: "0 0 12px" }}>SUBSCRIPTION HISTORY</p>
-                  <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 8, padding: "20px", textAlign: "center" }}>
+                  <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 8, padding: "20px", textAlign: "center" }}>
                     <p style={{ fontSize: 13, color: "#555", margin: 0 }}>No billing history yet.</p>
                   </div>
                 </div>
@@ -285,7 +285,7 @@ export default function SettingsPage() {
                 <p style={{ fontSize: 13, color: "#666", margin: "0 0 24px" }}>Update your login credentials or delete your account.</p>
 
                 {/* Update email */}
-                <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 10, padding: "20px 22px", marginBottom: 16 }}>
+                <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: "20px 22px", marginBottom: 16 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px" }}>Update email</p>
                   <p style={{ fontSize: 12, color: "#555", margin: "0 0 14px" }}>Current: {user?.email}</p>
                   <div style={{ display: "flex", gap: 10 }}>
@@ -296,11 +296,11 @@ export default function SettingsPage() {
                       Send Verification
                     </button>
                   </div>
-                  <p style={{ fontSize: 11, color: "#444", margin: "8px 0 0" }}>A confirmation link will be sent to your current email to verify the change.</p>
+                  <p style={{ fontSize: 11, color: "#5a5a5a", margin: "8px 0 0" }}>A confirmation link will be sent to your current email to verify the change.</p>
                 </div>
 
                 {/* Update password */}
-                <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 10, padding: "20px 22px", marginBottom: 16 }}>
+                <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: "20px 22px", marginBottom: 16 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Update password</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <input value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Current password" type="password" style={{ boxSizing: "border-box" }} />

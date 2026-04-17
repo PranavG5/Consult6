@@ -2,8 +2,8 @@ import Link from "next/link";
 
 export default function TermsPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#111", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid #1e1e1e", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#111", zIndex: 100 }}>
+    <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid #2d2d2d", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#1e1e1e", zIndex: 100 }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
@@ -73,20 +73,20 @@ export default function TermsPage() {
           You may close your account at any time from the Account tab in your settings. We reserve the right to suspend or terminate accounts that violate these terms. Upon termination, your data is handled in accordance with the Privacy Policy.
         </p>
 
-        <div style={{ background: "#161616", border: "1px solid #222", borderRadius: 12, padding: "24px 28px" }}>
+        <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Questions about these terms?</p>
           <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Contact us at <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will get back to you.</p>
         </div>
       </main>
 
-      <footer style={{ borderTop: "1px solid #1a1a1a", padding: "24px 40px" }}>
+      <footer style={{ borderTop: "1px solid #272727", padding: "24px 40px" }}>
         <div style={{ maxWidth: 1060, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 26, height: 26, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff" }}>6</div>
               <span style={{ fontWeight: 700, fontSize: 14, color: "#888" }}>Consult6</span>
             </div>
-            <span style={{ fontSize: 13, color: "#333" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
+            <span style={{ fontSize: 13, color: "#484848" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
             <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
