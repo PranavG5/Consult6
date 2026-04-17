@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { generatePDF, type AnalysisResult } from "@/lib/generateReport";
+import Link from "next/link";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -14,6 +15,36 @@ interface UsageData {
   advancedUsed: number;
   basicLimit: number;
   advancedLimit: number;
+}
+
+interface HistoryItem {
+  id: string;
+  created_at: string;
+  label: string;
+  mode: string;
+  org_name: string;
+  file_name: string;
+  analysis_result: AnalysisResult;
+}
+
+const HISTORY_STORAGE_KEY = "consult6_history";
+
+function loadHistoryFromStorage(userId: string): HistoryItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(`${HISTORY_STORAGE_KEY}_${userId}`);
+    if (!raw) return [];
+    return JSON.parse(raw) as HistoryItem[];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistoryToStorage(userId: string, items: HistoryItem[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`${HISTORY_STORAGE_KEY}_${userId}`, JSON.stringify(items));
+  } catch {}
 }
 
 function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
@@ -51,6 +82,8 @@ export default function Home() {
   const [extraContext, setExtraContext] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
   const [state, setState] = useState<State>("idle");
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [profileContext, setProfileContext] = useState<{ about_me: string; other_context: string; disable_pdf_history: boolean; disable_analysis_memory: boolean } | null>(null);
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -58,15 +91,60 @@ export default function Home() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyAccountType, setHistoryAccountType] = useState<string>("free");
+  const [noContextWarnShown, setNoContextWarnShown] = useState(false);
+  const [showNoContextModal, setShowNoContextModal] = useState(false);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser({ email: data.user.email ?? "" });
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      setUser({ email: data.user.email ?? "" });
+
+      // Transfer any pending guest analysis into this account's history
+      const pending = localStorage.getItem("consult6_guest_pending");
+      if (pending) {
+        try {
+          const p = JSON.parse(pending);
+          const newItem = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            created_at: p.createdAt ?? new Date().toISOString(),
+            label: p.label, mode: p.mode, org_name: p.orgName ?? "", file_name: p.fileName ?? "",
+            analysis_result: p.analysisResult,
+          };
+          const existing = loadHistoryFromStorage(data.user.id);
+          saveHistoryToStorage(data.user.id, [newItem, ...existing].slice(0, 5));
+        } catch {}
+        localStorage.removeItem("consult6_guest_pending");
+      }
+
+      // Load profile settings
+      const { data: prof } = await supabase.from("profiles").select("about_me,industry,company_size,other_context,disable_pdf_history,disable_analysis_memory,settings_popup_shown").eq("id", data.user.id).single();
+      if (prof) {
+        setProfileContext({
+          about_me: prof.about_me ?? "",
+          other_context: prof.other_context ?? "",
+          disable_pdf_history: prof.disable_pdf_history ?? false,
+          disable_analysis_memory: prof.disable_analysis_memory ?? false,
+        });
+        // Pre-fill industry/company_size if memory not disabled
+        if (!prof.disable_analysis_memory) {
+          if (prof.industry) setIndustry(prof.industry);
+          if (prof.company_size) setCompanySize(prof.company_size);
+        }
+        // First-time settings popup
+        if (!prof.settings_popup_shown) {
+          setShowSettingsPopup(true);
+          supabase.from("profiles").update({ settings_popup_shown: true }).eq("id", data.user.id).then(() => {});
+        }
+      }
     });
+    setNoContextWarnShown(localStorage.getItem("consult6_no_context_warn_shown") === "true");
     fetchUsage();
+    fetchHistory();
   }, []);
 
   async function fetchUsage() {
@@ -74,6 +152,69 @@ export default function Home() {
       const res = await fetch("/api/usage");
       if (res.ok) setUsage(await res.json());
     } catch {}
+  }
+
+  async function fetchHistory() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("account_type")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const acctType: string = profile?.account_type ?? "free";
+      setHistoryAccountType(acctType);
+      const limit = acctType === "free" ? 5 : 20;
+
+      const items = loadHistoryFromStorage(user.id).slice(0, limit);
+      setHistory(items);
+    } catch {}
+  }
+
+  async function saveToHistory(result: AnalysisResult, label: string, currentMode: Mode, currentOrgName: string, currentFileNames: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const acctType: string = historyAccountType || "free";
+      const limit = acctType === "free" ? 5 : 20;
+
+      const newItem: HistoryItem = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        created_at: new Date().toISOString(),
+        label,
+        mode: currentMode,
+        org_name: currentOrgName,
+        file_name: currentFileNames,
+        analysis_result: result,
+      };
+
+      const existing = loadHistoryFromStorage(user.id);
+      const updated = [newItem, ...existing].slice(0, limit);
+      saveHistoryToStorage(user.id, updated);
+      setHistory(updated);
+    } catch {}
+  }
+
+  function downloadHistoryPDF(item: HistoryItem) {
+    const generatedAt = new Date(item.created_at).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
+    const pdf = generatePDF({
+      orgName: item.org_name || item.label,
+      fileName: item.file_name,
+      generatedAt,
+      mode: item.mode,
+      analysis: item.analysis_result,
+    });
+    const blob = new Blob([new Uint8Array(pdf) as unknown as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `consult6-${item.mode}-report-${item.id.slice(0, 8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function startProgress(from: number, to: number, ms: number) {
@@ -98,9 +239,13 @@ export default function Home() {
 
   function handleFiles(newFiles: File[]) {
     const maxFiles = mode === "advanced" ? 3 : 1;
-    const valid = newFiles.filter(f =>
-      f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls")
-    );
+    const maxBytes = mode === "advanced" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const valid = newFiles.filter(f => {
+      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls");
+      const validSize = f.size <= maxBytes;
+      if (validType && !validSize) setErrorMsg(`"${f.name}" exceeds the ${mode === "advanced" ? "10 MB" : "5 MB"} limit for ${mode} analyses.`);
+      return validType && validSize;
+    });
     setFiles(prev => [...prev, ...valid].slice(0, maxFiles));
   }
 
@@ -115,8 +260,23 @@ export default function Home() {
     window.location.href = "/auth/login";
   }
 
-  async function runAnalysis() {
+  const advancedHasNoContext = mode === "advanced"
+    && !companySize && !industry && !constraints && !extraContext
+    && (!profileContext || profileContext.disable_analysis_memory || (!profileContext.about_me && !profileContext.other_context));
+
+  function confirmRunWithoutContext() {
+    localStorage.setItem("consult6_no_context_warn_shown", "true");
+    setNoContextWarnShown(true);
+    setShowNoContextModal(false);
+    runAnalysis(true);
+  }
+
+  async function runAnalysis(skipContextCheck = false) {
     if (!files.length) return;
+    if (mode === "advanced" && advancedHasNoContext && !noContextWarnShown && !skipContextCheck) {
+      setShowNoContextModal(true);
+      return;
+    }
     setState("uploading");
     setErrorMsg("");
     setAnalysis(null);
@@ -141,7 +301,12 @@ export default function Home() {
         if (companySize) fd.append("companySize", companySize);
         if (industry) fd.append("industry", industry);
         if (constraints) fd.append("constraints", constraints);
-        if (extraContext) fd.append("extraContext", extraContext);
+        // Merge user-typed context with saved profile context (if memory not disabled)
+        const profileExtra = profileContext && !profileContext.disable_analysis_memory
+          ? [profileContext.about_me, profileContext.other_context].filter(Boolean).join("\n")
+          : "";
+        const combinedExtra = [extraContext, profileExtra].filter(Boolean).join("\n");
+        if (combinedExtra) fd.append("extraContext", combinedExtra);
       }
 
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
@@ -183,6 +348,12 @@ export default function Home() {
         analysis: result,
       });
       setPdfBytes(pdf);
+
+      const historyLabel = orgName.trim() || files[0]?.name || "Unnamed Analysis";
+      const fileNames = files.map(f => f.name).join(", ");
+      if (!profileContext?.disable_pdf_history) {
+        saveToHistory(result, historyLabel, mode, orgName, fileNames);
+      }
 
       stopProgress();
       setProgress(100);
@@ -234,9 +405,9 @@ export default function Home() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#1a1a1a" }}>
+    <div style={{ minHeight: "100vh", background: "#272727" }}>
       {/* Navbar */}
-      <nav style={{ background: "#111", borderBottom: "1px solid #2a2a2a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
@@ -252,23 +423,25 @@ export default function Home() {
               <span style={{ background: "#CC5500", color: "#fff", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>PRO</span>
             )}
             {usage.accountType === "free" && (
-              <span style={{ background: "#333", color: "#aaa", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>FREE</span>
+              <span style={{ background: "#484848", color: "#aaa", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>FREE</span>
             )}
             <span style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
-            <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
+            <Link href="/settings" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
+            <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
           </div>
         )}
       </nav>
 
       {/* Main */}
-      <main style={{ maxWidth: 760, margin: "40px auto", padding: "0 20px" }}>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 20, padding: "40px 20px" }}>
+      <main style={{ width: "100%", maxWidth: 760, flexShrink: 1 }}>
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {(["basic", "advanced"] as Mode[]).map(m => (
               <button key={m} onClick={() => { setMode(m); reset(); }}
-                style={{ background: mode === m ? "#2a1800" : "#242424", border: `2px solid ${mode === m ? "#CC5500" : "#333"}`, borderRadius: 10, padding: "14px 16px", textAlign: "left", cursor: "pointer", transition: "all 0.15s" }}>
+                style={{ background: mode === m ? "#2a1800" : "#333333", border: `2px solid ${mode === m ? "#CC5500" : "#484848"}`, borderRadius: 10, padding: "14px 16px", textAlign: "left", cursor: "pointer", transition: "all 0.15s" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>{m === "basic" ? "Basic" : "Advanced"}</span>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -285,11 +458,11 @@ export default function Home() {
         </div>
 
         {/* Card */}
-        <div style={{ background: "#242424", border: "1px solid #333", borderRadius: 12, padding: 28 }}>
+        <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 28 }}>
           {/* New Analysis button at top when done */}
           {state === "done" && (
             <div style={{ marginBottom: 20 }}>
-              <button onClick={reset} style={{ width: "100%", background: "#1e1e1e", border: "1px solid #444", color: "#ccc", borderRadius: 9, padding: "11px 0", fontSize: 14, fontWeight: 600 }}>
+              <button onClick={reset} style={{ width: "100%", background: "#2d2d2d", border: "1px solid #5a5a5a", color: "#ccc", borderRadius: 9, padding: "11px 0", fontSize: 14, fontWeight: 600 }}>
                 ← New Analysis
               </button>
             </div>
@@ -307,24 +480,25 @@ export default function Home() {
               <button
                 onClick={() => setContextOpen(o => !o)}
                 disabled={isRunning}
-                style={{ width: "100%", background: contextOpen ? "#2a1800" : "#1e1e1e", border: `1px solid ${contextOpen ? "#CC5500" : "#333"}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                style={{ width: "100%", background: contextOpen ? "#2a1800" : "#2d2d2d", border: `1px solid ${contextOpen ? "#CC5500" : "#484848"}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: contextOpen ? "#CC5500" : "#aaa" }}>Additional context <span style={{ fontWeight: 400, color: "#666" }}>(optional)</span></span>
                 <span style={{ color: contextOpen ? "#CC5500" : "#555", fontSize: 14, fontWeight: 700 }}>{contextOpen ? "▲" : "▼"}</span>
               </button>
               {contextOpen && (
-                <div style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div style={{ gridColumn: "1" }}>
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Company size</label>
                     <select
                       value={companySize}
                       onChange={e => setCompanySize(e.target.value)}
                       disabled={isRunning}
-                      style={{ width: "100%", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: companySize ? "#f0f0f0" : "#666" }}>
+                      style={{ width: "100%", background: "#3a3a3a", border: "1px solid #494949", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: companySize ? "#f0f0f0" : "#666" }}>
                       <option value="">Select size</option>
-                      <option value="< 50 employees">&lt; 50 employees</option>
-                      <option value="50–200 employees">50–200 employees</option>
-                      <option value="200–1,000 employees">200–1,000 employees</option>
-                      <option value="1,000–10,000 employees">1,000–10,000 employees</option>
+                      <option value="≤ 10 employees">≤ 10 employees</option>
+                      <option value="11–50 employees">11–50 employees</option>
+                      <option value="51–200 employees">51–200 employees</option>
+                      <option value="201–1,000 employees">201–1,000 employees</option>
+                      <option value="1,001–10,000 employees">1,001–10,000 employees</option>
                       <option value="> 10,000 employees">&gt; 10,000 employees</option>
                     </select>
                   </div>
@@ -345,7 +519,7 @@ export default function Home() {
                       placeholder="e.g. Limited hiring budget, must maintain 6-month cash runway, no new debt"
                       disabled={isRunning}
                       rows={2}
-                      style={{ width: "100%", boxSizing: "border-box", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
+                      style={{ width: "100%", boxSizing: "border-box", background: "#3a3a3a", border: "1px solid #494949", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
                   </div>
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Other notes</label>
@@ -355,7 +529,7 @@ export default function Home() {
                       placeholder="e.g. Recently acquired a competitor, planning Series B, seasonality in Q4 revenue"
                       disabled={isRunning}
                       rows={2}
-                      style={{ width: "100%", boxSizing: "border-box", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
+                      style={{ width: "100%", boxSizing: "border-box", background: "#3a3a3a", border: "1px solid #494949", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", resize: "vertical", fontFamily: "inherit" }} />
                   </div>
                 </div>
               )}
@@ -369,7 +543,7 @@ export default function Home() {
             </label>
 
             {files.map((f, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ color: "#CC5500", fontSize: 18 }}>📄</span>
                   <span style={{ fontSize: 13, color: "#f0f0f0" }}>{f.name}</span>
@@ -388,10 +562,10 @@ export default function Home() {
                 onDragOver={e => { e.preventDefault(); setDragging(true); }}
                 onDragLeave={() => setDragging(false)}
                 onClick={() => fileInputRef.current?.click()}
-                style={{ border: `2px dashed ${dragging ? "#CC5500" : "#333"}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", transition: "border-color 0.2s", background: dragging ? "#2a1800" : "transparent" }}>
+                style={{ border: `2px dashed ${dragging ? "#CC5500" : "#484848"}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", transition: "border-color 0.2s", background: dragging ? "#2a1800" : "transparent" }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>↑</div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>{files.length > 0 ? "Add another file" : "Upload financial data"}</p>
-                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to 50 MB</p>
+                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to {mode === "advanced" ? "10 MB" : "5 MB"}</p>
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple style={{ display: "none" }}
                   onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
               </div>
@@ -401,7 +575,7 @@ export default function Home() {
           {/* Progress bar */}
           {isRunning && (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ height: 6, background: "#333", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: 6, background: "#484848", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{ height: "100%", background: "#CC5500", borderRadius: 3, width: `${progress}%`, transition: "width 0.3s ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "#666" }}>
@@ -422,7 +596,7 @@ export default function Home() {
           {state === "done" && analysis && (
             <div style={{ marginBottom: 20 }}>
               {/* Summary */}
-              <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+              <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, marginBottom: 8 }}>EXECUTIVE SUMMARY</p>
                 <p style={{ fontSize: 14, color: "#e0e0e0", lineHeight: 1.6, margin: 0 }}>{analysis.summary}</p>
               </div>
@@ -452,7 +626,7 @@ export default function Home() {
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RECOMMENDATIONS</p>
                   {analysis.recommendations.map((rec, i) => (
-                    <div key={i} style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "12px 14px", marginBottom: 8, display: "flex", gap: 12 }}>
+                    <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "12px 14px", marginBottom: 8, display: "flex", gap: 12 }}>
                       <div style={{ minWidth: 24, height: 24, background: "#CC5500", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, color: "#fff", flexShrink: 0 }}>{i + 1}</div>
                       <div>
                         <p style={{ fontWeight: 700, fontSize: 13, color: "#f0f0f0", margin: "0 0 4px" }}>{rec.title}</p>
@@ -464,7 +638,7 @@ export default function Home() {
               )}
 
               {/* Trajectory */}
-              <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 6 }}>FINANCIAL TRAJECTORY</p>
                 <p style={{ fontSize: 13, color: "#ccc", margin: 0, fontStyle: "italic", lineHeight: 1.5 }}>{analysis.trajectoryNote}</p>
               </div>
@@ -473,10 +647,10 @@ export default function Home() {
               {analysis.industryComparisons?.length && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>INDUSTRY BENCHMARKS</p>
-                  <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, overflow: "hidden" }}>
+                  <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead>
-                        <tr style={{ background: "#2a2a2a" }}>
+                        <tr style={{ background: "#3a3a3a" }}>
                           {["Metric", "Your Value", "Industry Avg", "Top 25%", "Status"].map(h => (
                             <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#CC5500", fontWeight: 700, fontSize: 11 }}>{h}</th>
                           ))}
@@ -484,7 +658,7 @@ export default function Home() {
                       </thead>
                       <tbody>
                         {analysis.industryComparisons.map((c, i) => (
-                          <tr key={i} style={{ borderTop: "1px solid #2a2a2a" }}>
+                          <tr key={i} style={{ borderTop: "1px solid #3a3a3a" }}>
                             <td style={{ padding: "10px 12px", color: "#f0f0f0", fontWeight: 600 }}>{c.metric}</td>
                             <td style={{ padding: "10px 12px", color: "#ccc" }}>{c.yourValue}</td>
                             <td style={{ padding: "10px 12px", color: "#ccc" }}>{c.industryAverage}</td>
@@ -506,7 +680,7 @@ export default function Home() {
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>CASE STUDIES</p>
                   {analysis.caseStudies.map((cs, i) => (
-                    <div key={i} style={{ background: "#1e1e1e", border: "1px solid #333", borderLeft: "3px solid #CC5500", borderRadius: 8, padding: "14px 16px", marginBottom: 8 }}>
+                    <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderLeft: "3px solid #CC5500", borderRadius: 8, padding: "14px 16px", marginBottom: 8 }}>
                       <p style={{ fontWeight: 700, fontSize: 14, color: "#CC5500", margin: "0 0 10px" }}>{cs.organization}</p>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                         {[["Challenge", cs.challenge], ["Solution", cs.solution], ["Outcome", cs.outcome]].map(([label, text]) => (
@@ -533,7 +707,7 @@ export default function Home() {
                       { label: "BASE CASE", text: analysis.scenarios.base, color: "#2980b9", border: "#1a3a5c" },
                       { label: "PESSIMISTIC", text: analysis.scenarios.pessimistic, color: "#e74c3c", border: "#5c1a1a" },
                     ].map(s => (
-                      <div key={s.label} style={{ background: "#1e1e1e", border: `1px solid ${s.border}`, borderTop: `3px solid ${s.color}`, borderRadius: 8, padding: "12px 14px" }}>
+                      <div key={s.label} style={{ background: "#2d2d2d", border: `1px solid ${s.border}`, borderTop: `3px solid ${s.color}`, borderRadius: 8, padding: "12px 14px" }}>
                         <p style={{ fontSize: 10, fontWeight: 800, color: s.color, margin: "0 0 6px", letterSpacing: 1 }}>{s.label}</p>
                         <p style={{ fontSize: 12, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{s.text}</p>
                       </div>
@@ -545,10 +719,10 @@ export default function Home() {
               {analysis.riskMatrix?.length && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RISK MATRIX</p>
-                  <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, overflow: "hidden" }}>
+                  <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <thead>
-                        <tr style={{ background: "#2a2a2a" }}>
+                        <tr style={{ background: "#3a3a3a" }}>
                           {["Risk", "Likelihood", "Impact", "Mitigation"].map(h => (
                             <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#CC5500", fontWeight: 700, fontSize: 11 }}>{h}</th>
                           ))}
@@ -558,7 +732,7 @@ export default function Home() {
                         {analysis.riskMatrix.map((r, i) => {
                           const levelColor = (v: string) => v === "high" ? "#e74c3c" : v === "medium" ? "#d4a017" : "#27ae60";
                           return (
-                            <tr key={i} style={{ borderTop: "1px solid #2a2a2a" }}>
+                            <tr key={i} style={{ borderTop: "1px solid #3a3a3a" }}>
                               <td style={{ padding: "10px 12px", color: "#f0f0f0", fontWeight: 600, maxWidth: 160 }}>{r.risk}</td>
                               <td style={{ padding: "10px 12px" }}>
                                 <span style={{ color: levelColor(r.likelihood), fontWeight: 700, fontSize: 11 }}>{r.likelihood.toUpperCase()}</span>
@@ -585,7 +759,7 @@ export default function Home() {
                       { label: "SHORT-TERM", sub: "30–90 days", items: analysis.actionPlan.shortTerm, color: "#d4a017", border: "#4a3500" },
                       { label: "LONG-TERM", sub: "90+ days", items: analysis.actionPlan.longTerm, color: "#27ae60", border: "#1e5c32" },
                     ].map(phase => (
-                      <div key={phase.label} style={{ background: "#1e1e1e", border: `1px solid ${phase.border}`, borderTop: `3px solid ${phase.color}`, borderRadius: 8, padding: "12px 14px" }}>
+                      <div key={phase.label} style={{ background: "#2d2d2d", border: `1px solid ${phase.border}`, borderTop: `3px solid ${phase.color}`, borderRadius: 8, padding: "12px 14px" }}>
                         <p style={{ fontSize: 10, fontWeight: 800, color: phase.color, margin: "0 0 2px", letterSpacing: 1 }}>{phase.label}</p>
                         <p style={{ fontSize: 10, color: "#666", margin: "0 0 10px" }}>{phase.sub}</p>
                         {phase.items.map((item, j) => (
@@ -602,6 +776,15 @@ export default function Home() {
             </div>
           )}
 
+          {/* No-context warning bubble (after first-time modal) */}
+          {state !== "done" && !isRunning && advancedHasNoContext && noContextWarnShown && (
+            <div style={{ background: "#2a1400", border: "1px solid #CC5500", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#ffaa66", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ flexShrink: 0 }}>⚠</span>
+              <span>No context provided — advanced analysis may produce generic results.</span>
+              <button onClick={() => { setContextOpen(true); }} style={{ background: "none", border: "none", color: "#CC5500", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0, marginLeft: "auto", whiteSpace: "nowrap" }}>Add context →</button>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 10 }}>
             {state === "done" ? (
@@ -610,7 +793,7 @@ export default function Home() {
               </button>
             ) : (
               <button
-                onClick={runAnalysis}
+                onClick={() => runAnalysis()}
                 disabled={isRunning || !files.length}
                 style={{ flex: 1, background: isRunning || !files.length ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: isRunning || !files.length ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {isRunning ? (
@@ -623,6 +806,105 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* History Sidebar */}
+      <aside style={{ width: 220, flexShrink: 0, position: "sticky", top: 76 }}>
+        <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 14px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 12px" }}>REPORT HISTORY</p>
+          {history.length === 0 ? (
+            <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5 }}>No analyses yet. Run your first report to see history here.</p>
+          ) : (
+            <div style={{
+              overflowY: historyAccountType !== "free" ? "auto" : "visible",
+              maxHeight: historyAccountType !== "free" ? 480 : "none",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}>
+              {history.map(item => {
+                const date = new Date(item.created_at);
+                const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                return (
+                  <div key={item.id} style={{ background: "#2d2d2d", border: "1px solid #3e3e3e", borderRadius: 8, padding: "10px 11px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 800, letterSpacing: 0.5, padding: "1px 5px", borderRadius: 3,
+                        background: item.mode === "advanced" ? "#CC5500" : "#484848",
+                        color: item.mode === "advanced" ? "#fff" : "#aaa",
+                      }}>
+                        {item.mode === "advanced" ? "ADV" : "BASIC"}
+                      </span>
+                      <span style={{ fontSize: 10, color: "#555" }}>{dateStr} · {timeStr}</span>
+                    </div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#e0e0e0", margin: "0 0 8px", lineHeight: 1.3, wordBreak: "break-word" }}>
+                      {item.label}
+                    </p>
+                    <button
+                      onClick={() => downloadHistoryPDF(item)}
+                      style={{ width: "100%", background: "#3a3a3a", border: "1px solid #494949", color: "#CC5500", borderRadius: 5, padding: "5px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      ↓ Download PDF
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p style={{ fontSize: 10, color: "#5a5a5a", margin: "10px 0 0", textAlign: "center" }}>
+            {historyAccountType === "free" ? "Free: last 5 reports" : "Pro/Admin: last 20 reports"}
+          </p>
+        </div>
+      </aside>
+      </div>
+
+      {/* No-context first-time warning modal */}
+      {showNoContextModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 16, padding: 32, maxWidth: 440, width: "100%" }}>
+            <div style={{ width: 40, height: 40, background: "#CC5500", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 18 }}>⚠</div>
+            <p style={{ fontSize: 18, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>Advanced analysis works best with context</p>
+            <p style={{ fontSize: 14, color: "#999", margin: "0 0 20px", lineHeight: 1.65 }}>
+              Without providing industry, company size, or constraints, the analysis will be based on generic benchmarks and may not reflect your organisation&apos;s actual situation. Results could be less accurate and harder to act on.
+            </p>
+            <p style={{ fontSize: 13, color: "#666", margin: "0 0 24px" }}>
+              You can add context using the <strong style={{ color: "#ccc" }}>Additional context</strong> panel above the upload area.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => { setShowNoContextModal(false); setContextOpen(true); }}
+                style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "12px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                Add context
+              </button>
+              <button
+                onClick={confirmRunWithoutContext}
+                style={{ flex: 1, background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 9, padding: "12px 0", fontSize: 14, cursor: "pointer" }}>
+                Run anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* First-time settings popup */}
+      {showSettingsPopup && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 16, padding: 36, maxWidth: 420, width: "100%", textAlign: "center" }}>
+            <div style={{ width: 48, height: 48, background: "#CC5500", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, color: "#fff", margin: "0 auto 20px" }}>6</div>
+            <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>Welcome to Consult6!</p>
+            <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px", lineHeight: 1.6 }}>
+              Set up your profile to save your industry, company context, and preferences — so you never have to re-enter them for each analysis.
+            </p>
+            <Link href="/settings" onClick={() => setShowSettingsPopup(false)}
+              style={{ display: "block", background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 0", borderRadius: 9, marginBottom: 10 }}>
+              Set Up Profile →
+            </Link>
+            <button onClick={() => setShowSettingsPopup(false)}
+              style={{ background: "none", border: "none", color: "#555", fontSize: 13, cursor: "pointer" }}>
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
