@@ -13,39 +13,17 @@ const LIMITS = {
   admin: { basic: 999999, advanced: 999999 },
 };
 
-const ANALYTICAL_RULES = `Apply these analytical standards internally when populating each JSON field. Do not output them as text.
-- Analyze every column. Every column must appear in at least one field of the JSON. Never skip operational KPI columns like churn_rate, nps_score, avg_deal_size, or sales_cycle_days.
-- Compute before you write. Calculate YoY growth rates, margins, and KPI trends numerically. Cite exact computed values in every description and metric field. Never describe a trend without a number.
-- Check for cross-metric contradictions. These are always more severe than single-metric observations: (a) revenue rising while churn is also rising → flag as "Fragile Growth"; (b) customer count rising while avg deal size is falling → "Volume vs. Value Divergence"; (c) revenue growing while sales cycle days increase → "Sales Strain"; (d) NPS improving while net margin declines → "Satisfaction-Monetization Gap"; (e) revenue growing while EBITDA margin compresses YoY → "Profitless Growth". Any confirmed contradiction must be CRITICAL or WARNING and must name the specific periods.
-- Seasonality: only label a pattern "recurring seasonal" if it appears in the same period across 3+ years. Flag escalating troughs separately.
-- Every recommendation must link to a specific flag or contradiction by name.`;
-
-const SYSTEM_BASIC = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
-
-JSON structure:
+const SYSTEM_BASIC = `You are a senior financial analyst. Tailor all analysis to the organisation described. Return ONLY valid JSON matching this exact structure — no explanation, no markdown, no preamble:
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
+Rules: summary 1-2 sentences with a quantified finding. flags 2-4 entries — compute YoY growth rates and margins numerically; every description cites a computed value and the period it covers; metric is an exact figure from the data; analyse every column including operational KPIs like churn_rate, nps_score, avg_deal_size. Flag any confirmed cross-metric contradiction as CRITICAL or WARNING naming the specific periods: revenue rising + churn rising = "Fragile Growth"; customer count up + avg deal size down = "Volume vs. Value Divergence"; revenue up + EBITDA margin compressing = "Profitless Growth". recommendations 2-3 entries each citing a named flag. trajectoryNote 1 sentence with a computed rate.`;
 
-Field rules: summary is 1-2 sentences with at least one quantified finding. flags has 2-4 entries; each description includes a computed value and the period it covers; metric is an exact figure from the data. recommendations has 2-3 entries each citing the flag it addresses. trajectoryNote is 1 sentence with a computed rate.
-
-${ANALYTICAL_RULES}`;
-
-const SYSTEM_ADVANCED_CORE = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
-
-JSON structure:
+const SYSTEM_ADVANCED_CORE = `You are a senior financial analyst. Tailor all analysis to the organisation described. Return ONLY valid JSON matching this exact structure — no explanation, no markdown, no preamble:
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
+Rules: summary 2 sentences with quantified findings. flags 3-6 entries covering all cross-metric contradictions found — compute YoY growth rates and margins numerically; every description cites computed values and specific periods; metric is an exact figure; analyse every column including churn_rate, nps_score, avg_deal_size, sales_cycle_days. Confirmed contradictions must be CRITICAL or WARNING naming specific periods: revenue rising + churn rising = "Fragile Growth"; customer count up + avg deal size down = "Volume vs. Value Divergence"; revenue up + EBITDA margin compressing = "Profitless Growth"; revenue up + sales cycle days rising = "Sales Strain"; NPS improving + net margin declining = "Satisfaction-Monetization Gap". recommendations 3-5 entries each citing a named flag. trajectoryNote 1-2 sentences with computed rates.`;
 
-Field rules: summary is 2 sentences with quantified findings. flags has 3-6 entries covering all cross-metric contradictions found; each description includes computed values and specific periods; metric is an exact figure. recommendations has 3-5 entries each citing the flag it addresses by name. trajectoryNote is 1-2 sentences with computed rates.
-
-${ANALYTICAL_RULES}`;
-
-const SYSTEM_ADVANCED_CONTEXT = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
-
-JSON structure:
+const SYSTEM_ADVANCED_CONTEXT = `You are a senior financial analyst. Tailor all analysis to the organisation described. Return ONLY valid JSON matching this exact structure — no explanation, no markdown, no preamble:
 {"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-
-Field rules: trendData has exactly 6 labels/values per series using actual data columns, 2 series. industryComparisons: only include if business model is identifiable from the data — if uncertain omit this key. caseStudies: 1-2 real documented companies with comparable model; source must be a real citation. scenarios: each sentence must state the specific historical YoY rate it uses and the period it comes from. riskMatrix: 3-4 risks linked to flags. actionPlan: 2-3 items per phase referencing specific data findings; all three arrays (immediate, shortTerm, longTerm) must be present even if empty.
-
-${ANALYTICAL_RULES}`;
+Rules: trendData exactly 6 labels/values per series using actual data columns, 2 series. industryComparisons only if business model is identifiable from the data — omit key if uncertain. caseStudies 1-2 real documented companies with comparable model; source must be a real citation. scenarios each sentence states the specific historical YoY rate it uses and the period it comes from — derive all rates from the data. riskMatrix 3-4 risks linked to flags. actionPlan 2-3 items per phase referencing specific data findings; all three arrays (immediate, shortTerm, longTerm) must be present even if empty.`;
 
 function extractDateRange(rawText: string): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
@@ -78,8 +56,6 @@ function buildUserMessage(rawText: string, orgName: string, fileName: string, co
     "",
     "Full data:",
     rawText,
-    "",
-    "Analyze all columns including operational KPIs. Check for all cross-metric contradictions listed in your rules. Derive all scenario assumptions from computed historical rates in this data.",
   ];
   return parts.join("\n");
 }
@@ -87,12 +63,8 @@ function buildUserMessage(rawText: string, orgName: string, fileName: string, co
 function extractJson(text: string): Record<string, unknown> {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) return {};
-  try {
-    return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+  if (start === -1 || end === -1) throw new Error(`Model did not return JSON. Response: ${text.slice(0, 300)}`);
+  return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
 }
 
 function ensureArray<T>(val: unknown): T[] {

@@ -5,18 +5,9 @@ export const maxDuration = 60;
 
 const anthropic = new Anthropic();
 
-const SYSTEM_BASIC = `You are a senior financial analyst. Your response must be ONLY a valid JSON object — no explanation, no markdown, no preamble. Begin your response with { and end with }.
-
-JSON structure:
+const SYSTEM_BASIC = `You are a senior financial analyst. Tailor all analysis to the organisation described. Return ONLY valid JSON matching this exact structure — no explanation, no markdown, no preamble:
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-
-Field rules: summary is 1-2 sentences with at least one quantified finding. flags has 2-4 entries; each description includes a computed value and the period it covers; metric is an exact figure from the data. recommendations has 2-3 entries each citing the flag it addresses. trajectoryNote is 1 sentence with a computed rate.
-
-Apply these standards internally when populating each field:
-- Analyze every column; never skip operational KPIs like churn_rate, nps_score, avg_deal_size.
-- Compute YoY growth rates and margins numerically; cite exact values; never describe a trend without a number.
-- Check for cross-metric contradictions: revenue rising with churn rising → "Fragile Growth"; customer count up with avg deal size down → "Volume vs. Value Divergence"; revenue up with EBITDA margin compressing → "Profitless Growth". Flag any confirmed contradiction as CRITICAL or WARNING with specific periods.
-- Every recommendation must reference a specific flag by name.`;
+Rules: summary 1-2 sentences with a quantified finding. flags 2-4 entries — compute YoY growth rates and margins numerically; every description cites a computed value and the period it covers; metric is an exact figure from the data; analyse every column including operational KPIs like churn_rate, nps_score, avg_deal_size. Flag any confirmed cross-metric contradiction as CRITICAL or WARNING naming the specific periods: revenue rising + churn rising = "Fragile Growth"; customer count up + avg deal size down = "Volume vs. Value Divergence"; revenue up + EBITDA margin compressing = "Profitless Growth". recommendations 2-3 entries each citing a named flag. trajectoryNote 1 sentence with a computed rate.`;
 
 function extractDateRange(rawText: string): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
@@ -39,7 +30,7 @@ function extractDateRange(rawText: string): string {
 function extractJson(text: string): object {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) return {};
+  if (start === -1 || end === -1) throw new Error(`Model did not return JSON. Response: ${text.slice(0, 300)}`);
   return JSON.parse(text.slice(start, end + 1));
 }
 
@@ -76,8 +67,6 @@ export async function POST(req: NextRequest) {
     "",
     "Full data:",
     rawText,
-    "",
-    "Analyze all columns including operational KPIs. Check for all cross-metric contradictions listed in your rules. Derive all scenario assumptions from computed historical rates in this data.",
   ].join("\n");
 
   const enc = new TextEncoder();
