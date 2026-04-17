@@ -77,11 +77,35 @@ function buildUserMessage(rawText: string, orgName: string, fileName: string, co
   return parts.join("\n");
 }
 
-function extractJson(text: string): object {
+function extractJson(text: string): Record<string, unknown> {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) return {};
-  return JSON.parse(text.slice(start, end + 1));
+  try {
+    return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function ensureArray<T>(val: unknown): T[] {
+  return Array.isArray(val) ? (val as T[]) : [];
+}
+
+function normalizeResult(raw: Record<string, unknown>): object {
+  const ap = raw.actionPlan as Record<string, unknown> | undefined;
+  return {
+    summary: raw.summary ?? "",
+    flags: ensureArray(raw.flags),
+    recommendations: ensureArray(raw.recommendations),
+    trajectoryNote: raw.trajectoryNote ?? "",
+    ...(raw.trendData ? { trendData: raw.trendData } : {}),
+    ...(raw.industryComparisons ? { industryComparisons: ensureArray(raw.industryComparisons) } : {}),
+    ...(raw.caseStudies ? { caseStudies: ensureArray(raw.caseStudies) } : {}),
+    ...(raw.scenarios ? { scenarios: raw.scenarios } : {}),
+    ...(raw.riskMatrix ? { riskMatrix: ensureArray(raw.riskMatrix) } : {}),
+    ...(ap ? { actionPlan: { immediate: ensureArray(ap.immediate), shortTerm: ensureArray(ap.shortTerm), longTerm: ensureArray(ap.longTerm) } } : {}),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -182,7 +206,7 @@ export async function POST(req: NextRequest) {
 
           const coreText = coreMsg.content[0].type === "text" ? coreMsg.content[0].text : "{}";
           const contextText = contextMsg.content[0].type === "text" ? contextMsg.content[0].text : "{}";
-          resultJson = { ...extractJson(coreText), ...extractJson(contextText) };
+          resultJson = normalizeResult({ ...extractJson(coreText), ...extractJson(contextText) });
         } else {
           const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
@@ -192,7 +216,7 @@ export async function POST(req: NextRequest) {
             messages: [{ role: "user", content: userMessage }],
           });
           const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
-          resultJson = extractJson(text);
+          resultJson = normalizeResult(extractJson(text));
         }
 
         controller.enqueue(enc.encode(JSON.stringify(resultJson)));

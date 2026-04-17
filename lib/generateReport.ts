@@ -121,7 +121,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   // Flags
   y = sectionHeader(doc, "Financial Flags", y, margin, W);
-  for (const flag of data.analysis.flags) {
+  for (const flag of (data.analysis.flags ?? [])) {
     if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     const sevColors: Record<string, { bg: [number,number,number]; border: [number,number,number]; label: string }> = {
       critical: { bg: RED_LIGHT, border: RED, label: "CRITICAL" },
@@ -167,8 +167,8 @@ export function generatePDF(data: ReportData): Uint8Array {
   if (y > 240) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
   y = sectionHeader(doc, "Recommendations", y, margin, W);
 
-  for (let i = 0; i < data.analysis.recommendations.length; i++) {
-    const rec = data.analysis.recommendations[i];
+  for (let i = 0; i < (data.analysis.recommendations ?? []).length; i++) {
+    const rec = (data.analysis.recommendations ?? [])[i];
     if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     const detailLines = doc.splitTextToSize(rec.detail, W - margin * 2 - 20);
     const cardH = detailLines.length * 5 + 18;
@@ -218,7 +218,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     const td = data.analysis.trendData;
     const chartW = W - margin * 2;
     const chartH = 50;
-    const allVals = td.series.flatMap(s => s.values);
+    const allVals = (td.series ?? []).flatMap(s => s.values ?? []);
     const maxVal = Math.max(...allVals, 1);
     const minVal = Math.min(...allVals, 0);
     const range = maxVal - minVal || 1;
@@ -428,7 +428,7 @@ export function generatePDF(data: ReportData): Uint8Array {
       doc.setTextColor(...phase.color);
       doc.text(phase.label, margin, y + 4);
       y += 8;
-      for (const item of phase.items) {
+      for (const item of (phase.items ?? [])) {
         if (y > 265) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
         const wrapped = doc.splitTextToSize(`• ${item}`, W - margin * 2 - 6);
         doc.setFillColor(...DARK);
