@@ -127,13 +127,13 @@ export async function POST(req: NextRequest) {
           const [coreMsg, contextMsg] = await Promise.all([
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1200,
+              max_tokens: 800,
               system: SYSTEM_ADVANCED_CORE,
               messages: [{ role: "user", content: userMessage }],
             }),
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1800,
+              max_tokens: 1200,
               system: SYSTEM_ADVANCED_CONTEXT,
               messages: [{ role: "user", content: userMessage }],
             }),
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
         } else {
           const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 900,
+            max_tokens: 600,
             system: SYSTEM_BASIC,
             messages: [{ role: "user", content: userMessage }],
           });
