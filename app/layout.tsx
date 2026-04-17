@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MobileGate from "@/components/MobileGate";
 
 export const metadata: Metadata = {
   title: "Consult6",
@@ -13,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon.png" type="image/png" sizes="512x512" />
       </head>
-      <body>{children}</body>
+      <body><MobileGate>{children}</MobileGate></body>
     </html>
   );
 }
