@@ -2,13 +2,14 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase-server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const anthropic = new Anthropic();
 
 const LIMITS = {
-  free: { basic: 5, advanced: 2 },
-  paid: { basic: 15, advanced: 5 },
+  free: { basic: 3, advanced: 1 },
+  paid: { basic: 10, advanced: 3 },
+  enterprise: { basic: 50, advanced: 20 },
   admin: { basic: 999999, advanced: 999999 },
 };
 
@@ -21,6 +22,26 @@ function summarize(rawText: string, mode: string = "basic"): string {
   const headers = lines[0].split(",").slice(0, maxCols).join(",");
   const rows = lines.slice(1, maxRows).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
   return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
+}
+
+// Trimmed CSV for the pre-analysis call: keep more rows/cols than summarize() so
+// trends can be computed, but hard-cap the size so a 1MB file cannot blow through
+// Anthropic's rate limit. max_tokens only caps output; input must be trimmed here.
+function trimForPreAnalysis(rawText: string): string {
+  const MAX_CHARS = 8000;
+  if (rawText.length <= MAX_CHARS) return rawText;
+  const lines = rawText.trim().split("\n").filter(Boolean);
+  if (!lines.length) return "";
+  const header = lines[0];
+  const rows = lines.slice(1);
+  const kept: string[] = [];
+  let used = header.length + 1;
+  for (const r of rows) {
+    if (used + r.length + 1 > MAX_CHARS) break;
+    kept.push(r);
+    used += r.length + 1;
+  }
+  return `${header}\n${kept.join("\n")}`;
 }
 
 const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
@@ -113,7 +134,31 @@ export async function POST(req: NextRequest) {
     constraints && `Key Constraints: ${constraints}`,
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
-  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nData:\n${summary}`;
+
+  let preAnalysisJson: object = {};
+  try {
+    const preAnalysisMsg = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1000,
+    temperature: 0,
+    system: "You are a financial data analyst. Return only raw JSON. No prose, no markdown, no code fences.",
+    messages: [{
+      role: "user",
+      content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the CSV data provided. For fields where a column is not present in the CSV, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nCSV data:\n${trimForPreAnalysis(rawText)}`,
+    }],
+    });
+    const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
+    try { preAnalysisJson = extractJson(preAnalysisText); } catch { /* leave as {} */ }
+  } catch (e: unknown) {
+    if ((e as { status?: number })?.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit reached. Please wait a minute and try again." }), {
+        status: 429, headers: { "Content-Type": "application/json" },
+      });
+    }
+    console.error("Pre-analysis error (non-fatal):", e);
+  }
+
+  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nPre-computed analysis summary — you MUST reference every single field in this JSON somewhere in the report. If a field shows a negative or worsening trend, it must appear as a flag. Do not skip any field. Do not write a section without checking whether any JSON field belongs in it.\nFields that must each appear at least once by name in the report:\n\ncustomer_count_trend\nnps_trend\ncontraction_revenue_trend\nchurn_trend (include the worst_period value explicitly)\ncash_runway_months (state the exact number)\navg_deal_size_trend\nsales_cycle_trend\ncontradictions_detected (list each one as its own flag)\n\n${JSON.stringify(preAnalysisJson)}\n\nData:\n${summary}`;
 
   const enc = new TextEncoder();
 
@@ -127,13 +172,13 @@ export async function POST(req: NextRequest) {
           const [coreMsg, contextMsg] = await Promise.all([
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 800,
+              max_tokens: 2000,
               system: SYSTEM_ADVANCED_CORE,
               messages: [{ role: "user", content: userMessage }],
             }),
             anthropic.messages.create({
               model: "claude-sonnet-4-6",
-              max_tokens: 1200,
+              max_tokens: 3000,
               system: SYSTEM_ADVANCED_CONTEXT,
               messages: [{ role: "user", content: userMessage }],
             }),
@@ -141,16 +186,21 @@ export async function POST(req: NextRequest) {
 
           const coreText = coreMsg.content[0].type === "text" ? coreMsg.content[0].text : "{}";
           const contextText = contextMsg.content[0].type === "text" ? contextMsg.content[0].text : "{}";
-          resultJson = { ...extractJson(coreText), ...extractJson(contextText) };
+          let coreJson = {}; let ctxJson = {};
+          try { coreJson = extractJson(coreText); } catch (e) { console.error("core extractJson failed:", e, coreText.slice(0, 200)); }
+          try { ctxJson = extractJson(contextText); } catch (e) { console.error("ctx extractJson failed:", e, contextText.slice(0, 200)); }
+          resultJson = { ...coreJson, ...ctxJson };
         } else {
           const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 600,
+            max_tokens: 900,
             system: SYSTEM_BASIC,
             messages: [{ role: "user", content: userMessage }],
           });
           const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
-          resultJson = extractJson(text);
+          let basicJson = {};
+          try { basicJson = extractJson(text); } catch (e) { console.error("basic extractJson failed:", e); }
+          resultJson = basicJson;
         }
 
         controller.enqueue(enc.encode(JSON.stringify(resultJson)));
@@ -173,8 +223,12 @@ export async function POST(req: NextRequest) {
           console.error("DB update error (non-fatal):", dbErr);
         }
       } catch (err) {
-        console.error("Stream error:", err);
-        controller.enqueue(enc.encode("\n__STREAM_ERROR__"));
+        const is429 = (err as { status?: number })?.status === 429;
+        const errMsg = is429
+          ? "Rate limit reached. Please wait a minute and try again."
+          : err instanceof Error ? `${err.constructor.name}: ${err.message}` : String(err);
+        console.error("Stream error:", errMsg);
+        controller.enqueue(enc.encode(`\n__STREAM_ERROR__:${errMsg}`));
       } finally {
         controller.close();
       }

@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --bg: #1a1a1a;
-  --card: #242424;
-  --border: #333;
+  --bg: #272727;
+  --card: #333333;
+  --border: #484848;
   --orange: #CC5500;
   --orange-hover: #e06010;
   --text: #f0f0f0;
@@ -13,6 +13,11 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+/* offset sticky navbar for anchor links */
+section[id] { scroll-margin-top: 72px; }
 
 body {
   background: var(--bg);
@@ -22,7 +27,7 @@ body {
 }
 
 input, textarea {
-  background: #2a2a2a;
+  background: #3a3a3a;
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
