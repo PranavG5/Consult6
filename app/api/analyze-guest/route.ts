@@ -5,32 +5,22 @@ export const maxDuration = 60;
 
 const anthropic = new Anthropic();
 
-const SYSTEM_BASIC = `You are a senior financial analyst. Tailor all analysis to the organisation described. Return ONLY valid JSON matching this exact structure — no explanation, no markdown, no preamble:
+const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
 {"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: summary 1-2 sentences with a quantified finding. flags 2-4 entries — compute YoY growth rates and margins numerically; every description cites a computed value and the period it covers; metric is an exact figure from the data; analyse every column including operational KPIs like churn_rate, nps_score, avg_deal_size. Flag any confirmed cross-metric contradiction as CRITICAL or WARNING naming the specific periods: revenue rising + churn rising = "Fragile Growth"; customer count up + avg deal size down = "Volume vs. Value Divergence"; revenue up + EBITDA margin compressing = "Profitless Growth". recommendations 2-3 entries each citing a named flag. trajectoryNote 1 sentence with a computed rate.`;
+Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each that are realistic for this specific organization. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
 
-function extractDateRange(rawText: string): string {
+function summarize(rawText: string): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
-  if (lines.length < 2) return "";
-  const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-  const firstRow = lines[1].split(",");
-  const lastRow = lines[lines.length - 1].split(",");
-  const dateIdx = headers.findIndex((h, i) => {
-    const v = (firstRow[i] ?? "").trim();
-    return /date|period|month|year|quarter/i.test(h)
-      || /^\d{4}[-/]\d{1,2}/.test(v)
-      || /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(v);
-  });
-  if (dateIdx === -1) return "";
-  const first = firstRow[dateIdx]?.trim() ?? "";
-  const last = lastRow[dateIdx]?.trim() ?? "";
-  return first && last && first !== last ? `${first} to ${last}` : first;
+  if (!lines.length) return "No data.";
+  const headers = lines[0].split(",").slice(0, 10).join(",");
+  const rows = lines.slice(1, 9).map(r => r.split(",").slice(0, 10).join(",")).join("\n");
+  return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, 900);
 }
 
 function extractJson(text: string): object {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error(`Model did not return JSON. Response: ${text.slice(0, 300)}`);
+  if (start === -1 || end === -1) return {};
   return JSON.parse(text.slice(start, end + 1));
 }
 
@@ -56,19 +46,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const headerRow = rawText.trim().split("\n")[0] ?? "";
-  const dateRange = extractDateRange(rawText);
-  const userMessage = [
-    `Organization: ${orgName || "Unknown"}`,
-    `File: ${fileName}`,
-    "",
-    `Column headers: ${headerRow}`,
-    ...(dateRange ? [`Date range: ${dateRange}`] : []),
-    "",
-    "Full data:",
-    rawText,
-  ].join("\n");
-
+  const summary = summarize(rawText);
+  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}\n\nData:\n${summary}`;
   const enc = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -76,8 +55,7 @@ export async function POST(req: NextRequest) {
       try {
         const msg = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          temperature: 0,
+          max_tokens: 900,
           system: SYSTEM_BASIC,
           messages: [{ role: "user", content: userMessage }],
         });
