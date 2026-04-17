@@ -129,7 +129,12 @@ export async function POST(req: NextRequest) {
     });
     const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
     try { preAnalysisJson = extractJson(preAnalysisText); } catch { /* leave as {} */ }
-  } catch (e) {
+  } catch (e: unknown) {
+    if ((e as { status?: number })?.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit reached. Please wait a minute and try again." }), {
+        status: 429, headers: { "Content-Type": "application/json" },
+      });
+    }
     console.error("Pre-analysis error (non-fatal):", e);
   }
 
@@ -198,7 +203,10 @@ export async function POST(req: NextRequest) {
           console.error("DB update error (non-fatal):", dbErr);
         }
       } catch (err) {
-        const errMsg = err instanceof Error ? `${err.constructor.name}: ${err.message}` : String(err);
+        const is429 = (err as { status?: number })?.status === 429;
+        const errMsg = is429
+          ? "Rate limit reached. Please wait a minute and try again."
+          : err instanceof Error ? `${err.constructor.name}: ${err.message}` : String(err);
         console.error("Stream error:", errMsg);
         controller.enqueue(enc.encode(`\n__STREAM_ERROR__:${errMsg}`));
       } finally {
