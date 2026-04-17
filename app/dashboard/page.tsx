@@ -329,7 +329,12 @@ export default function Home() {
       }
       raw += decoder.decode();
 
-      if (raw.includes("__STREAM_ERROR__")) throw new Error("Analysis failed on server.");
+      if (raw.includes("__STREAM_ERROR__")) {
+        const marker = "__STREAM_ERROR__:";
+        const idx = raw.indexOf(marker);
+        const detail = idx !== -1 ? raw.slice(idx + marker.length).trim() : "";
+        throw new Error(detail || "Analysis failed on server.");
+      }
 
       // Extract JSON
       const jsonStart = raw.indexOf("{");

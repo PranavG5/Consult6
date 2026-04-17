@@ -173,7 +173,9 @@ export async function POST(req: NextRequest) {
             messages: [{ role: "user", content: userMessage }],
           });
           const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
-          resultJson = extractJson(text);
+          let basicJson = {};
+          try { basicJson = extractJson(text); } catch (e) { console.error("basic extractJson failed:", e); }
+          resultJson = basicJson;
         }
 
         controller.enqueue(enc.encode(JSON.stringify(resultJson)));
@@ -196,8 +198,9 @@ export async function POST(req: NextRequest) {
           console.error("DB update error (non-fatal):", dbErr);
         }
       } catch (err) {
-        console.error("Stream error:", err);
-        controller.enqueue(enc.encode("\n__STREAM_ERROR__"));
+        const errMsg = err instanceof Error ? `${err.constructor.name}: ${err.message}` : String(err);
+        console.error("Stream error:", errMsg);
+        controller.enqueue(enc.encode(`\n__STREAM_ERROR__:${errMsg}`));
       } finally {
         controller.close();
       }
