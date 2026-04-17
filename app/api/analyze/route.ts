@@ -15,26 +15,21 @@ const LIMITS = {
 function summarize(rawText: string, mode: string = "basic"): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
   if (!lines.length) return "No data.";
-  const maxCols = mode === "advanced" ? 12 : 10;
-  const maxRows = mode === "advanced" ? 12 : 9;
-  const charLimit = mode === "advanced" ? 1200 : 900;
+  const maxCols = mode === "advanced" ? 8 : 6;
+  const maxRows = mode === "advanced" ? 8 : 6;
+  const charLimit = mode === "advanced" ? 700 : 500;
   const headers = lines[0].split(",").slice(0, maxCols).join(",");
-  const rows = lines.slice(1, maxRows).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
-  return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
+  const rows = lines.slice(1, maxRows + 1).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
+  return `${lines.length - 1}r,${lines[0].split(",").length}c\n${headers}\n${rows}`.slice(0, charLimit);
 }
 
-const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each that are realistic for this specific organization. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
+const SYSTEM_BASIC = `Return ONLY valid JSON, no markdown.
+{"summary":"","flags":[{"title":"","severity":"critical|warning|info","description":"","metric":""}],"recommendations":[{"title":"","detail":"","priority":"high|medium|low"}],"trajectoryNote":""}
+2-4 flags(≤20w each),2-3 recs(≤20w each),1-2 sentence summary.`;
 
-// Advanced is split into two parallel calls to double the effective token budget.
-const SYSTEM_ADVANCED_CORE = `You are an expert financial analyst. Tailor all analysis to the organization's size, industry, and constraints. Return ONLY valid JSON. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each tailored to this specific organization. Summary 2 sentences. trajectoryNote 1-2 sentences.`;
-
-const SYSTEM_ADVANCED_CONTEXT = `You are an expert financial analyst. Tailor all sections to the organization's industry, size, and constraints. Return ONLY valid JSON. No explanation, no markdown.
-{"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Rules: trendData exactly 6 labels/values per series, 2 series reflecting data patterns. industryComparisons 3 entries benchmarked to org's specific industry. caseStudies 1-2 real documented orgs, each field under 20 words, source must be a real specific citation (e.g. "HBR, 2019", "Bloomberg, March 2021"). scenarios 1-2 sentences each. riskMatrix 3 risks under 25 words each. actionPlan 2 items per phase under 20 words each.`;
+const SYSTEM_ADVANCED = `Return ONLY valid JSON, no markdown.
+{"summary":"","flags":[{"title":"","severity":"critical|warning|info","description":"","metric":""}],"recommendations":[{"title":"","detail":"","priority":"high|medium|low"}],"trajectoryNote":"","trendData":{"label":"","series":[{"name":"","values":[0,0,0,0,0,0]},{"name":"","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"","yourValue":"","industryAverage":"","topQuartile":"","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"","challenge":"","solution":"","outcome":"","source":""}],"scenarios":{"optimistic":"","base":"","pessimistic":""},"riskMatrix":[{"risk":"","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":""}],"actionPlan":{"immediate":[""],"shortTerm":[""],"longTerm":[""]}}
+3-5 flags(≤25w),3-4 recs(≤25w). trendData:2 series,6pts each. industryComparisons:3 items. caseStudies:1-2 real orgs,≤15w/field,real citation. scenarios:1 sentence each. riskMatrix:3 items(≤20w). actionPlan:2 items/phase(≤15w).`;
 
 function extractJson(text: string): object {
   const start = text.indexOf("{");
@@ -106,53 +101,31 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const summary = summarize(rawText, mode);
-  const contextLines = [
-    companySize && `Company Size: ${companySize}`,
-    industry && `Industry/Sector: ${industry}`,
-    constraints && `Key Constraints: ${constraints}`,
-    extraContext && `Additional Context: ${extraContext}`,
-  ].filter(Boolean).join("\n");
-  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nData:\n${summary}`;
+  const dataSummary = summarize(rawText, mode);
+  const ctx = [
+    companySize && `Size:${companySize}`,
+    industry && `Industry:${industry}`,
+    constraints && `Constraints:${constraints}`,
+    extraContext && `Notes:${extraContext}`,
+  ].filter(Boolean).join("|");
+  const userMessage = `Org:${orgName || "Unknown"} File:${fileName}${ctx ? ` ${ctx}` : ""}\n${dataSummary}`;
 
   const enc = new TextEncoder();
+  const systemPrompt = mode === "advanced" ? SYSTEM_ADVANCED : SYSTEM_BASIC;
+  const maxTokens = mode === "advanced" ? 1500 : 600;
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        let resultJson: object;
+        const msg = await anthropic.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: maxTokens,
+          system: [{ type: "text" as const, text: systemPrompt, cache_control: { type: "ephemeral" as const } }],
+          messages: [{ role: "user", content: userMessage }],
+        });
 
-        if (mode === "advanced") {
-          // Two parallel calls: core analysis + context sections
-          const [coreMsg, contextMsg] = await Promise.all([
-            anthropic.messages.create({
-              model: "claude-sonnet-4-6",
-              max_tokens: 1200,
-              system: SYSTEM_ADVANCED_CORE,
-              messages: [{ role: "user", content: userMessage }],
-            }),
-            anthropic.messages.create({
-              model: "claude-sonnet-4-6",
-              max_tokens: 1800,
-              system: SYSTEM_ADVANCED_CONTEXT,
-              messages: [{ role: "user", content: userMessage }],
-            }),
-          ]);
-
-          const coreText = coreMsg.content[0].type === "text" ? coreMsg.content[0].text : "{}";
-          const contextText = contextMsg.content[0].type === "text" ? contextMsg.content[0].text : "{}";
-          resultJson = { ...extractJson(coreText), ...extractJson(contextText) };
-        } else {
-          const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
-            max_tokens: 900,
-            system: SYSTEM_BASIC,
-            messages: [{ role: "user", content: userMessage }],
-          });
-          const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
-          resultJson = extractJson(text);
-        }
-
+        const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+        const resultJson = extractJson(text);
         controller.enqueue(enc.encode(JSON.stringify(resultJson)));
 
         // Update usage count
