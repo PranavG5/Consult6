@@ -239,11 +239,11 @@ export default function Home() {
 
   function handleFiles(newFiles: File[]) {
     const maxFiles = mode === "advanced" ? 3 : 1;
-    const maxBytes = mode === "advanced" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxBytes = 5 * 1024 * 1024;
     const valid = newFiles.filter(f => {
       const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls");
       const validSize = f.size <= maxBytes;
-      if (validType && !validSize) setErrorMsg(`"${f.name}" exceeds the ${mode === "advanced" ? "10 MB" : "5 MB"} limit for ${mode} analyses.`);
+      if (validType && !validSize) setErrorMsg(`"${f.name}" exceeds the 5 MB limit.`);
       return validType && validSize;
     });
     setFiles(prev => [...prev, ...valid].slice(0, maxFiles));

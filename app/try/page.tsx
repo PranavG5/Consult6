@@ -76,7 +76,12 @@ export default function TryPage() {
   }
 
   function handleFiles(newFiles: File[]) {
-    const valid = newFiles.filter(f => f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls"));
+    const maxBytes = 5 * 1024 * 1024;
+    const valid = newFiles.filter(f => {
+      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls");
+      if (validType && f.size > maxBytes) { setErrorMsg(`"${f.name}" exceeds the 5 MB limit.`); return false; }
+      return validType;
+    });
     setFiles(prev => [...prev, ...valid].slice(0, 1));
   }
   function handleDrop(e: React.DragEvent) {
@@ -256,7 +261,7 @@ export default function TryPage() {
                 style={{ border: `2px dashed ${dragging ? "#CC5500" : "#484848"}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", background: dragging ? "#2a1800" : "transparent" }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>↑</div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>Upload financial data</p>
-                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to 50 MB</p>
+                <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to 5 MB</p>
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
               </div>
             )}
