@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase-server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const anthropic = new Anthropic();
 
@@ -115,7 +115,9 @@ export async function POST(req: NextRequest) {
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
 
-  const preAnalysisMsg = await anthropic.messages.create({
+  let preAnalysisJson: object = {};
+  try {
+    const preAnalysisMsg = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 1000,
     temperature: 0,
@@ -124,9 +126,12 @@ export async function POST(req: NextRequest) {
       role: "user",
       content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the CSV data provided. For fields where a column is not present in the CSV, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nCSV data:\n${rawText}`,
     }],
-  });
-  const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
-  const preAnalysisJson = extractJson(preAnalysisText);
+    });
+    const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
+    try { preAnalysisJson = extractJson(preAnalysisText); } catch { /* leave as {} */ }
+  } catch (e) {
+    console.error("Pre-analysis error (non-fatal):", e);
+  }
 
   const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nPre-computed analysis summary — you MUST reference every single field in this JSON somewhere in the report. If a field shows a negative or worsening trend, it must appear as a flag. Do not skip any field. Do not write a section without checking whether any JSON field belongs in it.\nFields that must each appear at least once by name in the report:\n\ncustomer_count_trend\nnps_trend\ncontraction_revenue_trend\nchurn_trend (include the worst_period value explicitly)\ncash_runway_months (state the exact number)\navg_deal_size_trend\nsales_cycle_trend\ncontradictions_detected (list each one as its own flag)\n\n${JSON.stringify(preAnalysisJson)}\n\nData:\n${summary}`;
 
