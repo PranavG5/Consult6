@@ -24,24 +24,67 @@ function summarize(rawText: string, mode: string = "basic"): string {
   return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
 }
 
-// Trimmed CSV for the pre-analysis call: keep more rows/cols than summarize() so
-// trends can be computed, but hard-cap the size so a 1MB file cannot blow through
-// Anthropic's rate limit. max_tokens only caps output; input must be trimmed here.
-function trimForPreAnalysis(rawText: string): string {
-  const MAX_CHARS = 8000;
-  if (rawText.length <= MAX_CHARS) return rawText;
+type ColStats = { first: number | string; last: number | string; min?: number; max?: number; avg?: number };
+interface AggregatedStats {
+  row_count: number;
+  date_range: { first: string | null; last: string | null };
+  columns: Record<string, ColStats>;
+  cash_runway_months?: number | null;
+}
+
+function aggregateCSV(rawText: string): AggregatedStats {
   const lines = rawText.trim().split("\n").filter(Boolean);
-  if (!lines.length) return "";
-  const header = lines[0];
-  const rows = lines.slice(1);
-  const kept: string[] = [];
-  let used = header.length + 1;
-  for (const r of rows) {
-    if (used + r.length + 1 > MAX_CHARS) break;
-    kept.push(r);
-    used += r.length + 1;
+  if (lines.length < 2) return { row_count: 0, date_range: { first: null, last: null }, columns: {} };
+
+  const parseRow = (line: string) => line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+  const headers = parseRow(lines[0]);
+  const dataRows = lines.slice(1).map(parseRow);
+
+  const isDateLike = (v: string) =>
+    /^\d{4}-\d{2}-\d{2}/.test(v) ||
+    /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(v) ||
+    /^\d{4}Q[1-4]/i.test(v) ||
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(v);
+
+  const toNum = (v: string) => Number(v.replace(/[,$% ]/g, ""));
+
+  let dateColIdx = -1;
+  for (let c = 0; c < headers.length; c++) {
+    const sample = dataRows.find(r => r[c] !== "")?.[c] ?? "";
+    if (isDateLike(sample)) { dateColIdx = c; break; }
   }
-  return `${header}\n${kept.join("\n")}`;
+
+  const columns: Record<string, ColStats> = {};
+  for (let c = 0; c < headers.length; c++) {
+    if (c === dateColIdx) continue;
+    const name = headers[c];
+    if (!name) continue;
+    const vals = dataRows.map(r => r[c] ?? "").filter(v => v !== "");
+    if (!vals.length) continue;
+
+    const numVals = vals.map(toNum).filter(n => !isNaN(n) && isFinite(n));
+    if (numVals.length > vals.length / 2) {
+      const sum = numVals.reduce((a, b) => a + b, 0);
+      columns[name] = {
+        first: numVals[0],
+        last: numVals[numVals.length - 1],
+        min: Math.min(...numVals),
+        max: Math.max(...numVals),
+        avg: Math.round((sum / numVals.length) * 100) / 100,
+      };
+    } else {
+      columns[name] = { first: vals[0], last: vals[vals.length - 1] };
+    }
+  }
+
+  return {
+    row_count: dataRows.length,
+    date_range: {
+      first: dateColIdx >= 0 ? (dataRows[0]?.[dateColIdx] ?? null) : null,
+      last: dateColIdx >= 0 ? (dataRows[dataRows.length - 1]?.[dateColIdx] ?? null) : null,
+    },
+    columns,
+  };
 }
 
 const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
@@ -135,6 +178,30 @@ export async function POST(req: NextRequest) {
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
 
+  // Server-side aggregation — works on the full dataset, constant output size regardless of file size.
+  const aggregated = aggregateCSV(rawText);
+
+  // Fix 2: compute cash_runway_months server-side so it is never null due to Claude guessing.
+  const findLastNum = (candidates: string[]): number | null => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    for (const candidate of candidates) {
+      const needle = normalize(candidate);
+      const key = Object.keys(aggregated.columns).find(k => normalize(k) === needle || normalize(k).includes(needle));
+      if (key) {
+        const col = aggregated.columns[key];
+        const n = typeof col.last === "number" ? col.last : Number(String(col.last).replace(/[,$% ]/g, ""));
+        if (!isNaN(n) && isFinite(n)) return n;
+      }
+    }
+    return null;
+  };
+
+  const cash = findLastNum(["cash_and_equivalents", "cashandequivalents", "cash_equivalents", "cash"]);
+  const opex = findLastNum(["operating_expenses", "operatingexpenses", "total_operating_expenses", "opex"]);
+  aggregated.cash_runway_months = (cash !== null && opex !== null && opex > 0)
+    ? Math.round((cash / opex) * 10) / 10
+    : null;
+
   let preAnalysisJson: object = {};
   try {
     const preAnalysisMsg = await anthropic.messages.create({
@@ -144,7 +211,7 @@ export async function POST(req: NextRequest) {
     system: "You are a financial data analyst. Return only raw JSON. No prose, no markdown, no code fences.",
     messages: [{
       role: "user",
-      content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the CSV data provided. For fields where a column is not present in the CSV, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nCSV data:\n${trimForPreAnalysis(rawText)}`,
+      content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the aggregated statistics provided. For fields where a column is not present, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "${aggregated.cash_runway_months ?? "null — columns not found"}",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nAggregated statistics:\n${JSON.stringify(aggregated)}`,
     }],
     });
     const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
@@ -157,6 +224,10 @@ export async function POST(req: NextRequest) {
     }
     console.error("Pre-analysis error (non-fatal):", e);
   }
+
+  // Inject the server-computed cash runway so it always appears in the report prompt,
+  // overwriting whatever Claude returned (which may have been null or guessed).
+  (preAnalysisJson as Record<string, unknown>).cash_runway_months = aggregated.cash_runway_months;
 
   const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nPre-computed analysis summary — you MUST reference every single field in this JSON somewhere in the report. If a field shows a negative or worsening trend, it must appear as a flag. Do not skip any field. Do not write a section without checking whether any JSON field belongs in it.\nFields that must each appear at least once by name in the report:\n\ncustomer_count_trend\nnps_trend\ncontraction_revenue_trend\nchurn_trend (include the worst_period value explicitly)\ncash_runway_months (state the exact number)\navg_deal_size_trend\nsales_cycle_trend\ncontradictions_detected (list each one as its own flag)\n\n${JSON.stringify(preAnalysisJson)}\n\nData:\n${summary}`;
 
