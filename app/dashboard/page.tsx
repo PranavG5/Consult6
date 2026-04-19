@@ -920,6 +920,17 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <footer style={{ borderTop: "1px solid #272727", padding: "24px 40px", marginTop: 40 }}>
+        <div style={{ maxWidth: 1060, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+          <span style={{ fontSize: 13, color: "#484848" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+            <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
+            <Link href="/privacy" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Privacy</Link>
+            <Link href="/terms" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Terms</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
