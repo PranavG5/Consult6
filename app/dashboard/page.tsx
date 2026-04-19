@@ -816,7 +816,15 @@ export default function Home() {
       <aside style={{ width: 220, flexShrink: 0, position: "sticky", top: 76 }}>
         <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 14px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 12px" }}>REPORT HISTORY</p>
-          {history.length === 0 ? (
+          {profileContext?.disable_pdf_history ? (
+            <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.6 }}>
+              PDF history is turned off in{" "}
+              <span
+                onClick={() => window.location.href = "/settings"}
+                style={{ color: "#CC5500", cursor: "pointer", textDecoration: "underline" }}
+              >Settings</span>.
+            </p>
+          ) : history.length === 0 ? (
             <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5 }}>No analyses yet. Run your first report to see history here.</p>
           ) : (
             <div style={{
@@ -855,9 +863,11 @@ export default function Home() {
               })}
             </div>
           )}
-          <p style={{ fontSize: 10, color: "#5a5a5a", margin: "10px 0 0", textAlign: "center" }}>
-            {historyAccountType === "free" ? "Free: last 5 reports" : "Pro/Admin: last 20 reports"}
-          </p>
+          {!profileContext?.disable_pdf_history && (
+            <p style={{ fontSize: 10, color: "#5a5a5a", margin: "10px 0 0", textAlign: "center" }}>
+              {historyAccountType === "free" ? "Free: last 5 reports" : "Pro/Admin: last 20 reports"}
+            </p>
+          )}
         </div>
       </aside>
       </div>
