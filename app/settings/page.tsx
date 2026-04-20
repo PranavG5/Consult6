@@ -3,7 +3,30 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import Link from "next/link";
 
-type Tab = "profile" | "privacy" | "billing" | "account";
+type Tab = "profile" | "privacy" | "billing" | "account" | "admin";
+
+interface SubHistoryEntry {
+  id: string;
+  plan: string;
+  status: string;
+  from_plan?: string;
+  to_plan?: string;
+  is_admin_action?: boolean;
+  note?: string;
+  started_at?: string;
+  admin_email?: string;
+}
+
+interface AdminUser {
+  id: string;
+  email: string;
+  account_type: string;
+  industry: string;
+  company_size: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  provider: string;
+}
 
 interface ProfileData {
   about_me: string;
@@ -18,7 +41,7 @@ interface PrivacyData {
   memory_local_only: boolean;
 }
 
-const TAB_LABELS: { id: Tab; label: string }[] = [
+const BASE_TABS: { id: Tab; label: string }[] = [
   { id: "profile", label: "Profile" },
   { id: "privacy", label: "Privacy" },
   { id: "billing", label: "Billing" },
@@ -54,6 +77,14 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [subHistory, setSubHistory] = useState<SubHistoryEntry[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [adminSearch, setAdminSearch] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<AdminUser | null>(null);
+  const [upgradePlan, setUpgradePlan] = useState("free");
+  const [upgradeNote, setUpgradeNote] = useState("");
+  const [upgrading, setUpgrading] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -64,7 +95,8 @@ export default function SettingsPage() {
 
       const { data } = await supabase.from("profiles").select("*").eq("id", u.id).single();
       if (data) {
-        setAccountType(data.account_type ?? "free");
+        const aType = data.account_type ?? "free";
+        setAccountType(aType);
         setProfile({
           about_me: data.about_me ?? "",
           industry: data.industry ?? "",
@@ -76,6 +108,16 @@ export default function SettingsPage() {
           disable_analysis_memory: data.disable_analysis_memory ?? false,
           memory_local_only: data.memory_local_only ?? true,
         });
+        // fetch billing history for all users
+        fetch("/api/billing/history").then(r => r.json()).then(d => setSubHistory(d.history ?? []));
+        // fetch admin user list if admin
+        if (aType === "admin") {
+          setAdminLoading(true);
+          fetch("/api/admin/users").then(r => r.json()).then(d => {
+            setAdminUsers(d.users ?? []);
+            setAdminLoading(false);
+          });
+        }
       }
     }
     load();
@@ -136,6 +178,27 @@ export default function SettingsPage() {
     window.location.href = "/?deleted=1";
   }
 
+  async function handleUpgrade() {
+    if (!upgradeTarget) return;
+    setUpgrading(true);
+    const res = await fetch("/api/admin/upgrade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_user_id: upgradeTarget.id, new_plan: upgradePlan, note: upgradeNote }),
+    });
+    const data = await res.json();
+    setUpgrading(false);
+    if (!res.ok) { flash(data.error ?? "Upgrade failed.", false); return; }
+    setAdminUsers(prev => prev.map(u => u.id === upgradeTarget.id ? { ...u, account_type: upgradePlan } : u));
+    setUpgradeTarget(null);
+    setUpgradeNote("");
+    flash(`${upgradeTarget.email} upgraded to ${upgradePlan}.`);
+  }
+
+  const tabLabels: { id: Tab; label: string }[] = accountType === "admin"
+    ? [...BASE_TABS, { id: "admin", label: "Admin" }]
+    : BASE_TABS;
+
   const badgeStyle: Record<string, { bg: string; color: string }> = {
     free: { bg: "#484848", color: "#aaa" },
     paid: { bg: "#CC5500", color: "#fff" },
@@ -171,7 +234,7 @@ export default function SettingsPage() {
         <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
           {/* Sidebar tabs */}
           <div style={{ width: 180, flexShrink: 0 }}>
-            {TAB_LABELS.map(t => (
+            {tabLabels.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{ width: "100%", textAlign: "left", background: tab === t.id ? "#2a1800" : "transparent", border: tab === t.id ? "1px solid #CC5500" : "1px solid transparent", borderRadius: 8, padding: "10px 14px", fontSize: 14, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? "#CC5500" : "#888", cursor: "pointer", marginBottom: 4 }}>
                 {t.label}
@@ -271,10 +334,144 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 600, color: "#666", letterSpacing: 1, margin: "0 0 12px" }}>SUBSCRIPTION HISTORY</p>
-                  <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 8, padding: "20px", textAlign: "center" }}>
-                    <p style={{ fontSize: 13, color: "#555", margin: 0 }}>No billing history yet.</p>
-                  </div>
+                  {subHistory.length === 0 ? (
+                    <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 8, padding: "20px", textAlign: "center" }}>
+                      <p style={{ fontSize: 13, color: "#555", margin: 0 }}>No billing history yet.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {subHistory.map(h => (
+                        <div key={h.id} style={{ background: "#2d2d2d", border: `1px solid ${h.is_admin_action ? "#4b2e7a" : "#3a3a3a"}`, borderRadius: 8, padding: "14px 16px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              {h.from_plan && h.to_plan ? (
+                                <span style={{ fontSize: 13, color: "#f0f0f0", fontWeight: 600 }}>
+                                  {h.from_plan.toUpperCase()} → {h.to_plan.toUpperCase()}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 13, color: "#f0f0f0", fontWeight: 600 }}>{h.plan.toUpperCase()}</span>
+                              )}
+                              {h.is_admin_action && (
+                                <span style={{ fontSize: 10, fontWeight: 700, background: "#2d1a4a", color: "#c084fc", padding: "2px 7px", borderRadius: 10, letterSpacing: 0.5 }}>ADMIN ACTION</span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 11, color: "#555" }}>{h.started_at ? new Date(h.started_at).toLocaleDateString() : ""}</span>
+                          </div>
+                          {h.is_admin_action && h.admin_email && (
+                            <p style={{ fontSize: 12, color: "#888", margin: "2px 0 0" }}>Changed by {h.admin_email}</p>
+                          )}
+                          {h.note && <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0", fontStyle: "italic" }}>{h.note}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </div>
+            )}
+
+            {/* ── ADMIN ── */}
+            {tab === "admin" && (
+              <div>
+                <p style={{ fontSize: 16, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px" }}>Admin Dashboard</p>
+                <p style={{ fontSize: 13, color: "#666", margin: "0 0 20px" }}>Manage all accounts. Sensitive data (passwords, payment info) is never shown.</p>
+
+                {/* Search */}
+                <input
+                  value={adminSearch}
+                  onChange={e => setAdminSearch(e.target.value)}
+                  placeholder="Search by email, plan, industry…"
+                  style={{ width: "100%", boxSizing: "border-box", marginBottom: 16, background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13 }}
+                />
+
+                {adminLoading ? (
+                  <p style={{ fontSize: 13, color: "#555", textAlign: "center", padding: 20 }}>Loading accounts…</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 520, overflowY: "auto" }}>
+                    {adminUsers
+                      .filter(u => {
+                        const q = adminSearch.toLowerCase();
+                        return !q || (u.email ?? "").toLowerCase().includes(q) || u.account_type.includes(q) || u.industry.toLowerCase().includes(q);
+                      })
+                      .map(u => {
+                        const planColors: Record<string, { bg: string; color: string }> = {
+                          free: { bg: "#484848", color: "#aaa" },
+                          paid: { bg: "#CC5500", color: "#fff" },
+                          enterprise: { bg: "#16a34a", color: "#fff" },
+                          admin: { bg: "#6b21a8", color: "#f0f0f0" },
+                        };
+                        const pc = planColors[u.account_type] ?? planColors.free;
+                        return (
+                          <div key={u.id} style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: "14px 16px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                  <span style={{ fontSize: 14, fontWeight: 600, color: "#f0f0f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</span>
+                                  <span style={{ fontSize: 10, fontWeight: 700, background: pc.bg, color: pc.color, padding: "2px 8px", borderRadius: 10, flexShrink: 0 }}>{u.account_type.toUpperCase()}</span>
+                                </div>
+                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                                  {u.industry && <span style={{ fontSize: 12, color: "#777" }}>◈ {u.industry}</span>}
+                                  {u.company_size && <span style={{ fontSize: 12, color: "#777" }}>⊞ {u.company_size}</span>}
+                                  <span style={{ fontSize: 12, color: "#555" }}>Joined {new Date(u.created_at).toLocaleDateString()}</span>
+                                  <span style={{ fontSize: 12, color: "#555" }}>
+                                    Last seen {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "never"}
+                                  </span>
+                                  <span style={{ fontSize: 12, color: "#555" }}>via {u.provider}</span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => { setUpgradeTarget(u); setUpgradePlan(u.account_type); setUpgradeNote(""); }}
+                                style={{ background: "#2a1800", border: "1px solid #CC5500", color: "#CC5500", fontSize: 12, fontWeight: 600, borderRadius: 7, padding: "6px 14px", cursor: "pointer", flexShrink: 0 }}>
+                                Change Plan
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {adminUsers.filter(u => {
+                      const q = adminSearch.toLowerCase();
+                      return !q || (u.email ?? "").toLowerCase().includes(q) || u.account_type.includes(q) || u.industry.toLowerCase().includes(q);
+                    }).length === 0 && (
+                      <p style={{ fontSize: 13, color: "#555", textAlign: "center", padding: 20 }}>No accounts match your search.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Upgrade modal */}
+                {upgradeTarget && (
+                  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+                    <div style={{ background: "#252525", border: "1px solid #484848", borderRadius: 14, padding: 28, width: "100%", maxWidth: 420 }}>
+                      <p style={{ fontSize: 16, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px" }}>Change Plan</p>
+                      <p style={{ fontSize: 13, color: "#666", margin: "0 0 20px", wordBreak: "break-all" }}>{upgradeTarget.email}</p>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#aaa", marginBottom: 6 }}>New Plan</label>
+                      <select
+                        value={upgradePlan}
+                        onChange={e => setUpgradePlan(e.target.value)}
+                        style={{ width: "100%", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, marginBottom: 14, boxSizing: "border-box" }}>
+                        <option value="free">Free</option>
+                        <option value="paid">Pro ($10/mo)</option>
+                        <option value="enterprise">Enterprise ($40/mo)</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#aaa", marginBottom: 6 }}>Note (shown in user's billing history)</label>
+                      <input
+                        value={upgradeNote}
+                        onChange={e => setUpgradeNote(e.target.value)}
+                        placeholder="e.g. Complimentary upgrade — partnership deal"
+                        style={{ width: "100%", boxSizing: "border-box", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, marginBottom: 20 }}
+                      />
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button onClick={handleUpgrade} disabled={upgrading}
+                          style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 8, padding: "11px 0", fontSize: 14, fontWeight: 700, opacity: upgrading ? 0.6 : 1, cursor: "pointer" }}>
+                          {upgrading ? "Saving…" : "Confirm Change"}
+                        </button>
+                        <button onClick={() => setUpgradeTarget(null)}
+                          style={{ background: "none", border: "1px solid #484848", color: "#888", borderRadius: 8, padding: "11px 18px", fontSize: 13, cursor: "pointer" }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
