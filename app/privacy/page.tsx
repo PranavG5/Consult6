@@ -79,7 +79,7 @@ export default function PrivacyPage() {
             <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
             <Link href="/privacy" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Privacy</Link>
             <Link href="/terms" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Terms</Link>
-            <Link href="/contact" style={{ fontSize: 13, color: "#CC5500", textDecoration: "none" }}>Contact</Link>
+            <Link href="/contact" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Contact</Link>
           </div>
         </div>
       </footer>
