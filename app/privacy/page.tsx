@@ -70,7 +70,7 @@ export default function PrivacyPage() {
 
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Questions about your data?</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Reach us at <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will respond as promptly as possible.</p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Reach us at <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>our contact page</a> or email <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will respond as promptly as possible.</p>
         </div>
       </main>
 
@@ -87,6 +87,7 @@ export default function PrivacyPage() {
             <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
             <Link href="/privacy" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Privacy</Link>
             <Link href="/terms" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Terms</Link>
+            <Link href="/contact" style={{ fontSize: 13, color: "#CC5500", textDecoration: "none" }}>Contact</Link>
           </div>
         </div>
       </footer>

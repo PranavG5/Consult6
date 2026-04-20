@@ -199,7 +199,7 @@ export default function LandingPage() {
             <p style={{ fontSize: 13, color: "#555", margin: "0 0 6px" }}>per month</p>
             <p style={{ fontSize: 12, color: "#16a34a", margin: "0 0 20px", background: "#0d2a18", border: "1px solid #16a34a33", borderRadius: 6, padding: "6px 10px", lineHeight: 1.5 }}>
               Need custom limits or a team deal?{" "}
-              <a href="mailto:contact@consult6.com" style={{ color: "#4ade80", fontWeight: 600, textDecoration: "none" }}>Contact us</a>
+              <Link href="/contact" style={{ color: "#4ade80", fontWeight: 600, textDecoration: "none" }}>Contact us</Link>
               {" "}to discuss pricing and usage packages.
             </p>
             <div style={{ borderTop: "1px solid #16a34a33", paddingTop: 20, marginBottom: 28 }}>
@@ -213,9 +213,9 @@ export default function LandingPage() {
             <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8, marginBottom: 10 }}>
               Get Started with Enterprise
             </Link>
-            <a href="mailto:contact@consult6.com" style={{ display: "block", textAlign: "center", background: "transparent", border: "1px solid #16a34a55", color: "#4ade80", fontSize: 13, fontWeight: 600, textDecoration: "none", padding: "10px 0", borderRadius: 8 }}>
+            <Link href="/contact" style={{ display: "block", textAlign: "center", background: "transparent", border: "1px solid #16a34a55", color: "#4ade80", fontSize: 13, fontWeight: 600, textDecoration: "none", padding: "10px 0", borderRadius: 8 }}>
               Discuss Custom Pricing →
-            </a>
+            </Link>
           </div>
 
         </div>
@@ -235,6 +235,7 @@ export default function LandingPage() {
             <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
             <Link href="/privacy" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Privacy</Link>
             <Link href="/terms" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>Terms</Link>
+            <Link href="/contact" style={{ fontSize: 13, color: "#CC5500", textDecoration: "none" }}>Contact</Link>
           </div>
         </div>
       </footer>

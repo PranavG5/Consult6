@@ -328,7 +328,7 @@ export default function SettingsPage() {
                       <Link href="/#pricing" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Upgrade</Link>
                     ) : (
                       <button style={{ background: "none", border: "1px solid #484848", color: "#888", fontSize: 13, borderRadius: 7, padding: "8px 16px" }}
-                        onClick={() => flash("Subscription management coming soon. Contact support@consult6.com to cancel.")}>Cancel Plan</button>
+                        onClick={() => flash("Subscription management coming soon. Visit /contact or email consult6testing@gmail.com to cancel.")}>Cancel Plan</button>
                     )}
                   </div>
                 </div>
