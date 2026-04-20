@@ -1,18 +1,10 @@
 import Link from "next/link";
+import InfoNav from "@/components/InfoNav";
 
 export default function ContactPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid #2d2d2d", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#1e1e1e", zIndex: 100 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
-          <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
-        </Link>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Link href="/auth/login" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "8px 14px" }}>Sign in</Link>
-          <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Get Started</Link>
-        </div>
-      </nav>
+      <InfoNav />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "72px 24px 96px" }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 12 }}>CONTACT US</p>
@@ -23,36 +15,26 @@ export default function ContactPage() {
           Whether you have a question about your account, want to discuss an enterprise deal, or need help with something on the platform — we read every message and respond as quickly as we can.
         </p>
 
-        {/* Primary contact card */}
+        {/* General enquiries */}
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "28px 32px", marginBottom: 20 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>General enquiries &amp; support</p>
-          <p style={{ fontSize: 14, color: "#666", margin: "0 0 16px" }}>For account issues, billing questions, or anything else — drop us an email and we&apos;ll get back to you.</p>
-          <a
-            href="mailto:consult6testing@gmail.com"
-            style={{ display: "inline-block", background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "10px 22px", borderRadius: 8 }}
-          >
-            consult6testing@gmail.com
-          </a>
+          <p style={{ fontSize: 14, color: "#666", margin: "0 0 14px" }}>For account issues, billing questions, or anything else — email us directly:</p>
+          <p style={{ fontSize: 15, color: "#CC5500", fontWeight: 600, margin: 0 }}>consult6testing@gmail.com</p>
         </div>
 
-        {/* Enterprise card */}
+        {/* Enterprise */}
         <div style={{ background: "#111f14", border: "1px solid #16a34a55", borderRadius: 12, padding: "28px 32px", marginBottom: 20 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#4ade80", margin: "0 0 6px" }}>Enterprise &amp; custom pricing</p>
-          <p style={{ fontSize: 14, color: "#666", margin: "0 0 16px" }}>
-            Looking for a team plan, custom usage limits, or a tailored pricing package? Tell us about your organisation and we&apos;ll put together an offer.
+          <p style={{ fontSize: 14, color: "#666", margin: "0 0 14px" }}>
+            Looking for a team plan, custom usage limits, or a tailored pricing package? Email us and tell us about your organisation:
           </p>
-          <a
-            href="mailto:consult6testing@gmail.com?subject=Enterprise%20Pricing%20Enquiry"
-            style={{ display: "inline-block", background: "transparent", border: "1px solid #16a34a55", color: "#4ade80", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "10px 22px", borderRadius: 8 }}
-          >
-            Discuss Custom Pricing →
-          </a>
+          <p style={{ fontSize: 15, color: "#CC5500", fontWeight: 600, margin: 0 }}>consult6testing@gmail.com</p>
         </div>
 
-        {/* Response time note */}
+        {/* Response time */}
         <div style={{ background: "#1e1e1e", border: "1px solid #2d2d2d", borderRadius: 12, padding: "20px 24px" }}>
           <p style={{ fontSize: 13, color: "#555", margin: 0, lineHeight: 1.7 }}>
-            We typically respond within one business day. For urgent account issues, including login or billing problems, please include as much detail as possible in your email so we can resolve things quickly.
+            We typically respond within one business day. For urgent account or billing issues, please include as much detail as possible so we can help quickly.
           </p>
         </div>
       </main>
