@@ -113,10 +113,17 @@ export default function SettingsPage() {
         // fetch admin user list if admin
         if (aType === "admin") {
           setAdminLoading(true);
-          fetch("/api/admin/users").then(r => r.json()).then(d => {
-            setAdminUsers(d.users ?? []);
-            setAdminLoading(false);
-          });
+          fetch("/api/admin/users")
+            .then(r => r.json())
+            .then(d => {
+              if (d.error) flash(d.error, false);
+              setAdminUsers(d.users ?? []);
+              setAdminLoading(false);
+            })
+            .catch(err => {
+              flash("Admin API error: " + (err?.message ?? "unknown"), false);
+              setAdminLoading(false);
+            });
         }
       }
     }
