@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
   const isApiPage = request.nextUrl.pathname.startsWith("/api");
   const isLandingPage = request.nextUrl.pathname === "/";
   const isGuestPage = request.nextUrl.pathname.startsWith("/try");
-  const isPublicInfoPage = ["/about", "/privacy", "/terms"].includes(request.nextUrl.pathname);
+  const isPublicInfoPage = ["/about", "/privacy", "/terms", "/contact"].includes(request.nextUrl.pathname);
 
   if (!user && !isAuthPage && !isApiPage && !isLandingPage && !isGuestPage && !isPublicInfoPage) {
     const url = request.nextUrl.clone();
