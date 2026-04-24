@@ -785,7 +785,7 @@ export default function Home() {
           {state !== "done" && !isRunning && advancedHasNoContext && noContextWarnShown && (
             <div style={{ background: "#2a1400", border: "1px solid #CC5500", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#ffaa66", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ flexShrink: 0 }}>⚠</span>
-              <span>No context provided — advanced analysis may produce generic results.</span>
+              <span>No context provided. Advanced analysis may produce generic results.</span>
               <button onClick={() => { setContextOpen(true); }} style={{ background: "none", border: "none", color: "#CC5500", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0, marginLeft: "auto", whiteSpace: "nowrap" }}>Add context →</button>
             </div>
           )}
@@ -907,7 +907,7 @@ export default function Home() {
             <div style={{ width: 48, height: 48, background: "#CC5500", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, color: "#fff", margin: "0 auto 20px" }}>6</div>
             <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>Welcome to Consult6!</p>
             <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px", lineHeight: 1.6 }}>
-              Set up your profile to save your industry, company context, and preferences — so you never have to re-enter them for each analysis.
+              Set up your profile to save your industry, company context, and preferences so you never have to re-enter them for each analysis.
             </p>
             <Link href="/settings" onClick={() => setShowSettingsPopup(false)}
               style={{ display: "block", background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 0", borderRadius: 9, marginBottom: 10 }}>

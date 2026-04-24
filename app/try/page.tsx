@@ -203,7 +203,7 @@ export default function TryPage() {
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {/* Basic — active */}
+            {/* Basic - active */}
             <div style={{ background: "#2a1800", border: "2px solid #CC5500", borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Basic</span>
@@ -211,7 +211,7 @@ export default function TryPage() {
               </div>
               <p style={{ fontSize: 12, color: "#888", margin: 0 }}>Single file · Standard flags & recommendations · PDF report</p>
             </div>
-            {/* Advanced — locked */}
+            {/* Advanced - locked */}
             <button onClick={handleAdvancedClick}
               style={{ background: "#333333", border: "2px solid #484848", borderRadius: 10, padding: "14px 16px", textAlign: "left", cursor: "pointer", position: "relative" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -354,7 +354,7 @@ export default function TryPage() {
             </p>
             <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px", lineHeight: 1.6 }}>
               {modalReason === "advanced"
-                ? "Advanced analysis — trend charts, industry benchmarks, risk matrix, and more — is available on free and paid accounts."
+                ? "Advanced analysis (trend charts, industry benchmarks, risk matrix, and more) is available on free and paid accounts."
                 : "Your report is ready! Create a free account and it will be saved directly to your report history."}
             </p>
             <Link href="/auth/signup" style={{ display: "block", background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 0", borderRadius: 9, marginBottom: 10 }}>

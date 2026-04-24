@@ -4,7 +4,7 @@ const features = [
   {
     icon: "⚑",
     title: "Financial Flags",
-    desc: "Automatically surface critical issues, warnings, and key observations from your raw data — no manual review needed.",
+    desc: "Automatically surface critical issues, warnings, and key observations from your raw data, with no manual review needed.",
   },
   {
     icon: "◎",
@@ -32,7 +32,7 @@ const features = [
   {
     icon: "↓",
     title: "PDF Reports",
-    desc: "Download a professional, branded report — ready to share with stakeholders, boards, or investors.",
+    desc: "Download a professional, branded report, ready to share with stakeholders, boards, or investors.",
   },
 ];
 
@@ -95,7 +95,7 @@ export default function LandingPage() {
           <span style={{ color: "#CC5500" }}>that actually helps.</span>
         </h1>
         <p style={{ fontSize: 18, color: "#888", lineHeight: 1.7, margin: "0 auto 40px", maxWidth: 560 }}>
-          Upload your financial data and get instant AI-generated flags, benchmarks, and tailored recommendations — in under 30 seconds.
+          Upload your financial data and get instant AI-generated flags, benchmarks, and tailored recommendations in under 30 seconds.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 16, fontWeight: 700, textDecoration: "none", padding: "14px 32px", borderRadius: 9, display: "inline-block" }}>

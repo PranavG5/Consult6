@@ -12,13 +12,13 @@ export default function ContactPage() {
         <p style={{ fontSize: 13, color: "#555", margin: "0 0 40px" }}>General enquiries, enterprise pricing, and support</p>
 
         <p style={{ fontSize: 16, color: "#888", lineHeight: 1.8, margin: "0 0 48px" }}>
-          Whether you have a question about your account, want to discuss an enterprise deal, or need help with something on the platform — we read every message and respond as quickly as we can.
+          Whether you have a question about your account, want to discuss an enterprise deal, or need help with something on the platform, we read every message and respond as quickly as we can.
         </p>
 
         {/* General enquiries */}
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "28px 32px", marginBottom: 20 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>General enquiries &amp; support</p>
-          <p style={{ fontSize: 14, color: "#666", margin: "0 0 14px" }}>For account issues, billing questions, or anything else — email us directly:</p>
+          <p style={{ fontSize: 14, color: "#666", margin: "0 0 14px" }}>For account issues, billing questions, or anything else, email us directly:</p>
           <p style={{ fontSize: 15, color: "#CC5500", fontWeight: 600, margin: 0 }}>consult6testing@gmail.com</p>
         </div>
 

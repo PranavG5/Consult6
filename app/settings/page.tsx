@@ -329,7 +329,7 @@ export default function SettingsPage() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ background: badge.bg, color: badge.color, fontSize: 12, fontWeight: 800, padding: "4px 12px", borderRadius: 20, letterSpacing: 0.5 }}>{accountType.toUpperCase()}</span>
-                      <span style={{ fontSize: 15, color: "#ccc" }}>{accountType === "free" ? "Free — $0/mo" : accountType === "paid" ? "Pro — $10/mo" : accountType === "enterprise" ? "Enterprise — $40/mo" : "Admin"}</span>
+                      <span style={{ fontSize: 15, color: "#ccc" }}>{accountType === "free" ? "Free · $0/mo" : accountType === "paid" ? "Pro · $10/mo" : accountType === "enterprise" ? "Enterprise · $40/mo" : "Admin"}</span>
                     </div>
                     {accountType === "free" ? (
                       <Link href="/#pricing" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Upgrade</Link>
@@ -463,7 +463,7 @@ export default function SettingsPage() {
                       <input
                         value={upgradeNote}
                         onChange={e => setUpgradeNote(e.target.value)}
-                        placeholder="e.g. Complimentary upgrade — partnership deal"
+                        placeholder="e.g. Complimentary upgrade, partnership deal"
                         style={{ width: "100%", boxSizing: "border-box", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, marginBottom: 20 }}
                       />
                       <div style={{ display: "flex", gap: 10 }}>
