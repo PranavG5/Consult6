@@ -143,7 +143,7 @@ Rules:
 - summary: 2-3 sentences. Name specific numbers. No generic statements.
 - trajectoryNote: 1-2 sentences grounded in actual trends from the data.
 - trendData: Exactly 6 labels and 6 values per series. Use real date/period labels from the data. 2 series max (e.g. Revenue vs Expenses). Values must reflect actual data — do not fabricate.
-- industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector.
+- industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named "program_expenses", "program_costs", or "direct_service_costs" — never substitute "operating_expenses", "admin_expenses", or general overhead columns as a proxy for program expenses. If no clearly labeled program expense column is present, omit this benchmark entirely and substitute a more appropriate metric.
 - scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.
 - riskMatrix: 3 risks, each under 30 words. Based on actual flags found in the data.
 - actionPlan: 2 items per phase (immediate/shortTerm/longTerm), each under 25 words. Specific to this org.

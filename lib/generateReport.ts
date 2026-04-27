@@ -218,9 +218,9 @@ export function generatePDF(data: ReportData): Uint8Array {
     const td = data.analysis.trendData;
     const chartW = W - margin * 2;
     const chartH = 50;
-    const allVals = td.series.flatMap(s => s.values);
-    const maxVal = Math.max(...allVals, 1);
-    const minVal = Math.min(...allVals, 0);
+    const allVals = td.series.flatMap(s => (Array.isArray(s.values) ? s.values : []).map(Number)).filter(isFinite);
+    const maxVal = allVals.length ? Math.max(...allVals) : 1;
+    const minVal = allVals.length ? Math.min(...allVals) : 0;
     const range = maxVal - minVal || 1;
     const colors: [number,number,number][] = [ORANGE, [41, 128, 185], [39, 174, 96]];
 
@@ -248,18 +248,21 @@ export function generatePDF(data: ReportData): Uint8Array {
 
     // Series lines
     td.series.forEach((series, si) => {
+      const vals = (Array.isArray(series.values) ? series.values : []).map(Number);
+      if (vals.length < 2) return;
       const col = colors[si % colors.length];
       doc.setDrawColor(...col);
       doc.setLineWidth(0.8);
-      for (let i = 0; i < series.values.length - 1; i++) {
+      for (let i = 0; i < vals.length - 1; i++) {
+        if (!isFinite(vals[i]) || !isFinite(vals[i + 1])) continue;
         const x1 = plotX + (i / (n - 1)) * plotW;
-        const y1 = plotY + plotH - ((series.values[i] - minVal) / range) * plotH;
+        const y1 = plotY + plotH - ((vals[i] - minVal) / range) * plotH;
         const x2 = plotX + ((i + 1) / (n - 1)) * plotW;
-        const y2 = plotY + plotH - ((series.values[i + 1] - minVal) / range) * plotH;
+        const y2 = plotY + plotH - ((vals[i + 1] - minVal) / range) * plotH;
         doc.line(x1, y1, x2, y2);
         doc.setFillColor(...col);
         doc.circle(x1, y1, 0.8, "F");
-        if (i === series.values.length - 2) doc.circle(x2, y2, 0.8, "F");
+        if (i === vals.length - 2) doc.circle(x2, y2, 0.8, "F");
       }
     });
 
@@ -294,12 +297,21 @@ export function generatePDF(data: ReportData): Uint8Array {
       head: [["Metric", "Your Value", "Industry Avg", "Top 25%", "Status"]],
       body: data.analysis.industryComparisons.map(c => [
         c.metric, c.yourValue, c.industryAverage, c.topQuartile,
-        c.status === "above_average" ? "▲ Above Avg" : c.status === "below_average" ? "▼ Below Avg" : "◆ Average",
+        c.status === "above_average" ? "Above Avg" : c.status === "below_average" ? "Below Avg" : "Average",
       ]),
       theme: "plain",
       headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8 },
       alternateRowStyles: { fillColor: [32, 32, 32] },
+      didDrawCell: (hookData: any) => {
+        if (hookData.section === "body" && hookData.column.index === 4) {
+          const val: string = hookData.cell.text?.[0] ?? "";
+          const col: [number, number, number] = val === "Above Avg" ? [39, 174, 96] : val === "Below Avg" ? [192, 57, 43] : [120, 120, 120];
+          hookData.doc.setTextColor(...col);
+          hookData.doc.setFont("helvetica", "bold");
+          hookData.doc.text(val, hookData.cell.x + 2, hookData.cell.y + hookData.cell.height / 2 + 1.5);
+        }
+      },
       margin: { left: margin, right: margin },
     });
     y = (doc as any).lastAutoTable.finalY + 8;
