@@ -295,6 +295,143 @@ function renderRecommendations(doc: jsPDF, data: ReportData): void {
   });
 }
 
+// ─── Helper: parse numeric value from string or number ──────────────────────
+function parseNum(v: unknown): number {
+  if (typeof v === "number") return v;
+  const s = String(v).replace(/[$,%]/g, "").replace(/,/g, "");
+  return parseFloat(s);
+}
+
+// ─── Page: Trajectory + Chart ────────────────────────────────────────────────
+function renderTrajectoryAndChart(doc: jsPDF, data: ReportData): void {
+  const CHART_H = 75;   // chart area height in mm
+  const CHART_LEGEND_H = 14;
+
+  // ── Trajectory box ──────────────────────────────────────────────────────
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "WHERE THIS IS HEADING", y);
+  y += 4;
+
+  const trajText  = sanitize(data.analysis.trajectoryNote);
+  const trajLines = doc.splitTextToSize(trajText, CONTENT_W - 10) as string[];
+  const bodyLH    = FONT_SIZES.body * 0.352778 * 1.45;
+  const trajBoxH  = Math.max(22, trajLines.length * bodyLH + 14);
+
+  drawCard(doc, MARGIN, y, CONTENT_W, trajBoxH, COLORS.cardBg, COLORS.border);
+  doc.setFillColor(...COLORS.blue);
+  doc.rect(MARGIN, y, 3, trajBoxH, "F");
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(FONT_SIZES.body);
+  doc.setTextColor(...COLORS.textDark);
+  doc.text(trajLines, MARGIN + 8, y + bodyLH + 2);
+  y += trajBoxH + 8;
+
+  // ── Chart ────────────────────────────────────────────────────────────────
+  if (data.mode !== "advanced" || !data.analysis.trendData) return;
+
+  const td      = data.analysis.trendData;
+  const wordCnt = (data.analysis.trajectoryNote || "").split(/\s+/).filter(Boolean).length;
+  const chartTotalH = CHART_H + CHART_LEGEND_H + 18;
+
+  // Move to new page if trajectory was long or chart won't fit
+  if (wordCnt >= 120 || y + chartTotalH > CONTENT_BOTTOM) {
+    y = addNewPage(doc);
+    y += drawSectionHeader(doc, "FINANCIAL TREND", y);
+    y += 4;
+  }
+
+  const allVals = td.series
+    .flatMap(s => (Array.isArray(s.values) ? s.values : []).map(parseNum))
+    .filter(Number.isFinite)
+    .filter(v => v > 0);
+
+  if (!allVals.length) {
+    drawCard(doc, MARGIN, y, CONTENT_W, 20, COLORS.cardBg, COLORS.border);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(FONT_SIZES.body);
+    doc.setTextColor(...COLORS.textMid);
+    doc.text("Chart data unavailable", PAGE_W / 2, y + 12, { align: "center" });
+    return;
+  }
+
+  const maxVal  = Math.max(...allVals);
+  const maxR    = Math.ceil(maxVal / 10000) * 10000 || 10000;
+  const n       = td.labels.length;
+  const yAxisW  = 18;
+  const chartX  = MARGIN + yAxisW;
+  const chartW  = CONTENT_W - yAxisW;
+  const chartBottom = y + CHART_H;
+  const seriesCols: RGB[] = [COLORS.blue, COLORS.red, COLORS.orange];
+
+  // Chart background card
+  drawCard(doc, MARGIN, y - 2, CONTENT_W, CHART_H + CHART_LEGEND_H + 10, COLORS.cardBg, COLORS.border);
+
+  // Gridlines + y-axis labels
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(FONT_SIZES.tiny);
+  for (let t = 0; t <= 4; t++) {
+    const tickVal = Math.round((maxR / 4) * t);
+    const tickY   = chartBottom - (tickVal / maxR) * CHART_H;
+    doc.setDrawColor(...COLORS.border);
+    doc.setLineWidth(0.2);
+    doc.line(chartX, tickY, chartX + chartW, tickY);
+    const lbl = tickVal === 0 ? "$0" : `$${tickVal / 1000}k`;
+    doc.setTextColor(...COLORS.textLight);
+    doc.text(lbl, chartX - 2, tickY + 1, { align: "right" });
+  }
+
+  // Axes
+  doc.setDrawColor(...COLORS.textMid);
+  doc.setLineWidth(0.4);
+  doc.line(chartX, y, chartX, chartBottom);
+  doc.line(chartX, chartBottom, chartX + chartW, chartBottom);
+
+  // Bars (grouped, grow upward)
+  if (n > 0) {
+    const groupW    = chartW / n;
+    const numSeries = Math.min(td.series.length, 2);
+    const totalBarW = groupW * 0.65;
+    const barGap    = numSeries > 1 ? 1.5 : 0;
+    const singleW   = Math.max(2, (totalBarW - barGap * (numSeries - 1)) / numSeries);
+
+    for (let si = 0; si < numSeries; si++) {
+      const vals = (Array.isArray(td.series[si].values) ? td.series[si].values : []).map(parseNum);
+      doc.setFillColor(...seriesCols[si]);
+      vals.forEach((v, j) => {
+        if (!Number.isFinite(v) || v <= 0) return;
+        const barH = (v / maxR) * CHART_H;
+        const gLeft = chartX + j * groupW + (groupW - totalBarW) / 2;
+        const bx    = gLeft + si * (singleW + barGap);
+        doc.rect(bx, chartBottom - barH, singleW, barH, "F");
+      });
+    }
+
+    // X-axis labels
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(FONT_SIZES.tiny);
+    doc.setTextColor(...COLORS.textMid);
+    td.labels.forEach((lbl, j) => {
+      const gMid = chartX + j * groupW + groupW / 2;
+      doc.text(sanitize(lbl), gMid, chartBottom + 5, { align: "center" });
+    });
+  }
+
+  // Legend
+  const legendY    = chartBottom + 12;
+  const usedSeries = td.series.slice(0, 2);
+  const legendW    = usedSeries.length * 72;
+  let lx           = (PAGE_W - legendW) / 2;
+  usedSeries.forEach((s, si) => {
+    doc.setFillColor(...seriesCols[si]);
+    doc.rect(lx, legendY - 3, 4, 4, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(FONT_SIZES.small);
+    doc.setTextColor(...COLORS.textDark);
+    doc.text(sanitize(s.name), lx + 6, legendY);
+    lx += 72;
+  });
+}
+
 // ─── Page: Cover ─────────────────────────────────────────────────────────────
 function renderCover(doc: jsPDF, data: ReportData): void {
   // Prime text engine — prevents stray artifact on first doc.text() call
@@ -369,6 +506,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   renderExecutiveSummary(doc, data);
   renderFlags(doc, data);
   renderRecommendations(doc, data);
+  renderTrajectoryAndChart(doc, data);
 
   // Footer pass — all pages except cover (page 1)
   const totalPages = (doc as any).internal.getNumberOfPages();
