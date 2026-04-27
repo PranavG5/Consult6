@@ -16,12 +16,29 @@ const LIMITS = {
 function summarize(rawText: string, mode: string = "basic"): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
   if (!lines.length) return "No data.";
-  const maxCols = mode === "advanced" ? 12 : 10;
-  const maxRows = mode === "advanced" ? 12 : 9;
-  const charLimit = mode === "advanced" ? 1200 : 900;
-  const headers = lines[0].split(",").slice(0, maxCols).join(",");
-  const rows = lines.slice(1, maxRows).map(r => r.split(",").slice(0, maxCols).join(",")).join("\n");
-  return `Rows: ${lines.length - 1}, Cols: ${lines[0].split(",").length}\nHeaders: ${headers}\nSample:\n${rows}`.slice(0, charLimit);
+
+  const headerLine = lines[0];
+  const dataLines = lines.slice(1);
+  const rowCount = dataLines.length;
+  const colCount = headerLine.split(",").length;
+
+  const firstN = mode === "advanced" ? 30 : 15;
+  const lastN = mode === "advanced" ? 10 : 5;
+
+  const firstRows = dataLines.slice(0, firstN);
+  const lastRows = rowCount > firstN + lastN ? dataLines.slice(-lastN) : [];
+
+  const parts = [
+    `Total rows: ${rowCount} | Total columns: ${colCount}`,
+    `Headers: ${headerLine}`,
+    `First ${firstRows.length} rows:\n${firstRows.join("\n")}`,
+  ];
+
+  if (lastRows.length) {
+    parts.push(`Last ${lastRows.length} rows:\n${lastRows.join("\n")}`);
+  }
+
+  return parts.join("\n\n");
 }
 
 type ColStats = { first: number | string; last: number | string; min?: number; max?: number; avg?: number };
@@ -87,18 +104,50 @@ function aggregateCSV(rawText: string): AggregatedStats {
   };
 }
 
-const SYSTEM_BASIC = `You are a financial analyst. Tailor all analysis specifically to the organization described. Return ONLY valid JSON matching this exact structure. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 2-4 flags with descriptions under 30 words each, metric as a specific value or ratio. 2-3 recommendations under 30 words each that are realistic for this specific organization. Summary 1-2 sentences. trajectoryNote 1 sentence.`;
+const SYSTEM_BASIC = `You are a senior financial analyst. Analyze only what the data actually shows — do not mention any metric that is null, unavailable, or not present in the data. Tailor everything to the specific organization, size, and industry provided.
 
-// Advanced is split into two parallel calls to double the effective token budget.
-const SYSTEM_ADVANCED_CORE = `You are an expert financial analyst. Tailor all analysis to the organization's size, industry, and constraints. Return ONLY valid JSON. No explanation, no markdown.
-{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
-Rules: 3-5 flags under 35 words each with a specific metric value. 3-4 recommendations under 35 words each tailored to this specific organization. Summary 2 sentences. trajectoryNote 1-2 sentences.`;
+Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.
 
-const SYSTEM_ADVANCED_CONTEXT = `You are an expert financial analyst. Tailor all sections to the organization's industry, size, and constraints. Return ONLY valid JSON. No explanation, no markdown.
-{"trendData":{"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]},"industryComparisons":[{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],"caseStudies":[{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],"scenarios":{"optimistic":"string","base":"string","pessimistic":"string"},"riskMatrix":[{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],"actionPlan":{"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}}
-Rules: trendData exactly 6 labels/values per series, 2 series reflecting data patterns. industryComparisons 3 entries benchmarked to org's specific industry. caseStudies 1-2 real documented orgs, each field under 20 words, source must be a real specific citation (e.g. "HBR, 2019", "Bloomberg, March 2021"). scenarios 1-2 sentences each. riskMatrix 3 risks under 25 words each. actionPlan 2 items per phase under 20 words each.`;
+{"summary":"string","flags":[{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],"recommendations":[{"title":"string","detail":"string","priority":"high|medium|low"}],"trajectoryNote":"string"}
+
+Rules:
+- 2-4 flags. Only flag metrics that have real data values. Each description under 30 words. Metric must be a specific number or ratio from the data.
+- 2-3 recommendations that are realistic and specific to this organization. Under 30 words each.
+- Summary: 1-2 sentences, specific to this org — no generic statements.
+- trajectoryNote: 1 sentence on where this org is headed based on actual trends.
+- NEVER mention a field as "unavailable", "not provided", or "data not found" — simply omit it.`;
+
+const SYSTEM_ADVANCED = `You are a senior financial analyst producing a detailed report for a specific organization. Analyze only what the data actually shows. Never reference metrics that are null, unavailable, or absent from the data — omit them entirely. Do not use placeholder language like "data unavailable" or "not provided".
+
+Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.
+
+{
+  "summary": "string",
+  "flags": [{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}],
+  "recommendations": [{"title":"string","detail":"string","priority":"high|medium|low"}],
+  "trajectoryNote": "string",
+  "trendData": {
+    "label": "string",
+    "series": [{"name":"string","values":[0,0,0,0,0,0]}],
+    "labels": ["","","","","",""]
+  },
+  "industryComparisons": [{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],
+  "scenarios": {"optimistic":"string","base":"string","pessimistic":"string"},
+  "riskMatrix": [{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],
+  "actionPlan": {"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}
+}
+
+Rules:
+- flags: 3-5 items. Only flag real data points. Each description under 40 words. Metric must be a specific value from the data.
+- recommendations: 3-4 items, specific to this org's actual situation. Under 40 words each.
+- summary: 2-3 sentences. Name specific numbers. No generic statements.
+- trajectoryNote: 1-2 sentences grounded in actual trends from the data.
+- trendData: Exactly 6 labels and 6 values per series. Use real date/period labels from the data. 2 series max (e.g. Revenue vs Expenses). Values must reflect actual data — do not fabricate.
+- industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector.
+- scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.
+- riskMatrix: 3 risks, each under 30 words. Based on actual flags found in the data.
+- actionPlan: 2 items per phase (immediate/shortTerm/longTerm), each under 25 words. Specific to this org.
+- Remove the caseStudies field entirely — do not include it.`;
 
 function extractJson(text: string): object {
   const start = text.indexOf("{");
@@ -229,7 +278,20 @@ export async function POST(req: NextRequest) {
   // overwriting whatever Claude returned (which may have been null or guessed).
   (preAnalysisJson as Record<string, unknown>).cash_runway_months = aggregated.cash_runway_months;
 
-  const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}${contextLines ? `\n${contextLines}` : ""}\n\nPre-computed analysis summary — you MUST reference every single field in this JSON somewhere in the report. If a field shows a negative or worsening trend, it must appear as a flag. Do not skip any field. Do not write a section without checking whether any JSON field belongs in it.\nFields that must each appear at least once by name in the report:\n\ncustomer_count_trend\nnps_trend\ncontraction_revenue_trend\nchurn_trend (include the worst_period value explicitly)\ncash_runway_months (state the exact number)\navg_deal_size_trend\nsales_cycle_trend\ncontradictions_detected (list each one as its own flag)\n\n${JSON.stringify(preAnalysisJson)}\n\nData:\n${summary}`;
+  const userMessage = `Organization: ${orgName || "Unknown"}
+File: ${fileName}${contextLines ? `\n${contextLines}` : ""}
+
+Aggregated statistics (computed from full dataset — use these as ground truth):
+${JSON.stringify(preAnalysisJson)}
+
+Raw data sample:
+${summary}
+
+Instructions:
+- Cross-reference the aggregated stats with the raw sample to identify real trends and anomalies.
+- Only include metrics and flags where you have actual data values.
+- If a field in the aggregated stats is null, skip it entirely — do not mention it.
+- Contradictions between metrics (e.g. member count rising while dues revenue falls) should each become their own flag.`;
 
   const enc = new TextEncoder();
 
@@ -239,32 +301,20 @@ export async function POST(req: NextRequest) {
         let resultJson: object;
 
         if (mode === "advanced") {
-          // Two parallel calls: core analysis + context sections
-          const [coreMsg, contextMsg] = await Promise.all([
-            anthropic.messages.create({
-              model: "claude-sonnet-4-6",
-              max_tokens: 2000,
-              system: SYSTEM_ADVANCED_CORE,
-              messages: [{ role: "user", content: userMessage }],
-            }),
-            anthropic.messages.create({
-              model: "claude-sonnet-4-6",
-              max_tokens: 3000,
-              system: SYSTEM_ADVANCED_CONTEXT,
-              messages: [{ role: "user", content: userMessage }],
-            }),
-          ]);
-
-          const coreText = coreMsg.content[0].type === "text" ? coreMsg.content[0].text : "{}";
-          const contextText = contextMsg.content[0].type === "text" ? contextMsg.content[0].text : "{}";
-          let coreJson = {}; let ctxJson = {};
-          try { coreJson = extractJson(coreText); } catch (e) { console.error("core extractJson failed:", e, coreText.slice(0, 200)); }
-          try { ctxJson = extractJson(contextText); } catch (e) { console.error("ctx extractJson failed:", e, contextText.slice(0, 200)); }
-          resultJson = { ...coreJson, ...ctxJson };
+          const advancedMsg = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 6000,
+            temperature: 0,
+            system: SYSTEM_ADVANCED,
+            messages: [{ role: "user", content: userMessage }],
+          });
+          const advancedText = advancedMsg.content[0].type === "text" ? advancedMsg.content[0].text : "{}";
+          try { resultJson = extractJson(advancedText); } catch (e) { console.error("advanced extractJson failed:", e, advancedText.slice(0, 200)); resultJson = {}; }
         } else {
           const msg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 900,
+            max_tokens: 1500,
+            temperature: 0,
             system: SYSTEM_BASIC,
             messages: [{ role: "user", content: userMessage }],
           });
