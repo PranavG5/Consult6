@@ -141,12 +141,85 @@ export function drawCard(doc: jsPDF, x: number, y: number, w: number, h: number,
   doc.roundedRect(x, y, w, h, 2, 2, "FD");
 }
 
-// ─── Stub: main entry point — page rendering not yet implemented ─────────────
-export function generatePDF(data: ReportData): Uint8Array {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  // Cover (placeholder)
+// ─── Page: Cover ─────────────────────────────────────────────────────────────
+function renderCover(doc: jsPDF, data: ReportData): void {
+  // Prime text engine — prevents stray artifact on first doc.text() call
+  doc.setFontSize(1);
+  doc.setTextColor(...COLORS.navy);
+  doc.text(" ", 1, 1);
+
+  // Full-bleed navy background
   doc.setFillColor(...COLORS.navy);
   doc.rect(0, 0, PAGE_W, PAGE_H, "F");
-  void data;
+
+  // Large "6" — 120pt, white, centered at y=100mm
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(FONT_SIZES.coverTitle);
+  doc.setTextColor(...COLORS.white);
+  doc.text("6", PAGE_W / 2, 100, { align: "center" });
+
+  // "CONSULT6" — 22pt white centered at y=138mm
+  doc.setFontSize(FONT_SIZES.coverSub);
+  doc.setTextColor(...COLORS.white);
+  doc.text("CONSULT6", PAGE_W / 2, 138, { align: "center" });
+
+  // Horizontal rule — 60mm wide, white, centered at y=146mm
+  doc.setDrawColor(...COLORS.white);
+  doc.setLineWidth(0.3);
+  doc.line((PAGE_W - 60) / 2, 146, (PAGE_W + 60) / 2, 146);
+
+  // Subtitle — 11pt textLight centered at y=154mm
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(...COLORS.textLight);
+  doc.text("Executive Consulting Report", PAGE_W / 2, 154, { align: "center" });
+
+  // Org name — 18pt bold white centered at y=168mm
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(...COLORS.white);
+  doc.text(sanitize(data.orgName || "Report"), PAGE_W / 2, 168, { align: "center" });
+
+  // Date — 9pt textLight centered at y=177mm
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textLight);
+  doc.text(sanitize(data.generatedAt), PAGE_W / 2, 177, { align: "center" });
+
+  // Tagline — 8pt textMid centered at y=188mm
+  doc.setFontSize(FONT_SIZES.small);
+  doc.setTextColor(...COLORS.textMid);
+  doc.text("Prepared by Consult6  |  Senior financial insight, no consultant required.", PAGE_W / 2, 188, { align: "center" });
+}
+
+// ─── Page: Executive Summary ─────────────────────────────────────────────────
+function renderExecutiveSummary(doc: jsPDF, data: ReportData): void {
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "EXECUTIVE SUMMARY", y);
+  y += 4;
+
+  const summary = sanitize(data.analysis.summary);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(FONT_SIZES.body);
+  doc.setTextColor(...COLORS.textDark);
+  const lines = doc.splitTextToSize(summary, CONTENT_W) as string[];
+  const lineH = FONT_SIZES.body * 0.352778 * 1.45;
+  doc.text(lines, MARGIN, y + lineH);
+}
+
+// ─── Main entry point ────────────────────────────────────────────────────────
+export function generatePDF(data: ReportData): Uint8Array {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  renderCover(doc, data);
+  renderExecutiveSummary(doc, data);
+
+  // Footer pass — all pages except cover (page 1)
+  const totalPages = (doc as any).internal.getNumberOfPages();
+  for (let p = 2; p <= totalPages; p++) {
+    doc.setPage(p);
+    drawFooter(doc, data.orgName, p - 1, totalPages - 1);
+  }
+
   return doc.output("arraybuffer") as unknown as Uint8Array;
 }
