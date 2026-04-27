@@ -432,6 +432,208 @@ function renderTrajectoryAndChart(doc: jsPDF, data: ReportData): void {
   });
 }
 
+// ─── Page: Benchmarks ────────────────────────────────────────────────────────
+function renderBenchmarks(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.industryComparisons?.length) return;
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "HOW YOU COMPARE", y);
+  y += 4;
+
+  (doc as any).autoTable({
+    startY: y,
+    head: [["Metric", "Your Value", "Industry Avg", "Top 25%", "Status"]],
+    body: data.analysis.industryComparisons.map(c => [
+      sanitize(c.metric), sanitize(c.yourValue), sanitize(c.industryAverage),
+      sanitize(c.topQuartile),
+      c.status === "above_average" ? "Above Avg" : c.status === "below_average" ? "Below Avg" : "Average",
+    ]),
+    theme: "plain",
+    headStyles: { fillColor: COLORS.navy, textColor: COLORS.white, fontStyle: "bold", fontSize: 10, minCellHeight: 10, valign: "middle" },
+    bodyStyles: { fillColor: COLORS.pageBg, textColor: COLORS.textDark, fontSize: FONT_SIZES.small, lineWidth: 0.2, lineColor: COLORS.border, minCellHeight: 12, cellPadding: 3 },
+    alternateRowStyles: { fillColor: COLORS.rowAlt },
+    styles: { overflow: "linebreak" },
+    columnStyles: {
+      0: { cellWidth: 65, halign: "left"   as const },
+      1: { cellWidth: 35, halign: "center" as const },
+      2: { cellWidth: 35, halign: "center" as const },
+      3: { cellWidth: 22, halign: "center" as const },
+      4: { cellWidth: 23, halign: "center" as const },
+    },
+    didParseCell: (d: any) => {
+      if (d.section === "body" && d.column.index === 4) {
+        const v: string = d.cell.raw?.toString() ?? "";
+        d.cell.styles.fontStyle = "bold";
+        if (v === "Above Avg")      d.cell.styles.textColor = COLORS.blue;
+        else if (v === "Below Avg") d.cell.styles.textColor = COLORS.red;
+        else                        d.cell.styles.textColor = COLORS.textMid;
+      }
+    },
+    margin: { left: MARGIN, right: MARGIN },
+  });
+}
+
+// ─── Page: Case Studies ───────────────────────────────────────────────────────
+function renderCaseStudies(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.caseStudies?.length) return;
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "WHO'S BEEN HERE BEFORE", y);
+  y += 4;
+
+  for (const cs of data.analysis.caseStudies) {
+    if (y + 50 > CONTENT_BOTTOM) { y = addNewPage(doc); y += 4; }
+
+    // Org name bar
+    doc.setFillColor(...COLORS.navy);
+    doc.roundedRect(MARGIN, y, CONTENT_W, 11, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(FONT_SIZES.cardTitle);
+    doc.setTextColor(...COLORS.white);
+    doc.text(sanitize(cs.organization), MARGIN + 6, y + 7.5);
+    y += 11;
+
+    (doc as any).autoTable({
+      startY: y,
+      head: [["Challenge", "Solution", "Outcome"]],
+      body: [[sanitize(cs.challenge), sanitize(cs.solution), sanitize(cs.outcome)]],
+      theme: "plain",
+      headStyles: { fillColor: COLORS.cardBg, textColor: COLORS.textMid, fontStyle: "bold", fontSize: FONT_SIZES.small, cellPadding: { top: 3, right: 4, bottom: 3, left: 4 } },
+      bodyStyles: { fillColor: COLORS.pageBg, textColor: COLORS.textDark, fontSize: FONT_SIZES.body, lineWidth: 0.2, lineColor: COLORS.border, cellPadding: { top: 4, right: 4, bottom: 4, left: 4 } },
+      styles: { overflow: "linebreak" },
+      columnStyles: {
+        0: { cellWidth: 60, halign: "left" as const },
+        1: { cellWidth: 60, halign: "left" as const },
+        2: { cellWidth: 60, halign: "left" as const },
+      },
+      margin: { left: MARGIN, right: MARGIN },
+    });
+    y = (doc as any).lastAutoTable.finalY;
+
+    if (cs.source) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(FONT_SIZES.tiny);
+      doc.setTextColor(...COLORS.textLight);
+      doc.text(`Source: ${sanitize(cs.source)}`, MARGIN, y + 4);
+      y += 7;
+    }
+    y += 6;
+  }
+}
+
+// ─── Page: Scenarios ─────────────────────────────────────────────────────────
+function renderScenarios(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.scenarios) return;
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "HOW THIS COULD PLAY OUT", y);
+  y += 4;
+
+  const boxW = (CONTENT_W - 8) / 3;
+  const scens = [
+    { label: "OPTIMISTIC",  text: data.analysis.scenarios.optimistic,  col: COLORS.green },
+    { label: "BASE CASE",   text: data.analysis.scenarios.base,         col: COLORS.blue  },
+    { label: "PESSIMISTIC", text: data.analysis.scenarios.pessimistic,  col: COLORS.red   },
+  ];
+
+  let fs = FONT_SIZES.small;
+  const measure = (fontSize: number) => scens.map(s => {
+    const ls = doc.splitTextToSize(sanitize(s.text), boxW - 10) as string[];
+    return ls.length * (fontSize * 0.352778 * 1.45);
+  });
+
+  let heights = measure(fs);
+  if (Math.max(...heights) + 20 > 80) { fs = FONT_SIZES.tiny; heights = measure(fs); }
+  const boxH = Math.max(40, Math.max(...heights) + 20);
+
+  scens.forEach((s, i) => {
+    const sx = MARGIN + i * (boxW + 4);
+    drawCard(doc, sx, y, boxW, boxH, COLORS.cardBg, s.col);
+    doc.setFillColor(...s.col);
+    doc.rect(sx, y, boxW, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(FONT_SIZES.small);
+    doc.setTextColor(...s.col);
+    doc.text(s.label, sx + 5, y + 10);
+    const bodyL = doc.splitTextToSize(sanitize(s.text), boxW - 10) as string[];
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs);
+    doc.setTextColor(...COLORS.textDark);
+    doc.text(bodyL, sx + 5, y + 18);
+  });
+}
+
+// ─── Page: Risk Matrix ────────────────────────────────────────────────────────
+function renderRiskMatrix(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.riskMatrix?.length) return;
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "WHAT WE'RE WATCHING", y);
+  y += 4;
+
+  (doc as any).autoTable({
+    startY: y,
+    head: [["Risk", "Likelihood", "Impact", "Mitigation"]],
+    body: data.analysis.riskMatrix.map(r => [
+      sanitize(r.risk), r.likelihood.toUpperCase(), r.impact.toUpperCase(), sanitize(r.mitigation),
+    ]),
+    theme: "plain",
+    headStyles: { fillColor: COLORS.navy, textColor: COLORS.white, fontStyle: "bold", fontSize: 9, minCellHeight: 10, valign: "middle" },
+    bodyStyles: { fillColor: COLORS.pageBg, textColor: COLORS.textDark, fontSize: FONT_SIZES.small, lineWidth: 0.2, lineColor: COLORS.border, minCellHeight: 14, cellPadding: 3 },
+    alternateRowStyles: { fillColor: COLORS.rowAlt },
+    styles: { overflow: "linebreak" },
+    columnStyles: {
+      0: { cellWidth: 68, halign: "left"   as const },
+      1: { cellWidth: 22, halign: "center" as const },
+      2: { cellWidth: 22, halign: "center" as const },
+      3: { cellWidth: 68, halign: "left"   as const },
+    },
+    didParseCell: (d: any) => {
+      if (d.section === "body" && (d.column.index === 1 || d.column.index === 2)) {
+        const v = d.cell.raw?.toString().toLowerCase();
+        if (v === "high")   { d.cell.styles.fillColor = COLORS.highBg; d.cell.styles.textColor = COLORS.highTxt; d.cell.styles.fontStyle = "bold"; }
+        else if (v === "medium") { d.cell.styles.fillColor = COLORS.medBg;  d.cell.styles.textColor = COLORS.medTxt;  d.cell.styles.fontStyle = "bold"; }
+        else if (v === "low")    { d.cell.styles.fillColor = COLORS.lowBg;  d.cell.styles.textColor = COLORS.lowTxt;  d.cell.styles.fontStyle = "bold"; }
+      }
+    },
+    margin: { left: MARGIN, right: MARGIN },
+  });
+}
+
+// ─── Page: Action Plan ────────────────────────────────────────────────────────
+function renderActionPlan(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.actionPlan) return;
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "YOUR NEXT STEPS", y);
+  y += 4;
+
+  const phases = [
+    { label: "IMMEDIATE (0-30 DAYS)",   items: data.analysis.actionPlan.immediate,  col: COLORS.red    },
+    { label: "SHORT-TERM (30-90 DAYS)", items: data.analysis.actionPlan.shortTerm,  col: COLORS.orange },
+    { label: "LONG-TERM (90+ DAYS)",    items: data.analysis.actionPlan.longTerm,   col: COLORS.blue   },
+  ];
+
+  for (const phase of phases) {
+    if (y + 18 > CONTENT_BOTTOM) { y = addNewPage(doc); y += 4; }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...phase.col);
+    doc.text(phase.label, MARGIN, y + 5);
+    y += 12;
+
+    for (const item of phase.items) {
+      const wrapped = doc.splitTextToSize(`- ${sanitize(item)}`, CONTENT_W - 10) as string[];
+      const itemH   = Math.max(10, wrapped.length * (FONT_SIZES.body * 0.352778 * 1.45) + 6);
+      if (y + itemH > CONTENT_BOTTOM) { y = addNewPage(doc); y += 4; }
+      drawCard(doc, MARGIN, y, CONTENT_W, itemH, COLORS.cardBg, COLORS.border);
+      doc.setFillColor(...phase.col);
+      doc.rect(MARGIN, y, 3, itemH, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(FONT_SIZES.body);
+      doc.setTextColor(...COLORS.textDark);
+      doc.text(wrapped, MARGIN + 7, y + 5);
+      y += itemH + 3;
+    }
+    y += 8;
+  }
+}
+
 // ─── Page: Cover ─────────────────────────────────────────────────────────────
 function renderCover(doc: jsPDF, data: ReportData): void {
   // Prime text engine — prevents stray artifact on first doc.text() call
@@ -507,6 +709,11 @@ export function generatePDF(data: ReportData): Uint8Array {
   renderFlags(doc, data);
   renderRecommendations(doc, data);
   renderTrajectoryAndChart(doc, data);
+  renderBenchmarks(doc, data);
+  renderCaseStudies(doc, data);
+  renderScenarios(doc, data);
+  renderRiskMatrix(doc, data);
+  renderActionPlan(doc, data);
 
   // Footer pass — all pages except cover (page 1)
   const totalPages = (doc as any).internal.getNumberOfPages();
