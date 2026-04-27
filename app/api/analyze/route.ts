@@ -136,6 +136,7 @@ Return ONLY valid JSON with this exact structure. No explanation, no markdown, n
   "industryComparisons": [{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}],
   "scenarios": {"optimistic":"string","base":"string","pessimistic":"string"},
   "riskMatrix": [{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}],
+  "caseStudies": [{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}],
   "actionPlan": {"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}
 }
 
@@ -148,8 +149,8 @@ Rules:
 - industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named "program_expenses", "program_costs", or "direct_service_costs" — never substitute "operating_expenses", "admin_expenses", or general overhead columns as a proxy for program expenses. If no clearly labeled program expense column is present, omit this benchmark entirely and substitute a more appropriate metric.
 - scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.
 - riskMatrix: 3 risks, each under 30 words. Based on actual flags found in the data.
+- caseStudies: 1-2 real-world organizations that faced a similar situation to this client and how they resolved it. Keep challenge/solution/outcome under 20 words each. source is optional (publication or report name).
 - actionPlan: 2 items per phase (immediate/shortTerm/longTerm), each under 25 words. Specific to this org.
-- Remove the caseStudies field entirely — do not include it.
 - Never use raw data field names in the report. Do not write words like churn_trend, contraction_revenue_trend, nps_trend, cash_runway_months, avg_deal_size_trend, sales_cycle_trend, customer_count_trend, or any other underscore-separated field name in the report body. Translate all field references into plain English. For example: 'churn_trend' becomes 'your customer retention rate', 'contraction_revenue_trend' becomes 'revenue lost to customer downgrades', 'cash_runway_months' becomes 'months of cash remaining.'
 - Write the entire report in first-person plural. Use 'we reviewed,' 'we identified,' 'our assessment,' 'we recommend,' and 'in our view' throughout. The report should read as if a team of senior consultants prepared and signed off on it together.`;
 

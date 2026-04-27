@@ -85,10 +85,10 @@ function sectionHeader(doc: jsPDF, title: string, y: number, margin: number, W: 
   doc.setFillColor(...ORANGE);
   doc.rect(margin, y, W - margin * 2, 0.5, "F");
   doc.setTextColor(...ORANGE);
-  doc.setFontSize(11);
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text(title.toUpperCase(), margin, y - 2);
-  return y + 6;
+  return y + 7;
 }
 
 export function generatePDF(data: ReportData): Uint8Array {
@@ -104,21 +104,21 @@ export function generatePDF(data: ReportData): Uint8Array {
   doc.rect(0, 0, W, 2, "F");
 
   // Logo mark (centered)
-  const logoSize = 18;
+  const logoSize = 32;
   const logoX = (W - logoSize) / 2;
-  const logoY = 72;
+  const logoY = 66;
   doc.setFillColor(...ORANGE);
-  doc.roundedRect(logoX, logoY, logoSize, logoSize, 3, 3, "F");
+  doc.roundedRect(logoX, logoY, logoSize, logoSize, 5, 5, "F");
   doc.setTextColor(...WHITE);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("6", W / 2, logoY + 12.5, { align: "center" });
+  doc.setFontSize(22);
+  doc.text("6", W / 2, logoY + 21, { align: "center" });
 
   // Wordmark
   doc.setTextColor(...ORANGE);
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("CONSULT6", W / 2, logoY + 26, { align: "center" });
+  doc.text("CONSULT6", W / 2, logoY + 40, { align: "center" });
 
   // Report title
   doc.setTextColor(...WHITE);
@@ -166,11 +166,11 @@ export function generatePDF(data: ReportData): Uint8Array {
   doc.setFillColor(...ORANGE);
   doc.rect(margin, y, 3, 50, "F");
   doc.setTextColor(...ORANGE);
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("EXECUTIVE SUMMARY", margin + 8, y + 8);
   doc.setTextColor(...WHITE);
-  doc.setFontSize(9.5);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   const summaryLines = doc.splitTextToSize(sanitize(data.analysis.summary), W - margin * 2 - 16);
   doc.text(summaryLines, margin + 8, y + 16);
@@ -202,14 +202,14 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.text(sc.label, margin + 5, y + 8.2);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(...WHITE);
-    doc.text(sanitize(flag.title), margin + 28, y + 8);
+    doc.text(sanitize(flag.title), margin + 28, y + 9);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(9);
     doc.setTextColor(200, 200, 200);
-    doc.text(descLines, margin + 6, y + 17);
+    doc.text(descLines, margin + 6, y + 18);
 
     if (flag.metric) {
       doc.setFont("helvetica", "bold");
@@ -217,10 +217,10 @@ export function generatePDF(data: ReportData): Uint8Array {
       doc.setTextColor(...sc.border as [number,number,number]);
       doc.text(`Metric: ${sanitize(flag.metric)}`, margin + 6, y + cardH - 4);
     }
-    y += cardH + 4;
+    y += cardH + 3;
   }
 
-  y += 6;
+  y += 4;
   if (y > 240) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
   y = sectionHeader(doc, "What We'd Do", y, margin, W);
 
@@ -236,21 +236,21 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "FD");
 
     doc.setFillColor(...ORANGE);
-    doc.circle(margin + 7, y + 8, 4, "F");
+    doc.circle(margin + 7, y + 9, 5, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setTextColor(...WHITE);
-    doc.text(`${i + 1}`, margin + 7, y + 10.5, { align: "center" });
+    doc.text(`${i + 1}`, margin + 7, y + 11.5, { align: "center" });
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(...WHITE);
-    doc.text(sanitize(rec.title), margin + 15, y + 9);
+    doc.text(sanitize(rec.title), margin + 16, y + 10);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(9);
     doc.setTextColor(200, 200, 200);
-    doc.text(detailLines, margin + 6, y + 17);
+    doc.text(detailLines, margin + 6, y + 18);
     y += cardH + 4;
   }
 
