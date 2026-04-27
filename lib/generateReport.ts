@@ -1,6 +1,20 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
+function sanitize(text: string | undefined | null): string {
+  if (!text) return "";
+  return String(text)
+    .replace(/[→➜➡]/g, "->")
+    .replace(/[↓⬇▼▽]/g, "(down)")
+    .replace(/[↑⬆▲△]/g, "(up)")
+    .replace(/[←⬅]/g, "<-")
+    .replace(/[◆◇•]/g, "-")
+    .replace(/[–—]/g, "-")
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[^\x00-\x7E]/g, "");
+}
+
 const ORANGE: [number, number, number] = [204, 85, 0];
 const BLACK: [number, number, number] = [26, 26, 26];
 const DARK: [number, number, number] = [36, 36, 36];
@@ -158,7 +172,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   doc.setTextColor(...WHITE);
   doc.setFontSize(9.5);
   doc.setFont("helvetica", "normal");
-  const summaryLines = doc.splitTextToSize(data.analysis.summary, W - margin * 2 - 16);
+  const summaryLines = doc.splitTextToSize(sanitize(data.analysis.summary), W - margin * 2 - 16);
   doc.text(summaryLines, margin + 8, y + 16);
   y += 58;
 
@@ -172,7 +186,7 @@ export function generatePDF(data: ReportData): Uint8Array {
       info: { bg: BLUE_LIGHT, border: BLUE, label: "INFO" },
     };
     const sc = sevColors[flag.severity] ?? sevColors.info;
-    const descLines = doc.splitTextToSize(flag.description, W - margin * 2 - 32);
+    const descLines = doc.splitTextToSize(sanitize(flag.description), W - margin * 2 - 32);
     const cardH = descLines.length * 5 + (flag.metric ? 8 : 0) + 18;
 
     doc.setFillColor(...sc.bg);
@@ -190,7 +204,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(...WHITE);
-    doc.text(flag.title, margin + 28, y + 8);
+    doc.text(sanitize(flag.title), margin + 28, y + 8);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
@@ -201,7 +215,7 @@ export function generatePDF(data: ReportData): Uint8Array {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...sc.border as [number,number,number]);
-      doc.text(`Metric: ${flag.metric}`, margin + 6, y + cardH - 4);
+      doc.text(`Metric: ${sanitize(flag.metric)}`, margin + 6, y + cardH - 4);
     }
     y += cardH + 4;
   }
@@ -213,7 +227,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   for (let i = 0; i < data.analysis.recommendations.length; i++) {
     const rec = data.analysis.recommendations[i];
     if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    const detailLines = doc.splitTextToSize(rec.detail, W - margin * 2 - 20);
+    const detailLines = doc.splitTextToSize(sanitize(rec.detail), W - margin * 2 - 20);
     const cardH = detailLines.length * 5 + 18;
 
     doc.setFillColor(...DARK);
@@ -231,7 +245,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(...WHITE);
-    doc.text(rec.title, margin + 15, y + 9);
+    doc.text(sanitize(rec.title), margin + 15, y + 9);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
@@ -249,7 +263,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   doc.setFont("helvetica", "italic");
   doc.setFontSize(9);
   doc.setTextColor(200, 200, 200);
-  const trajLines = doc.splitTextToSize(data.analysis.trajectoryNote, W - margin * 2 - 10);
+  const trajLines = doc.splitTextToSize(sanitize(data.analysis.trajectoryNote), W - margin * 2 - 10);
   doc.text(trajLines, margin + 5, y + 8);
   y += 28;
 
@@ -261,7 +275,14 @@ export function generatePDF(data: ReportData): Uint8Array {
     const td = data.analysis.trendData;
     const chartW = W - margin * 2;
     const chartH = 50;
-    const allVals = td.series.flatMap(s => (Array.isArray(s.values) ? s.values : []).map(Number)).filter(isFinite);
+
+    const parseNum = (v: unknown): number => {
+      if (typeof v === "number") return v;
+      const s = String(v).replace(/[$,%]/g, "").replace(/,/g, "");
+      return parseFloat(s);
+    };
+
+    const allVals = td.series.flatMap(s => (Array.isArray(s.values) ? s.values : []).map(parseNum)).filter(isFinite);
     const maxVal = allVals.length ? Math.max(...allVals) : 1;
     const minVal = allVals.length ? Math.min(...allVals) : 0;
     const range = maxVal - minVal || 1;
@@ -273,7 +294,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...MUTED);
-    doc.text(td.label, margin + 4, y + 6);
+    doc.text(sanitize(td.label), margin + 4, y + 6);
 
     const plotX = margin + 4;
     const plotY = y + 10;
@@ -291,21 +312,21 @@ export function generatePDF(data: ReportData): Uint8Array {
 
     // Series lines
     td.series.forEach((series, si) => {
-      const vals = (Array.isArray(series.values) ? series.values : []).map(Number);
+      const vals = (Array.isArray(series.values) ? series.values : []).map(parseNum).filter(isFinite);
       if (vals.length < 2) return;
+      const nPts = vals.length;
       const col = colors[si % colors.length];
       doc.setDrawColor(...col);
+      doc.setFillColor(...col);
       doc.setLineWidth(0.8);
-      for (let i = 0; i < vals.length - 1; i++) {
-        if (!isFinite(vals[i]) || !isFinite(vals[i + 1])) continue;
-        const x1 = plotX + (i / (n - 1)) * plotW;
+      for (let i = 0; i < nPts - 1; i++) {
+        const x1 = plotX + (i / (nPts - 1)) * plotW;
         const y1 = plotY + plotH - ((vals[i] - minVal) / range) * plotH;
-        const x2 = plotX + ((i + 1) / (n - 1)) * plotW;
+        const x2 = plotX + ((i + 1) / (nPts - 1)) * plotW;
         const y2 = plotY + plotH - ((vals[i + 1] - minVal) / range) * plotH;
         doc.line(x1, y1, x2, y2);
-        doc.setFillColor(...col);
         doc.circle(x1, y1, 0.8, "F");
-        if (i === vals.length - 2) doc.circle(x2, y2, 0.8, "F");
+        if (i === nPts - 2) doc.circle(x2, y2, 0.8, "F");
       }
     });
 
@@ -346,13 +367,20 @@ export function generatePDF(data: ReportData): Uint8Array {
       headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8 },
       alternateRowStyles: { fillColor: [32, 32, 32] },
-      didDrawCell: (hookData: any) => {
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 30, halign: "center" as const },
+        2: { cellWidth: 30, halign: "center" as const },
+        3: { cellWidth: 28, halign: "center" as const },
+        4: { cellWidth: 28, halign: "center" as const },
+      },
+      didParseCell: (hookData: any) => {
         if (hookData.section === "body" && hookData.column.index === 4) {
           const val: string = hookData.cell.text?.[0] ?? "";
-          const col: [number, number, number] = val === "Above Avg" ? [39, 174, 96] : val === "Below Avg" ? [192, 57, 43] : [120, 120, 120];
-          hookData.doc.setTextColor(...col);
-          hookData.doc.setFont("helvetica", "bold");
-          hookData.doc.text(val, hookData.cell.x + 2, hookData.cell.y + hookData.cell.height / 2 + 1.5);
+          hookData.cell.styles.fontStyle = "bold";
+          if (val === "Above Avg") hookData.cell.styles.textColor = [39, 174, 96];
+          else if (val === "Below Avg") hookData.cell.styles.textColor = [192, 57, 43];
+          else hookData.cell.styles.textColor = [120, 120, 120];
         }
       },
       margin: { left: margin, right: margin },
@@ -414,9 +442,13 @@ export function generatePDF(data: ReportData): Uint8Array {
       { label: "PESSIMISTIC", text: data.analysis.scenarios.pessimistic, color: RED },
     ];
     const cw = (W - margin * 2 - 8) / 3;
-    const maxScenH = 40;
+    const scenData = scens.map(s => {
+      const wrapped = doc.splitTextToSize(sanitize(s.text), cw - 8);
+      return { ...s, wrapped, cardH: Math.max(40, wrapped.length * 5 + 18) };
+    });
+    const maxScenH = Math.max(...scenData.map(s => s.cardH));
 
-    scens.forEach((s, i) => {
+    scenData.forEach((s, i) => {
       const sx = margin + i * (cw + 4);
       doc.setFillColor(...DARK);
       doc.roundedRect(sx, y, cw, maxScenH, 2, 2, "F");
@@ -429,8 +461,7 @@ export function generatePDF(data: ReportData): Uint8Array {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(...WHITE);
-      const wrapped = doc.splitTextToSize(s.text, cw - 8);
-      doc.text(wrapped, sx + 4, y + 15);
+      doc.text(s.wrapped, sx + 4, y + 15);
     });
     y += maxScenH + 6;
   }
@@ -443,22 +474,21 @@ export function generatePDF(data: ReportData): Uint8Array {
     (doc as any).autoTable({
       startY: y,
       head: [["Risk", "Likelihood", "Impact", "Mitigation"]],
-      body: data.analysis.riskMatrix.map(r => [r.risk, r.likelihood.toUpperCase(), r.impact.toUpperCase(), r.mitigation]),
+      body: data.analysis.riskMatrix.map(r => [sanitize(r.risk), r.likelihood.toUpperCase(), r.impact.toUpperCase(), sanitize(r.mitigation)]),
       theme: "plain",
       headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8 },
       alternateRowStyles: { fillColor: [32, 32, 32] },
       columnStyles: {
-        1: { halign: "center" as const, fontStyle: "bold" },
-        2: { halign: "center" as const, fontStyle: "bold" },
+        1: { halign: "center" as const, cellWidth: 26 },
+        2: { halign: "center" as const, cellWidth: 22 },
       },
-      didDrawCell: (hookData: any) => {
+      didParseCell: (hookData: any) => {
         if (hookData.section === "body" && (hookData.column.index === 1 || hookData.column.index === 2)) {
           const val = hookData.cell.raw?.toString().toLowerCase();
           const col = riskColors[val] ?? MUTED;
-          hookData.doc.setTextColor(...col);
-          hookData.doc.setFont("helvetica", "bold");
-          hookData.doc.text(hookData.cell.raw, hookData.cell.x + hookData.cell.width / 2, hookData.cell.y + hookData.cell.height / 2 + 1.5, { align: "center" });
+          hookData.cell.styles.textColor = col;
+          hookData.cell.styles.fontStyle = "bold";
         }
       },
       margin: { left: margin, right: margin },
@@ -485,7 +515,7 @@ export function generatePDF(data: ReportData): Uint8Array {
       y += 8;
       for (const item of phase.items) {
         if (y > 265) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-        const wrapped = doc.splitTextToSize(`• ${item}`, W - margin * 2 - 6);
+        const wrapped = doc.splitTextToSize(`- ${sanitize(item)}`, W - margin * 2 - 6);
         doc.setFillColor(...DARK);
         const cardH = wrapped.length * 5 + 8;
         doc.roundedRect(margin, y, W - margin * 2, cardH, 1.5, 1.5, "F");
