@@ -216,8 +216,8 @@ export function generatePDF(data: ReportData): Uint8Array {
       info: { bg: BLUE_LIGHT, border: BLUE, label: "INFO" },
     };
     const sc = sevColors[flag.severity] ?? sevColors.info;
-    const descLines = doc.splitTextToSize(sanitize(flag.description), W - margin * 2 - 32);
-    const cardH = descLines.length * 5 + (flag.metric ? 8 : 0) + 18;
+    const descLines = doc.splitTextToSize(sanitize(flag.description), W - margin * 2 - 12);
+    const cardH = descLines.length * 6.5 + (flag.metric ? 10 : 0) + 22;
 
     doc.setFillColor(...sc.bg);
     doc.setDrawColor(...sc.border);
@@ -225,29 +225,29 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "FD");
 
     doc.setFillColor(...sc.border);
-    doc.roundedRect(margin + 3, y + 4, 22, 6, 1, 1, "F");
+    doc.roundedRect(margin + 3, y + 5, 26, 7, 1, 1, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(6);
+    doc.setFontSize(7);
     doc.setTextColor(...WHITE);
-    doc.text(sc.label, margin + 5, y + 8.2);
+    doc.text(sc.label, margin + 5, y + 10);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(14);
     doc.setTextColor(...WHITE);
-    doc.text(sanitize(flag.title), margin + 28, y + 9);
+    doc.text(sanitize(flag.title), margin + 32, y + 10);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.setTextColor(200, 200, 200);
-    doc.text(descLines, margin + 6, y + 18);
+    doc.text(descLines, margin + 6, y + 22);
 
     if (flag.metric) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
+      doc.setFontSize(9);
       doc.setTextColor(...sc.border as [number,number,number]);
-      doc.text(`Metric: ${sanitize(flag.metric)}`, margin + 6, y + cardH - 4);
+      doc.text(`Metric: ${sanitize(flag.metric)}`, margin + 6, y + cardH - 5);
     }
-    y += cardH + 3;
+    y += cardH + 5;
   }
 
   y = startSection(doc, W);
@@ -256,8 +256,8 @@ export function generatePDF(data: ReportData): Uint8Array {
   for (let i = 0; i < data.analysis.recommendations.length; i++) {
     const rec = data.analysis.recommendations[i];
     if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    const detailLines = doc.splitTextToSize(sanitize(rec.detail), W - margin * 2 - 20);
-    const cardH = detailLines.length * 5 + 18;
+    const detailLines = doc.splitTextToSize(sanitize(rec.detail), W - margin * 2 - 12);
+    const cardH = detailLines.length * 6.5 + 22;
 
     doc.setFillColor(...DARK);
     doc.setDrawColor(60, 60, 60);
@@ -265,35 +265,37 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "FD");
 
     doc.setFillColor(...ORANGE);
-    doc.circle(margin + 7, y + 9, 5, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...WHITE);
-    doc.text(`${i + 1}`, margin + 7, y + 11.5, { align: "center" });
-
+    doc.circle(margin + 8, y + 10, 6, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...WHITE);
-    doc.text(sanitize(rec.title), margin + 16, y + 10);
+    doc.text(`${i + 1}`, margin + 8, y + 13, { align: "center" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(...WHITE);
+    doc.text(sanitize(rec.title), margin + 18, y + 11);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.setTextColor(200, 200, 200);
-    doc.text(detailLines, margin + 6, y + 18);
-    y += cardH + 4;
+    doc.text(detailLines, margin + 6, y + 22);
+    y += cardH + 5;
   }
 
   // Trajectory — own page
   y = startSection(doc, W);
   y = sectionHeader(doc, "Where This Is Heading", y, margin, W);
-  const trajLines = doc.splitTextToSize(sanitize(data.analysis.trajectoryNote), W - margin * 2 - 10);
-  const trajH = Math.max(20, trajLines.length * 5 + 8);
+  const trajLines = doc.splitTextToSize(sanitize(data.analysis.trajectoryNote), W - margin * 2 - 12);
+  const trajH = Math.max(30, trajLines.length * 8 + 16);
   doc.setFillColor(...DARK);
-  doc.roundedRect(margin, y, W - margin * 2, trajH, 2, 2, "F");
+  doc.roundedRect(margin, y, W - margin * 2, trajH, 3, 3, "F");
+  doc.setFillColor(...ORANGE);
+  doc.rect(margin, y, 3, trajH, "F");
   doc.setFont("helvetica", "italic");
-  doc.setFontSize(9);
+  doc.setFontSize(13);
   doc.setTextColor(200, 200, 200);
-  doc.text(trajLines, margin + 5, y + 8);
+  doc.text(trajLines, margin + 10, y + 12);
   y += trajH + 8;
 
   // Advanced sections
@@ -303,7 +305,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
     const td = data.analysis.trendData;
     const chartW = W - margin * 2;
-    const chartH = 50;
+    const chartH = 100;
 
     const parseNum = (v: unknown): number => {
       if (typeof v === "number") return v;
@@ -318,16 +320,16 @@ export function generatePDF(data: ReportData): Uint8Array {
     const colors: [number,number,number][] = [ORANGE, [41, 128, 185], [39, 174, 96]];
 
     doc.setFillColor(...DARK);
-    doc.roundedRect(margin, y, chartW, chartH + 16, 2, 2, "F");
+    doc.roundedRect(margin, y, chartW, chartH + 26, 2, 2, "F");
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
+    doc.setFontSize(11);
     doc.setTextColor(...MUTED);
-    doc.text(sanitize(td.label), margin + 4, y + 6);
+    doc.text(sanitize(td.label), margin + 6, y + 8);
 
-    const plotX = margin + 4;
-    const plotY = y + 10;
-    const plotW = chartW - 8;
+    const plotX = margin + 6;
+    const plotY = y + 14;
+    const plotW = chartW - 12;
     const plotH = chartH;
     const n = td.labels.length;
 
@@ -347,38 +349,38 @@ export function generatePDF(data: ReportData): Uint8Array {
       const col = colors[si % colors.length];
       doc.setDrawColor(...col);
       doc.setFillColor(...col);
-      doc.setLineWidth(0.8);
+      doc.setLineWidth(1.2);
       for (let i = 0; i < nPts - 1; i++) {
         const x1 = plotX + (i / (nPts - 1)) * plotW;
         const y1 = plotY + plotH - ((vals[i] - minVal) / range) * plotH;
         const x2 = plotX + ((i + 1) / (nPts - 1)) * plotW;
         const y2 = plotY + plotH - ((vals[i + 1] - minVal) / range) * plotH;
         doc.line(x1, y1, x2, y2);
-        doc.circle(x1, y1, 0.8, "F");
-        if (i === nPts - 2) doc.circle(x2, y2, 0.8, "F");
+        doc.circle(x1, y1, 1.4, "F");
+        if (i === nPts - 2) doc.circle(x2, y2, 1.4, "F");
       }
     });
 
     // Labels
-    doc.setFontSize(6.5);
+    doc.setFontSize(9);
     doc.setTextColor(...MUTED);
     td.labels.forEach((label, i) => {
-      const lx = plotX + (i / (n - 1)) * plotW;
-      doc.text(label, lx, plotY + plotH + 6, { align: "center" });
+      const lx = plotX + (i / Math.max(n - 1, 1)) * plotW;
+      doc.text(label, lx, plotY + plotH + 7, { align: "center" });
     });
 
     // Legend
     td.series.forEach((series, si) => {
       const col = colors[si % colors.length];
-      const lx = plotX + si * 50;
+      const lx = plotX + si * 70;
       doc.setFillColor(...col);
-      doc.rect(lx, plotY + plotH + 10, 6, 2, "F");
+      doc.rect(lx, plotY + plotH + 14, 8, 2.5, "F");
       doc.setTextColor(...WHITE);
-      doc.setFontSize(6);
-      doc.text(series.name, lx + 8, plotY + plotH + 11.5);
+      doc.setFontSize(9);
+      doc.text(sanitize(series.name), lx + 11, plotY + plotH + 16);
     });
 
-    y += chartH + 24;
+    y += chartH + 30;
   }
 
   if (data.mode === "advanced" && data.analysis.industryComparisons?.length) {
@@ -396,16 +398,16 @@ export function generatePDF(data: ReportData): Uint8Array {
         ];
       }),
       theme: "plain",
-      headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
-      bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8, lineWidth: 0.2, lineColor: [50, 50, 50] },
+      headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 11 },
+      bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 11, lineWidth: 0.2, lineColor: [50, 50, 50] },
       alternateRowStyles: { fillColor: [30, 30, 30] },
-      styles: { lineWidth: 0.2, lineColor: [50, 50, 50] },
+      styles: { lineWidth: 0.2, lineColor: [50, 50, 50], cellPadding: 4 },
       columnStyles: {
-        0: { cellWidth: 50, halign: "left" as const },
-        1: { cellWidth: 30, halign: "center" as const },
-        2: { cellWidth: 30, halign: "center" as const },
+        0: { cellWidth: 62, halign: "left" as const },
+        1: { cellWidth: 34, halign: "center" as const },
+        2: { cellWidth: 34, halign: "center" as const },
         3: { cellWidth: 28, halign: "center" as const },
-        4: { cellWidth: 28, halign: "center" as const },
+        4: { cellWidth: 24, halign: "center" as const },
       },
       didParseCell: (hookData: any) => {
         if (hookData.section === "body" && hookData.column.index === 4) {
@@ -427,31 +429,33 @@ export function generatePDF(data: ReportData): Uint8Array {
 
     for (const cs of data.analysis.caseStudies) {
       if (y > 250) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-      const cardH = cs.source ? 42 : 36;
+      const cols = (W - margin * 2 - 10) / 3;
+      const texts = [cs.challenge, cs.solution, cs.outcome];
+      const wrappedTexts = texts.map(t => doc.splitTextToSize(sanitize(t), cols - 6));
+      const maxLines = Math.max(...wrappedTexts.map(w => w.length));
+      const cardH = Math.max(50, maxLines * 6.5 + 28) + (cs.source ? 10 : 0);
+
       doc.setFillColor(...DARK);
       doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "F");
       doc.setFillColor(...ORANGE);
-      doc.rect(margin, y, 2, cardH, "F");
+      doc.rect(margin, y, 3, cardH, "F");
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFontSize(13);
       doc.setTextColor(...ORANGE);
-      doc.text(cs.organization, margin + 6, y + 7);
+      doc.text(sanitize(cs.organization), margin + 8, y + 9);
 
-      const cols = (W - margin * 2 - 8) / 3;
       const labels = ["Challenge", "Solution", "Outcome"];
-      const texts = [cs.challenge, cs.solution, cs.outcome];
       labels.forEach((label, i) => {
-        const cx = margin + 6 + i * cols;
+        const cx = margin + 8 + i * cols;
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
+        doc.setFontSize(9);
         doc.setTextColor(...MUTED);
-        doc.text(label.toUpperCase(), cx, y + 14);
+        doc.text(label.toUpperCase(), cx, y + 18);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
+        doc.setFontSize(11);
         doc.setTextColor(...WHITE);
-        const wrapped = doc.splitTextToSize(texts[i], cols - 4);
-        doc.text(wrapped, cx, y + 20);
+        doc.text(wrappedTexts[i], cx, y + 26);
       });
 
       if (cs.source) {
@@ -476,10 +480,10 @@ export function generatePDF(data: ReportData): Uint8Array {
       { label: "PESSIMISTIC", text: data.analysis.scenarios.pessimistic, color: RED },
     ];
     const cw = (W - margin * 2 - 8) / 3;
-    const hPad = 4.5;
+    const hPad = 6;
     const scenData = scens.map(s => {
       const wrapped = doc.splitTextToSize(sanitize(s.text), cw - hPad * 2);
-      return { ...s, wrapped, cardH: Math.max(45, wrapped.length * 5 + 18) };
+      return { ...s, wrapped, cardH: Math.max(60, wrapped.length * 6.5 + 24) };
     });
     const maxScenH = Math.max(...scenData.map(s => s.cardH));
 
@@ -491,15 +495,15 @@ export function generatePDF(data: ReportData): Uint8Array {
       doc.setFillColor(...DARK);
       doc.roundedRect(sx, y, cw, maxScenH, 2, 2, "F");
       doc.setFillColor(...s.color);
-      doc.rect(sx, y, cw, 2, "F");
+      doc.rect(sx, y, cw, 3, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7);
+      doc.setFontSize(10);
       doc.setTextColor(...s.color);
-      doc.text(s.label, sx + hPad, y + 8);
+      doc.text(s.label, sx + hPad, y + 11);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(11);
       doc.setTextColor(...WHITE);
-      doc.text(s.wrapped, sx + hPad, y + 15);
+      doc.text(s.wrapped, sx + hPad, y + 20);
     });
     y += maxScenH + 6;
   }
@@ -514,12 +518,13 @@ export function generatePDF(data: ReportData): Uint8Array {
       head: [["Risk", "Likelihood", "Impact", "Mitigation"]],
       body: data.analysis.riskMatrix.map(r => [sanitize(r.risk), r.likelihood.toUpperCase(), r.impact.toUpperCase(), sanitize(r.mitigation)]),
       theme: "plain",
-      headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
-      bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8 },
-      alternateRowStyles: { fillColor: [32, 32, 32] },
+      headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 11 },
+      bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 11, lineWidth: 0.2, lineColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [30, 30, 30] },
+      styles: { cellPadding: 4 },
       columnStyles: {
-        1: { halign: "center" as const, cellWidth: 26 },
-        2: { halign: "center" as const, cellWidth: 22 },
+        1: { halign: "center" as const, cellWidth: 30 },
+        2: { halign: "center" as const, cellWidth: 26 },
       },
       didParseCell: (hookData: any) => {
         if (hookData.section === "body" && (hookData.column.index === 1 || hookData.column.index === 2)) {
@@ -547,26 +552,26 @@ export function generatePDF(data: ReportData): Uint8Array {
     const bulletIndent = margin + 7; // ~20pt
     for (const phase of phases) {
       if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-      y += 4; // 12pt above each phase header
+      y += 5;
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
+      doc.setFontSize(13);
       doc.setTextColor(26, 86, 164);
-      doc.text(phase.label, margin, y + 4);
-      y += 10;
+      doc.text(phase.label, margin, y + 5);
+      y += 12;
       for (const item of phase.items) {
         if (y > 265) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
         const wrapped = doc.splitTextToSize(`- ${sanitize(item)}`, W - bulletIndent - margin);
-        const lineH = 4.1; // 1.15 * 9pt
-        const cardH = wrapped.length * lineH + 8;
+        const lineH = 6.5;
+        const cardH = wrapped.length * lineH + 10;
         doc.setFillColor(...DARK);
         doc.roundedRect(margin, y, W - margin * 2, cardH, 1.5, 1.5, "F");
         doc.setFillColor(26, 86, 164);
         doc.rect(margin, y, 2, cardH, "F");
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
+        doc.setFontSize(11);
         doc.setTextColor(...WHITE);
-        doc.text(wrapped, bulletIndent, y + 5);
-        y += cardH + 2; // 6pt between bullets
+        doc.text(wrapped, bulletIndent, y + 7);
+        y += cardH + 3;
       }
       y += 4;
     }
