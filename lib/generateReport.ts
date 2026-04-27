@@ -12,34 +12,38 @@ function sanitize(text: string | undefined | null): string {
     .replace(/[–—]/g, "-")
     .replace(/['']/g, "'")
     .replace(/[""]/g, '"')
+    .replace(/!'/g, ">")
+    .replace(/%¼/g, "to")
     .replace(/[^\x00-\x7E]/g, "");
 }
 
 // ─── Color palette ───────────────────────────────────────────────────────────
-const ORANGE:      [number,number,number] = [204,  85,   0];
-const NAVY:        [number,number,number] = [ 10,  22,  40];   // #0a1628
-const BLACK:       [number,number,number] = [ 26,  26,  26];
-const DARK:        [number,number,number] = [ 36,  36,  36];
-const WHITE:       [number,number,number] = [240, 240, 240];
-const MUTED:       [number,number,number] = [120, 120, 120];
-const SLATE:       [number,number,number] = [148, 163, 184];   // #94a3b8
-const SLATE_DIM:   [number,number,number] = [100, 116, 139];   // #64748b
-const RED:         [number,number,number] = [192,  57,  43];
-const AMBER:       [number,number,number] = [180, 120,   0];
-const BLUE_A:      [number,number,number] = [ 59, 130, 246];   // #3b82f6
-const CHART_BLUE:  [number,number,number] = [ 59, 130, 246];   // #3b82f6
-const CHART_RED:   [number,number,number] = [239,  68,  68];   // #ef4444
-const GREEN:       [number,number,number] = [ 39, 174,  96];
-const RED_LIGHT:   [number,number,number] = [ 50,  20,  20];
-const AMBER_LIGHT: [number,number,number] = [ 50,  40,  10];
-const BLUE_LIGHT:  [number,number,number] = [ 15,  30,  50];
-// Risk matrix bg colors (light — for colored cells)
-const RISK_HIGH_BG: [number,number,number] = [254, 226, 226];  // #fee2e2
-const RISK_MED_BG:  [number,number,number] = [254, 249, 195];  // #fef9c3
-const RISK_LOW_BG:  [number,number,number] = [220, 252, 231];  // #dcfce7
-const RISK_HIGH_TXT:[number,number,number] = [153,  27,  27];
-const RISK_MED_TXT: [number,number,number] = [133,  77,  14];
-const RISK_LOW_TXT: [number,number,number] = [ 21, 128,  61];
+const ORANGE:       [number,number,number] = [249, 115,  22];  // #f97316
+const BG_COVER:     [number,number,number] = [ 31,  41,  55];  // #1f2937
+const BLACK:        [number,number,number] = [ 26,  26,  26];
+const DARK:         [number,number,number] = [ 36,  36,  36];
+const WHITE:        [number,number,number] = [240, 240, 240];
+const MUTED:        [number,number,number] = [120, 120, 120];
+const SLATE:        [number,number,number] = [148, 163, 184];
+const SLATE_DIM:    [number,number,number] = [100, 116, 139];
+const RED:          [number,number,number] = [192,  57,  43];
+const AMBER:        [number,number,number] = [180, 120,   0];
+const GREEN:        [number,number,number] = [ 39, 174,  96];
+const BLUE_A:       [number,number,number] = [ 59, 130, 246];  // section accent bar
+const CRITICAL_CLR: [number,number,number] = [234,  88,  12];  // #ea580c
+const AVG_CLR:      [number,number,number] = [ 75,  85,  99];  // #4b5563
+const CHART_A:      [number,number,number] = [249, 115,  22];  // Revenue — orange
+const CHART_B:      [number,number,number] = [107, 114, 128];  // Expenses — gray #6b7280
+const RED_LIGHT:    [number,number,number] = [ 50,  20,  20];
+const AMBER_LIGHT:  [number,number,number] = [ 50,  40,  10];
+const BLUE_LIGHT:   [number,number,number] = [ 15,  30,  50];
+// Risk matrix — dark-theme tinted cells
+const RISK_HIGH_BG: [number,number,number] = [ 60,  38,  15];  // dark orange tint
+const RISK_HIGH_TXT:[number,number,number] = [249, 115,  22];  // orange
+const RISK_MED_BG:  [number,number,number] = [ 55,  50,  18];  // dark amber tint
+const RISK_MED_TXT: [number,number,number] = [200, 160,  50];  // amber
+const RISK_LOW_BG:  [number,number,number] = [ 20,  55,  35];  // dark green tint
+const RISK_LOW_TXT: [number,number,number] = [ 60, 190, 100];  // green
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 export interface Flag { title: string; severity: "critical"|"warning"|"info"; description: string; metric?: string; }
@@ -64,37 +68,37 @@ function addPageFooter(doc: jsPDF, orgName: string, pageNum: number, totalPages:
   const m = 15;
   doc.setDrawColor(80, 80, 80);
   doc.setLineWidth(0.3);
-  doc.line(m, 287, W - m, 287);
+  doc.line(m, 285, W - m, 285);
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...SLATE);
   const cleanOrg = sanitize(orgName || "").trim();
   const leftTxt = cleanOrg ? `${cleanOrg} - Executive Consulting Report` : "Executive Consulting Report";
-  doc.text(leftTxt, m, 291);
-  doc.text(`Page ${pageNum} of ${totalPages}`, W / 2, 291, { align: "center" });
-  doc.text("Consult6 - Senior financial insight, no consultant required.", W - m, 291, { align: "right" });
+  doc.text(leftTxt, m, 289);
+  doc.text(`Page ${pageNum} of ${totalPages}`, W / 2, 289, { align: "center" });
+  doc.text("Consult6 - Senior financial insight, no consultant required.", W - m, 289, { align: "right" });
 }
 
 function sectionHeader(doc: jsPDF, title: string, y: number, margin: number, W: number): number {
   doc.setFillColor(...BLUE_A);
-  doc.rect(margin, y, 3, 9, "F");
+  doc.rect(margin, y, 3, 10, "F");
   doc.setTextColor(...ORANGE);
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(title.toUpperCase(), margin + 7, y + 7);
-  return y + 16;
+  doc.text(title.toUpperCase(), margin + 7, y + 8);
+  return y + 18;
 }
 
 function startSection(doc: jsPDF, W: number): number {
   doc.addPage();
-  doc.setFillColor(...BLACK);
+  doc.setFillColor(...BG_COVER);
   doc.rect(0, 0, W, 297, "F");
   return 18;
 }
 
 function newPageInSection(doc: jsPDF, W: number): number {
   doc.addPage();
-  doc.setFillColor(...BLACK);
+  doc.setFillColor(...BG_COVER);
   doc.rect(0, 0, W, 297, "F");
   return 18;
 }
@@ -107,53 +111,58 @@ export function generatePDF(data: ReportData): Uint8Array {
   let y = 0;
 
   // ── COVER PAGE ──────────────────────────────────────────────────────────────
-  doc.setFillColor(...NAVY);
+  doc.setFillColor(...BG_COVER);
   doc.rect(0, 0, W, 297, "F");
 
-  // Large "6" numeral — explicit x to avoid alignment artifacts
+  // Prime text engine — prevents stray artifact on first doc.text() call
+  doc.setFontSize(1);
+  doc.setTextColor(...BG_COVER);
+  doc.text(" ", 1, 1);
+
+  // Large "6" focal point — orange, centered
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(120);
-  doc.setTextColor(...WHITE);
-  const sixW = doc.getTextWidth("6");
-  doc.text("6", (W - sixW) / 2, 105);
+  doc.setFontSize(150);
+  doc.setTextColor(...ORANGE);
+  doc.text("6", W / 2, 100, { align: "center" });
 
   // "CONSULT6" wordmark
-  doc.setFontSize(22);
+  doc.setFontSize(24);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...WHITE);
-  doc.text("CONSULT6", W / 2, 135, { align: "center" });
+  doc.text("CONSULT6", W / 2, 132, { align: "center" });
 
-  // Thin horizontal rule (40% white = light gray)
-  doc.setDrawColor(160, 160, 160);
+  // Thin separator rule
+  doc.setDrawColor(80, 80, 80);
   doc.setLineWidth(0.3);
-  doc.line((W - 60) / 2, 142, (W + 60) / 2, 142);
+  doc.line((W - 60) / 2, 140, (W + 60) / 2, 140);
 
-  // Subtitle
-  doc.setFontSize(11);
+  // Subtitle (part of logo group)
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...SLATE);
-  doc.text("Executive Consulting Report", W / 2, 150, { align: "center" });
+  doc.text("Executive Consulting Report", W / 2, 148, { align: "center" });
 
+  // ── 30mm breathing room from CONSULT6 ──
   // Org name
-  doc.setFontSize(18);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...WHITE);
-  doc.text(sanitize(data.orgName || "Report"), W / 2, 165, { align: "center" });
+  doc.text(sanitize(data.orgName || "Report"), W / 2, 180, { align: "center" });
 
   // Date
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...SLATE);
-  doc.text(data.generatedAt, W / 2, 173, { align: "center" });
+  doc.text(data.generatedAt, W / 2, 189, { align: "center" });
 
-  // Prepared by + tagline
+  // Tagline
   doc.setFontSize(8);
   doc.setTextColor(...SLATE_DIM);
-  doc.text("Prepared by Consult6  |  Senior financial insight, no consultant required.", W / 2, 185, { align: "center" });
+  doc.text("Prepared by Consult6  |  Senior financial insight, no consultant required.", W / 2, 199, { align: "center" });
 
   // ── PAGE 2: EXECUTIVE SUMMARY ────────────────────────────────────────────────
   doc.addPage();
-  doc.setFillColor(...BLACK);
+  doc.setFillColor(...BG_COVER);
   doc.rect(0, 0, W, 297, "F");
   y = 18;
   y = sectionHeader(doc, "Executive Summary", y, margin, W);
@@ -174,7 +183,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   y = sectionHeader(doc, "What We Found", y, margin, W);
   for (const flag of data.analysis.flags) {
     const sevColors: Record<string,{bg:[number,number,number];border:[number,number,number];label:string}> = {
-      critical: { bg: RED_LIGHT,   border: RED,   label: "CRITICAL" },
+      critical: { bg: RED_LIGHT,   border: CRITICAL_CLR, label: "CRITICAL" },
       warning:  { bg: AMBER_LIGHT, border: AMBER, label: "WARNING"  },
       info:     { bg: BLUE_LIGHT,  border: BLUE_A, label: "INFO"    },
     };
@@ -221,7 +230,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     const rec = data.analysis.recommendations[i];
     const detailLines = doc.splitTextToSize(sanitize(rec.detail), W - margin * 2 - 12);
     const cardH = detailLines.length * 6.5 + 24;
-    if (y + cardH > 280) { y = newPageInSection(doc, W); }
+    if (y + cardH > 272) { y = newPageInSection(doc, W); }
 
     doc.setFillColor(...DARK);
     doc.setDrawColor(60, 60, 60);
@@ -298,7 +307,7 @@ export function generatePDF(data: ReportData): Uint8Array {
       const maxVal = Math.max(...allVals);
       const maxRounded = Math.ceil(maxVal / 10000) * 10000 || 1;
       const n = td.labels.length;
-      const seriesColors: [number,number,number][] = [CHART_BLUE, CHART_RED, ORANGE];
+      const seriesColors: [number,number,number][] = [CHART_A, CHART_B, ORANGE];
 
       // Chart area
       const yAxisLabelW = 14;
@@ -402,19 +411,19 @@ export function generatePDF(data: ReportData): Uint8Array {
       alternateRowStyles: { fillColor: [30,30,30] },
       styles: { lineWidth: 0.2, lineColor: [50,50,50], cellPadding: 3, overflow: "linebreak" },
       columnStyles: {
-        0: { cellWidth: 58, halign: "left"   as const },
-        1: { cellWidth: 32, halign: "center" as const },
-        2: { cellWidth: 32, halign: "center" as const },
+        0: { cellWidth: 70, halign: "left"   as const },
+        1: { cellWidth: 28, halign: "center" as const },
+        2: { cellWidth: 28, halign: "center" as const },
         3: { cellWidth: 28, halign: "center" as const },
-        4: { cellWidth: 30, halign: "center" as const },
+        4: { cellWidth: 26, halign: "center" as const },
       },
       didParseCell: (hookData: any) => {
         if (hookData.section === "body" && hookData.column.index === 4) {
-          const val: string = hookData.cell.text?.[0] ?? "";
+          const val: string = hookData.cell.raw?.toString() ?? "";
           hookData.cell.styles.fontStyle = "bold";
           if (val === "Above Avg") hookData.cell.styles.textColor = [39,174,96];
-          else if (val === "Below Avg") hookData.cell.styles.textColor = [192,57,43];
-          else hookData.cell.styles.textColor = [180,130,0];
+          else if (val === "Below Avg") hookData.cell.styles.textColor = CRITICAL_CLR;
+          else hookData.cell.styles.textColor = AVG_CLR;
         }
       },
       margin: { left: margin, right: margin },
@@ -428,47 +437,47 @@ export function generatePDF(data: ReportData): Uint8Array {
     y = sectionHeader(doc, "Who's Been Here Before", y, margin, W);
 
     for (const cs of data.analysis.caseStudies) {
-      const colW = (W - margin * 2 - 10) / 3;
-      const texts = [cs.challenge, cs.solution, cs.outcome];
-      const wrappedTexts = texts.map(t => doc.splitTextToSize(sanitize(t), colW - 6));
-      const maxLines = Math.max(...wrappedTexts.map(w => w.length));
-      const cardH = Math.max(50, maxLines * 6.5 + 30) + (cs.source ? 10 : 0);
-      if (y + cardH > 280) { y = newPageInSection(doc, W); }
+      if (y + 60 > 280) { y = newPageInSection(doc, W); }
 
+      // Org name header bar
       doc.setFillColor(...DARK);
-      doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "F");
+      doc.roundedRect(margin, y, W - margin * 2, 13, 2, 2, "F");
       doc.setFillColor(...ORANGE);
-      doc.rect(margin, y, 3, cardH, "F");
-
+      doc.rect(margin, y, 3, 13, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
+      doc.setFontSize(12);
       doc.setTextColor(...ORANGE);
-      doc.text(sanitize(cs.organization), margin + 8, y + 10);
+      doc.text(sanitize(cs.organization), margin + 8, y + 9);
+      y += 13;
 
-      const labels = ["Challenge", "Solution", "Outcome"];
-      labels.forEach((label, i) => {
-        const cx = margin + 8 + i * colW;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(...MUTED);
-        doc.text(label.toUpperCase(), cx, y + 20);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9.5);
-        doc.setTextColor(...WHITE);
-        doc.text(wrappedTexts[i], cx, y + 28);
+      // Three-column table — each col 60mm (total 180mm = full content width)
+      (doc as any).autoTable({
+        startY: y,
+        head: [["Challenge", "Solution", "Outcome"]],
+        body: [[sanitize(cs.challenge), sanitize(cs.solution), sanitize(cs.outcome)]],
+        theme: "plain",
+        headStyles: { fillColor: [45,45,45], textColor: [150,150,150], fontStyle: "bold", fontSize: 8 },
+        bodyStyles: { fillColor: [36,36,36], textColor: [200,200,200], fontSize: 9.5, lineWidth: 0.2, lineColor: [60,60,60], cellPadding: 4 },
+        styles: { overflow: "linebreak" },
+        columnStyles: {
+          0: { cellWidth: 60, halign: "left" as const },
+          1: { cellWidth: 60, halign: "left" as const },
+          2: { cellWidth: 60, halign: "left" as const },
+        },
+        margin: { left: margin, right: margin },
       });
+      y = (doc as any).lastAutoTable.finalY;
 
       if (cs.source) {
-        const srcY = y + cardH - 5;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(102, 102, 102);
-        doc.text("Source:", margin + 8, srcY);
-        const lw = doc.getTextWidth("Source: ");
+        doc.setFillColor(30, 30, 30);
+        doc.rect(margin, y, W - margin * 2, 9, "F");
         doc.setFont("helvetica", "italic");
-        doc.text(sanitize(cs.source), margin + 8 + lw, srcY);
+        doc.setFontSize(7.5);
+        doc.setTextColor(110, 110, 110);
+        doc.text(`Source: ${sanitize(cs.source)}`, margin + 6, y + 5.5);
+        y += 9;
       }
-      y += cardH + 6;
+      y += 8;
     }
   }
 
@@ -525,10 +534,10 @@ export function generatePDF(data: ReportData): Uint8Array {
       alternateRowStyles: { fillColor: [30,30,30] },
       styles: { lineWidth: 0.2, lineColor: [50,50,50], cellPadding: 3, overflow: "linebreak" },
       columnStyles: {
-        0: { cellWidth: 65, halign: "left"   as const },
-        1: { cellWidth: 22, halign: "center" as const },
-        2: { cellWidth: 22, halign: "center" as const },
-        3: { cellWidth: 71, halign: "left"   as const },
+        0: { cellWidth: 55, halign: "left"   as const },
+        1: { cellWidth: 25, halign: "center" as const },
+        2: { cellWidth: 25, halign: "center" as const },
+        3: { cellWidth: 75, halign: "left"   as const },
       },
       didParseCell: (hookData: any) => {
         if (hookData.section === "body" && (hookData.column.index === 1 || hookData.column.index === 2)) {
