@@ -80,12 +80,12 @@ function addPageFooter(doc: jsPDF, orgName: string, pageNum: number, totalPages:
 }
 
 function sectionHeader(doc: jsPDF, title: string, y: number, margin: number, W: number): number {
-  doc.setFillColor(...BLUE_A);
-  doc.rect(margin, y, 3, 10, "F");
-  doc.setTextColor(...ORANGE);
+  doc.setFillColor(...ORANGE);
+  doc.rect(margin, y, 4, 10, "F");
+  doc.setTextColor(...WHITE);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(title.toUpperCase(), margin + 7, y + 8);
+  doc.text(title.toUpperCase(), margin + 8, y + 8);
   return y + 18;
 }
 
@@ -188,9 +188,10 @@ export function generatePDF(data: ReportData): Uint8Array {
       info:     { bg: BLUE_LIGHT,  border: BLUE_A, label: "INFO"    },
     };
     const sc = sevColors[flag.severity] ?? sevColors.info;
+    const titleLines = doc.splitTextToSize(sanitize(flag.title), W - margin * 2 - 42);
     const descLines = doc.splitTextToSize(sanitize(flag.description), W - margin * 2 - 12);
-    const cardH = descLines.length * 6.5 + (flag.metric ? 12 : 0) + 24;
-    if (y + cardH > 280) { y = newPageInSection(doc, W); }
+    const cardH = titleLines.length * 7 + descLines.length * 6.5 + (flag.metric ? 12 : 0) + 18;
+    if (y + cardH > 272) { y = newPageInSection(doc, W); }
 
     doc.setFillColor(...sc.bg);
     doc.setDrawColor(...sc.border);
@@ -205,14 +206,15 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.text(sc.label, margin + 5, y + 10.5);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(...WHITE);
-    doc.text(sanitize(flag.title), margin + 34, y + 10);
+    doc.text(titleLines, margin + 34, y + 10);
 
+    const bodyStartY = y + titleLines.length * 7 + 11;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(200, 200, 200);
-    doc.text(descLines, margin + 8, y + 22);
+    doc.text(descLines, margin + 8, bodyStartY);
 
     if (flag.metric) {
       doc.setFont("helvetica", "bold");
@@ -228,8 +230,9 @@ export function generatePDF(data: ReportData): Uint8Array {
   y = sectionHeader(doc, "What We'd Do", y, margin, W);
   for (let i = 0; i < data.analysis.recommendations.length; i++) {
     const rec = data.analysis.recommendations[i];
+    const titleLines = doc.splitTextToSize(sanitize(rec.title), W - margin * 2 - 26);
     const detailLines = doc.splitTextToSize(sanitize(rec.detail), W - margin * 2 - 12);
-    const cardH = detailLines.length * 6.5 + 24;
+    const cardH = titleLines.length * 7 + detailLines.length * 6.5 + 18;
     if (y + cardH > 272) { y = newPageInSection(doc, W); }
 
     doc.setFillColor(...DARK);
@@ -245,14 +248,15 @@ export function generatePDF(data: ReportData): Uint8Array {
     doc.text(`${i + 1}`, margin + 9, y + 14, { align: "center" });
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(...WHITE);
-    doc.text(sanitize(rec.title), margin + 20, y + 12);
+    doc.text(titleLines, margin + 20, y + 11);
 
+    const detailStartY = y + titleLines.length * 7 + 10;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(200, 200, 200);
-    doc.text(detailLines, margin + 8, y + 23);
+    doc.text(detailLines, margin + 8, detailStartY);
     y += cardH + 5;
   }
 
@@ -330,15 +334,15 @@ export function generatePDF(data: ReportData): Uint8Array {
       // Y-axis ticks + grid lines + labels
       const numTicks = 5;
       for (let t = 0; t <= numTicks; t++) {
-        const tickVal = (maxRounded / numTicks) * t;
+        const tickVal = Math.round((maxRounded / numTicks) * t);
         const tickY = axisY + axisH - (tickVal / maxRounded) * axisH;
         doc.setDrawColor(50, 50, 50);
         doc.setLineWidth(0.1);
         doc.line(axisX, tickY, axisX + axisW, tickY);
-        const labelStr = tickVal >= 1000 ? `${Math.round(tickVal / 1000)}k` : `${Math.round(tickVal)}`;
-        doc.setFontSize(7);
+        const labelStr = tickVal >= 1000 ? `${tickVal / 1000}k` : String(tickVal);
         doc.setFont("helvetica", "normal");
-        doc.setTextColor(...MUTED);
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
         doc.text(labelStr, axisX - 2, tickY + 1, { align: "right" });
       }
 
@@ -365,13 +369,14 @@ export function generatePDF(data: ReportData): Uint8Array {
         });
       }
 
-      // X-axis labels
-      doc.setFontSize(7);
+      // X-axis labels — centered under each group's midpoint
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(...MUTED);
-      td.labels.forEach((label, i) => {
-        const lx = axisX + (i + 0.5) * (axisW / Math.max(n, 1));
-        doc.text(sanitize(label), lx, axisY + axisH + 6, { align: "center" });
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      const groupW2 = axisW / Math.max(n, 1);
+      td.labels.forEach((label, j) => {
+        const groupMid = axisX + j * groupW2 + groupW2 / 2;
+        doc.text(sanitize(label), groupMid, axisY + axisH + 6, { align: "center" });
       });
 
       // Legend — centered below chart
@@ -574,17 +579,17 @@ export function generatePDF(data: ReportData): Uint8Array {
     ];
     const bulletX = margin + 8;
     for (const phase of phases) {
-      if (y > 265) { y = newPageInSection(doc, W); }
+      if (y > 260) { y = newPageInSection(doc, W); }
       y += 5;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.setTextColor(26, 86, 164);
+      doc.setTextColor(...ORANGE);
       doc.text(phase.label, margin, y + 5);
       y += 13;
       for (const item of phase.items) {
         const wrapped = doc.splitTextToSize(`- ${sanitize(item)}`, W - bulletX - margin);
         const cardH = wrapped.length * 6.5 + 12;
-        if (y + cardH > 280) { y = newPageInSection(doc, W); }
+        if (y + cardH > 272) { y = newPageInSection(doc, W); }
         doc.setFillColor(...DARK);
         doc.roundedRect(margin, y, W - margin * 2, cardH, 2, 2, "F");
         doc.setFillColor(...phase.color);
