@@ -291,7 +291,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   // Advanced sections
   if (data.mode === "advanced" && data.analysis.trendData) {
-    if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    if (y > 190) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     y = sectionHeader(doc, "Financial Trend", y, margin, W);
 
     const td = data.analysis.trendData;
@@ -375,7 +375,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.industryComparisons?.length) {
-    if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    if (y > 210) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     y = sectionHeader(doc, "How You Compare", y, margin, W);
 
     (doc as any).autoTable({
@@ -389,10 +389,10 @@ export function generatePDF(data: ReportData): Uint8Array {
         ];
       }),
       theme: "plain",
-      headStyles: { fillColor: [26, 86, 164], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-      bodyStyles: { fillColor: [255, 255, 255], textColor: [26, 26, 26], fontSize: 8, lineWidth: 0.3, lineColor: [204, 204, 204] },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      styles: { lineWidth: 0.3, lineColor: [204, 204, 204] },
+      headStyles: { fillColor: [36, 36, 36], textColor: [204, 85, 0], fontStyle: "bold", fontSize: 8 },
+      bodyStyles: { fillColor: [26, 26, 26], textColor: [200, 200, 200], fontSize: 8, lineWidth: 0.2, lineColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [30, 30, 30] },
+      styles: { lineWidth: 0.2, lineColor: [50, 50, 50] },
       columnStyles: {
         0: { cellWidth: 50, halign: "left" as const },
         1: { cellWidth: 30, halign: "center" as const },
@@ -404,16 +404,9 @@ export function generatePDF(data: ReportData): Uint8Array {
         if (hookData.section === "body" && hookData.column.index === 4) {
           const val: string = hookData.cell.text?.[0] ?? "";
           hookData.cell.styles.fontStyle = "bold";
-          if (val === "Above Avg") {
-            hookData.cell.styles.fillColor = [230, 244, 234];
-            hookData.cell.styles.textColor = [30, 126, 52];
-          } else if (val === "Below Avg") {
-            hookData.cell.styles.fillColor = [253, 236, 234];
-            hookData.cell.styles.textColor = [198, 40, 40];
-          } else {
-            hookData.cell.styles.fillColor = [255, 248, 225];
-            hookData.cell.styles.textColor = [184, 134, 11];
-          }
+          if (val === "Above Avg") hookData.cell.styles.textColor = [39, 174, 96];
+          else if (val === "Below Avg") hookData.cell.styles.textColor = [192, 57, 43];
+          else hookData.cell.styles.textColor = [180, 130, 0];
         }
       },
       margin: { left: margin, right: margin },
@@ -422,7 +415,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.caseStudies?.length) {
-    if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    if (y > 210) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     y = sectionHeader(doc, "Who's Been Here Before", y, margin, W);
 
     for (const cs of data.analysis.caseStudies) {
@@ -470,23 +463,22 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.scenarios) {
-    if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    y = sectionHeader(doc, "How This Could Play Out", y, margin, W);
-
     const scens = [
       { label: "OPTIMISTIC", text: data.analysis.scenarios.optimistic, color: [39, 174, 96] as [number,number,number] },
       { label: "BASE CASE", text: data.analysis.scenarios.base, color: BLUE },
       { label: "PESSIMISTIC", text: data.analysis.scenarios.pessimistic, color: RED },
     ];
     const cw = (W - margin * 2 - 8) / 3;
-    const hPad = 4.5; // ~12pt horizontal padding
+    const hPad = 4.5;
     const scenData = scens.map(s => {
       const wrapped = doc.splitTextToSize(sanitize(s.text), cw - hPad * 2);
       return { ...s, wrapped, cardH: Math.max(45, wrapped.length * 5 + 18) };
     });
     const maxScenH = Math.max(...scenData.map(s => s.cardH));
 
-    if (y + maxScenH > 270) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    // Single check: header (14mm) + cards must fit together
+    if (y + 14 + maxScenH > 270) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = sectionHeader(doc, "How This Could Play Out", y, margin, W);
 
     scenData.forEach((s, i) => {
       const sx = margin + i * (cw + 4);
@@ -507,7 +499,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.riskMatrix?.length) {
-    if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    if (y > 210) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     y = sectionHeader(doc, "What We're Watching", y, margin, W);
 
     const riskColors: Record<string, [number,number,number]> = { high: RED, medium: AMBER, low: [39, 174, 96] };
@@ -537,7 +529,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.actionPlan) {
-    if (y > 200) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    if (y > 190) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     y = sectionHeader(doc, "Your Next Steps", y, margin, W);
 
     const phases = [
