@@ -52,8 +52,19 @@ function addPageFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   doc.setTextColor(...MUTED);
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.text("Consult6 · AI-Powered Financial Health Analysis", 14, H - 3.5);
+  doc.text("Consult6 — Senior financial insight, no consultant required.", 14, H - 3.5);
   doc.text(`Page ${pageNum} of ${totalPages}`, W - 14, H - 3.5, { align: "right" });
+}
+
+function addPageHeader(doc: jsPDF, orgName: string) {
+  const W = doc.internal.pageSize.getWidth();
+  doc.setFillColor(...BLACK);
+  doc.rect(0, 0, W, 10, "F");
+  doc.setTextColor(70, 70, 70);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  const headerText = orgName ? `${orgName} — Executive Consulting Report` : "Executive Consulting Report";
+  doc.text(headerText, W / 2, 6.5, { align: "center" });
 }
 
 function sectionHeader(doc: jsPDF, title: string, y: number, margin: number, W: number): number {
@@ -72,33 +83,70 @@ export function generatePDF(data: ReportData): Uint8Array {
   const margin = 14;
   let y = 0;
 
-  // Cover page
+  // Cover page — centered design
   doc.setFillColor(...BLACK);
   doc.rect(0, 0, W, 297, "F");
   doc.setFillColor(...ORANGE);
   doc.rect(0, 0, W, 2, "F");
 
-  doc.setFillColor(...DARK);
-  doc.rect(0, 50, W, 80, "F");
-
-  doc.setTextColor(...ORANGE);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text(`CONSULT6 ${data.mode.toUpperCase()}`, margin, 62);
-
+  // Logo mark (centered)
+  const logoSize = 18;
+  const logoX = (W - logoSize) / 2;
+  const logoY = 72;
+  doc.setFillColor(...ORANGE);
+  doc.roundedRect(logoX, logoY, logoSize, logoSize, 3, 3, "F");
   doc.setTextColor(...WHITE);
-  doc.setFontSize(22);
-  doc.text("Financial Health Analysis Report", margin, 75);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("6", W / 2, logoY + 12.5, { align: "center" });
 
-  doc.setFontSize(13);
+  // Wordmark
+  doc.setTextColor(...ORANGE);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text("CONSULT6", W / 2, logoY + 26, { align: "center" });
+
+  // Report title
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(26);
+  doc.setFont("helvetica", "bold");
+  doc.text("Executive Consulting Report", W / 2, 132, { align: "center" });
+
+  // Organization name
+  doc.setFontSize(15);
   doc.setTextColor(...MUTED);
-  doc.text(data.orgName, margin, 88);
+  doc.setFont("helvetica", "normal");
+  doc.text(data.orgName || "Report", W / 2, 150, { align: "center" });
 
+  // Date
   doc.setFontSize(9);
-  doc.text(`Generated ${data.generatedAt}  ·  Source: ${data.fileName}`, margin, 100);
+  doc.setTextColor(70, 70, 70);
+  doc.text(data.generatedAt, W / 2, 163, { align: "center" });
 
-  // Summary box
-  y = 150;
+  // Divider
+  doc.setDrawColor(...ORANGE);
+  doc.setLineWidth(0.4);
+  doc.line(W / 2 - 28, 173, W / 2 + 28, 173);
+
+  // Prepared by line
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("Prepared by Consult6", W / 2, 248, { align: "center" });
+
+  // Tagline
+  doc.setFontSize(7.5);
+  doc.setTextColor(65, 65, 65);
+  doc.setFont("helvetica", "italic");
+  doc.text("Senior financial insight, no consultant required.", W / 2, 260, { align: "center" });
+
+  // Page 2: Analysis
+  doc.addPage();
+  doc.setFillColor(...BLACK);
+  doc.rect(0, 0, W, 297, "F");
+  y = 20;
+
+  // Executive Summary
   doc.setFillColor(...DARK);
   doc.roundedRect(margin, y, W - margin * 2, 50, 3, 3, "F");
   doc.setFillColor(...ORANGE);
@@ -112,15 +160,10 @@ export function generatePDF(data: ReportData): Uint8Array {
   doc.setFont("helvetica", "normal");
   const summaryLines = doc.splitTextToSize(data.analysis.summary, W - margin * 2 - 16);
   doc.text(summaryLines, margin + 8, y + 16);
+  y += 58;
 
-  // Page 2: Analysis
-  doc.addPage();
-  doc.setFillColor(...BLACK);
-  doc.rect(0, 0, W, 297, "F");
-  y = 20;
-
-  // Flags
-  y = sectionHeader(doc, "Financial Flags", y, margin, W);
+  // What We Found
+  y = sectionHeader(doc, "What We Found", y, margin, W);
   for (const flag of data.analysis.flags) {
     if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
     const sevColors: Record<string, { bg: [number,number,number]; border: [number,number,number]; label: string }> = {
@@ -165,7 +208,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   y += 6;
   if (y > 240) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-  y = sectionHeader(doc, "Recommendations", y, margin, W);
+  y = sectionHeader(doc, "What We'd Do", y, margin, W);
 
   for (let i = 0; i < data.analysis.recommendations.length; i++) {
     const rec = data.analysis.recommendations[i];
@@ -200,7 +243,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   // Trajectory
   if (y > 250) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
   y += 4;
-  y = sectionHeader(doc, "Financial Trajectory", y, margin, W);
+  y = sectionHeader(doc, "Where This Is Heading", y, margin, W);
   doc.setFillColor(...DARK);
   doc.roundedRect(margin, y, W - margin * 2, 20, 2, 2, "F");
   doc.setFont("helvetica", "italic");
@@ -290,7 +333,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   if (data.mode === "advanced" && data.analysis.industryComparisons?.length) {
     if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    y = sectionHeader(doc, "Industry Benchmarks", y, margin, W);
+    y = sectionHeader(doc, "How You Compare", y, margin, W);
 
     (doc as any).autoTable({
       startY: y,
@@ -319,7 +362,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   if (data.mode === "advanced" && data.analysis.caseStudies?.length) {
     if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    y = sectionHeader(doc, "Case Studies", y, margin, W);
+    y = sectionHeader(doc, "Who's Been Here Before", y, margin, W);
 
     for (const cs of data.analysis.caseStudies) {
       if (y > 250) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
@@ -363,7 +406,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   if (data.mode === "advanced" && data.analysis.scenarios) {
     if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    y = sectionHeader(doc, "12-Month Scenarios", y, margin, W);
+    y = sectionHeader(doc, "How This Could Play Out", y, margin, W);
 
     const scens = [
       { label: "OPTIMISTIC", text: data.analysis.scenarios.optimistic, color: [39, 174, 96] as [number,number,number] },
@@ -394,7 +437,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   if (data.mode === "advanced" && data.analysis.riskMatrix?.length) {
     if (y > 220) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    y = sectionHeader(doc, "Risk Matrix", y, margin, W);
+    y = sectionHeader(doc, "What We're Watching", y, margin, W);
 
     const riskColors: Record<string, [number,number,number]> = { high: RED, medium: AMBER, low: [39, 174, 96] };
     (doc as any).autoTable({
@@ -425,7 +468,7 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   if (data.mode === "advanced" && data.analysis.actionPlan) {
     if (y > 200) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-    y = sectionHeader(doc, "Action Plan", y, margin, W);
+    y = sectionHeader(doc, "Your Next Steps", y, margin, W);
 
     const phases = [
       { label: "IMMEDIATE (0–30 days)", items: data.analysis.actionPlan.immediate, color: RED },
@@ -458,11 +501,14 @@ export function generatePDF(data: ReportData): Uint8Array {
     }
   }
 
-  // Add footers to all pages
+  // Add headers and footers to all pages except the cover
   const totalPages = (doc as any).internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    addPageFooter(doc, p, totalPages);
+    if (p > 1) {
+      addPageHeader(doc, data.orgName);
+      addPageFooter(doc, p - 1, totalPages - 1);
+    }
   }
 
   return doc.output("arraybuffer") as unknown as Uint8Array;

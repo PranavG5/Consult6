@@ -212,7 +212,9 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `consult6-${item.mode}-report-${item.id.slice(0, 8)}.pdf`;
+    const monthYear = new Date(item.created_at).toLocaleString("en-US", { month: "long", year: "numeric" });
+    const safeName = (item.org_name || item.label || "Report").replace(/[^a-zA-Z0-9 \-]/g, "").trim();
+    a.download = `Consult6 — ${safeName} Executive Report — ${monthYear}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -378,7 +380,9 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `consult6-${mode}-report-${Date.now()}.pdf`;
+    const monthYear = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
+    const safeName = (orgName || "Report").replace(/[^a-zA-Z0-9 \-]/g, "").trim();
+    a.download = `Consult6 — ${safeName} Executive Report — ${monthYear}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -609,7 +613,7 @@ export default function Home() {
               {/* Flags */}
               {analysis.flags.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>FINANCIAL FLAGS</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE FOUND</p>
                   {analysis.flags.map((flag, i) => {
                     const s = sevStyle[flag.severity] ?? sevStyle.info;
                     return (
@@ -629,7 +633,7 @@ export default function Home() {
               {/* Recommendations */}
               {analysis.recommendations.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RECOMMENDATIONS</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE'D DO</p>
                   {analysis.recommendations.map((rec, i) => (
                     <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "12px 14px", marginBottom: 8, display: "flex", gap: 12 }}>
                       <div style={{ minWidth: 24, height: 24, background: "#CC5500", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, color: "#fff", flexShrink: 0 }}>{i + 1}</div>
@@ -644,14 +648,14 @@ export default function Home() {
 
               {/* Trajectory */}
               <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 6 }}>FINANCIAL TRAJECTORY</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 6 }}>WHERE THIS IS HEADING</p>
                 <p style={{ fontSize: 13, color: "#ccc", margin: 0, fontStyle: "italic", lineHeight: 1.5 }}>{analysis.trajectoryNote}</p>
               </div>
 
               {/* Advanced sections */}
               {analysis.industryComparisons?.length && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>INDUSTRY BENCHMARKS</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>HOW YOU COMPARE</p>
                   <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead>
@@ -683,7 +687,7 @@ export default function Home() {
 
               {analysis.caseStudies?.length && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>CASE STUDIES</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHO'S BEEN HERE BEFORE</p>
                   {analysis.caseStudies.map((cs, i) => (
                     <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderLeft: "3px solid #CC5500", borderRadius: 8, padding: "14px 16px", marginBottom: 8 }}>
                       <p style={{ fontWeight: 700, fontSize: 14, color: "#CC5500", margin: "0 0 10px" }}>{cs.organization}</p>
@@ -705,7 +709,7 @@ export default function Home() {
 
               {analysis.scenarios && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>12-MONTH SCENARIOS</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>HOW THIS COULD PLAY OUT</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                     {[
                       { label: "OPTIMISTIC", text: analysis.scenarios.optimistic, color: "#27ae60", border: "#1e5c32" },
@@ -723,7 +727,7 @@ export default function Home() {
 
               {analysis.riskMatrix?.length && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>RISK MATRIX</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE'RE WATCHING</p>
                   <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <thead>
@@ -757,7 +761,7 @@ export default function Home() {
 
               {analysis.actionPlan && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ACTION PLAN</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>YOUR NEXT STEPS</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                     {[
                       { label: "IMMEDIATE", sub: "0–30 days", items: analysis.actionPlan.immediate, color: "#e74c3c", border: "#5c1a1a" },
