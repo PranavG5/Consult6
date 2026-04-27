@@ -112,6 +112,13 @@ function sectionHeader(doc: jsPDF, title: string, y: number, margin: number, W: 
   return y + 7;
 }
 
+function startSection(doc: jsPDF, W: number): number {
+  doc.addPage();
+  doc.setFillColor(...BLACK);
+  doc.rect(0, 0, W, 297, "F");
+  return 20;
+}
+
 export function generatePDF(data: ReportData): Uint8Array {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
@@ -198,7 +205,8 @@ export function generatePDF(data: ReportData): Uint8Array {
   doc.text(summaryLines, margin + 8, y + 16);
   y += 58;
 
-  // What We Found
+  // What We Found — own page
+  y = startSection(doc, W);
   y = sectionHeader(doc, "What We Found", y, margin, W);
   for (const flag of data.analysis.flags) {
     if (y > 260) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
@@ -242,8 +250,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     y += cardH + 3;
   }
 
-  y += 4;
-  if (y > 240) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+  y = startSection(doc, W);
   y = sectionHeader(doc, "What We'd Do", y, margin, W);
 
   for (let i = 0; i < data.analysis.recommendations.length; i++) {
@@ -276,22 +283,22 @@ export function generatePDF(data: ReportData): Uint8Array {
     y += cardH + 4;
   }
 
-  // Trajectory
-  if (y > 250) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
-  y += 4;
+  // Trajectory — own page
+  y = startSection(doc, W);
   y = sectionHeader(doc, "Where This Is Heading", y, margin, W);
+  const trajLines = doc.splitTextToSize(sanitize(data.analysis.trajectoryNote), W - margin * 2 - 10);
+  const trajH = Math.max(20, trajLines.length * 5 + 8);
   doc.setFillColor(...DARK);
-  doc.roundedRect(margin, y, W - margin * 2, 20, 2, 2, "F");
+  doc.roundedRect(margin, y, W - margin * 2, trajH, 2, 2, "F");
   doc.setFont("helvetica", "italic");
   doc.setFontSize(9);
   doc.setTextColor(200, 200, 200);
-  const trajLines = doc.splitTextToSize(sanitize(data.analysis.trajectoryNote), W - margin * 2 - 10);
   doc.text(trajLines, margin + 5, y + 8);
-  y += 28;
+  y += trajH + 8;
 
   // Advanced sections
   if (data.mode === "advanced" && data.analysis.trendData) {
-    if (y > 190) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = startSection(doc, W);
     y = sectionHeader(doc, "Financial Trend", y, margin, W);
 
     const td = data.analysis.trendData;
@@ -375,7 +382,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.industryComparisons?.length) {
-    if (y > 210) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = startSection(doc, W);
     y = sectionHeader(doc, "How You Compare", y, margin, W);
 
     (doc as any).autoTable({
@@ -415,7 +422,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.caseStudies?.length) {
-    if (y > 210) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = startSection(doc, W);
     y = sectionHeader(doc, "Who's Been Here Before", y, margin, W);
 
     for (const cs of data.analysis.caseStudies) {
@@ -476,8 +483,7 @@ export function generatePDF(data: ReportData): Uint8Array {
     });
     const maxScenH = Math.max(...scenData.map(s => s.cardH));
 
-    // Single check: header (14mm) + cards must fit together
-    if (y + 14 + maxScenH > 270) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = startSection(doc, W);
     y = sectionHeader(doc, "How This Could Play Out", y, margin, W);
 
     scenData.forEach((s, i) => {
@@ -499,7 +505,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.riskMatrix?.length) {
-    if (y > 210) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = startSection(doc, W);
     y = sectionHeader(doc, "What We're Watching", y, margin, W);
 
     const riskColors: Record<string, [number,number,number]> = { high: RED, medium: AMBER, low: [39, 174, 96] };
@@ -529,7 +535,7 @@ export function generatePDF(data: ReportData): Uint8Array {
   }
 
   if (data.mode === "advanced" && data.analysis.actionPlan) {
-    if (y > 190) { doc.addPage(); doc.setFillColor(...BLACK); doc.rect(0, 0, W, 297, "F"); y = 20; }
+    y = startSection(doc, W);
     y = sectionHeader(doc, "Your Next Steps", y, margin, W);
 
     const phases = [
