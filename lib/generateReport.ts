@@ -141,6 +141,160 @@ export function drawCard(doc: jsPDF, x: number, y: number, w: number, h: number,
   doc.roundedRect(x, y, w, h, 2, 2, "FD");
 }
 
+// ─── Helper: draw a single flag card — returns total height consumed ────────
+function drawFlag(doc: jsPDF, flag: Flag, y: number): number {
+  const sev = flag.severity;
+  const bg     = sev === "critical" ? COLORS.criticalBg     : sev === "warning" ? COLORS.warningBg     : COLORS.infoBg;
+  const border = sev === "critical" ? COLORS.criticalBorder : sev === "warning" ? COLORS.warningBorder : COLORS.infoBorder;
+  const label  = sev.toUpperCase();
+  const badgeW = label.length * 2.4 + 8;
+
+  // Wrap text and measure
+  const titleLines  = doc.splitTextToSize(sanitize(flag.title),       CONTENT_W - badgeW - 16) as string[];
+  const descLines   = doc.splitTextToSize(sanitize(flag.description), CONTENT_W - 12)          as string[];
+  const titleLH = FONT_SIZES.cardTitle * 0.352778 * 1.45;
+  const bodyLH  = FONT_SIZES.body      * 0.352778 * 1.45;
+  const smallLH = FONT_SIZES.small     * 0.352778 * 1.45;
+
+  const titleH  = titleLines.length * titleLH;
+  const descH   = descLines.length  * bodyLH;
+  const metricH = flag.metric ? smallLH + 2 : 0;
+  const cardH   = Math.max(22, titleH + descH + metricH + 16);
+
+  // Card background + border
+  drawCard(doc, MARGIN, y, CONTENT_W, cardH, bg, border);
+
+  // Severity badge
+  doc.setFillColor(...border);
+  doc.roundedRect(MARGIN + 4, y + 5, badgeW, 7, 1, 1, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...COLORS.white);
+  doc.text(label, MARGIN + 4 + badgeW / 2, y + 10.2, { align: "center" });
+
+  // Title (right of badge, may wrap)
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(FONT_SIZES.cardTitle);
+  doc.setTextColor(...COLORS.textDark);
+  doc.text(titleLines, MARGIN + 4 + badgeW + 6, y + 10);
+
+  // Description
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(FONT_SIZES.body);
+  doc.setTextColor(...COLORS.textMid);
+  doc.text(descLines, MARGIN + 6, y + titleH + 14);
+
+  // Metric (italic, bottom)
+  if (flag.metric) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(FONT_SIZES.small);
+    doc.setTextColor(...border);
+    doc.text(`Metric: ${sanitize(flag.metric)}`, MARGIN + 6, y + cardH - 4);
+  }
+
+  return cardH;
+}
+
+// ─── Helper: draw a numbered recommendation card ────────────────────────────
+function drawRecommendation(doc: jsPDF, rec: Recommendation, idx: number, y: number): number {
+  const numW = 14;  // space reserved for number circle
+  const titleLines  = doc.splitTextToSize(sanitize(rec.title),  CONTENT_W - numW - 8) as string[];
+  const detailLines = doc.splitTextToSize(sanitize(rec.detail), CONTENT_W - numW - 8) as string[];
+  const titleLH = FONT_SIZES.cardTitle * 0.352778 * 1.45;
+  const bodyLH  = FONT_SIZES.body      * 0.352778 * 1.45;
+
+  const titleH  = titleLines.length  * titleLH;
+  const detailH = detailLines.length * bodyLH;
+  const cardH   = Math.max(22, titleH + detailH + 14);
+
+  drawCard(doc, MARGIN, y, CONTENT_W, cardH, COLORS.cardBg, COLORS.border);
+
+  // Number circle
+  doc.setFillColor(...COLORS.blue);
+  doc.circle(MARGIN + 8, y + 10, 5.5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...COLORS.white);
+  doc.text(String(idx + 1), MARGIN + 8, y + 12.5, { align: "center" });
+
+  // Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(FONT_SIZES.cardTitle);
+  doc.setTextColor(...COLORS.textDark);
+  doc.text(titleLines, MARGIN + numW + 2, y + 10);
+
+  // Detail
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(FONT_SIZES.body);
+  doc.setTextColor(...COLORS.textMid);
+  doc.text(detailLines, MARGIN + numW + 2, y + titleH + 12);
+
+  return cardH;
+}
+
+// ─── Page: What We Found (flags) ─────────────────────────────────────────────
+function renderFlags(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.flags?.length) return;
+
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "WHAT WE FOUND", y);
+  y += 4;
+
+  const GAP = 4;
+  for (const flag of data.analysis.flags) {
+    // Pre-measure to know if it fits
+    const sev = flag.severity;
+    const label  = sev.toUpperCase();
+    const badgeW = label.length * 2.4 + 8;
+    const titleLines = doc.splitTextToSize(sanitize(flag.title),       CONTENT_W - badgeW - 16) as string[];
+    const descLines  = doc.splitTextToSize(sanitize(flag.description), CONTENT_W - 12)          as string[];
+    const titleLH = FONT_SIZES.cardTitle * 0.352778 * 1.45;
+    const bodyLH  = FONT_SIZES.body      * 0.352778 * 1.45;
+    const smallLH = FONT_SIZES.small     * 0.352778 * 1.45;
+    const cardH = Math.max(22,
+      titleLines.length * titleLH +
+      descLines.length  * bodyLH  +
+      (flag.metric ? smallLH + 2 : 0) + 16
+    );
+
+    if (y + cardH > CONTENT_BOTTOM) {
+      y = addNewPage(doc);  // no repeated section header per spec
+    }
+
+    const drawn = drawFlag(doc, flag, y);
+    y += drawn + GAP;
+  }
+}
+
+// ─── Page: What We'd Do (recommendations) ────────────────────────────────────
+function renderRecommendations(doc: jsPDF, data: ReportData): void {
+  if (!data.analysis.recommendations?.length) return;
+
+  let y = addNewPage(doc);
+  y += drawSectionHeader(doc, "WHAT WE'D DO", y);
+  y += 4;
+
+  const GAP = 4;
+  data.analysis.recommendations.forEach((rec, i) => {
+    const numW = 14;
+    const titleLines  = doc.splitTextToSize(sanitize(rec.title),  CONTENT_W - numW - 8) as string[];
+    const detailLines = doc.splitTextToSize(sanitize(rec.detail), CONTENT_W - numW - 8) as string[];
+    const titleLH = FONT_SIZES.cardTitle * 0.352778 * 1.45;
+    const bodyLH  = FONT_SIZES.body      * 0.352778 * 1.45;
+    const cardH = Math.max(22,
+      titleLines.length  * titleLH +
+      detailLines.length * bodyLH  + 14
+    );
+
+    if (y + cardH > CONTENT_BOTTOM) {
+      y = addNewPage(doc);
+    }
+
+    const drawn = drawRecommendation(doc, rec, i, y);
+    y += drawn + GAP;
+  });
+}
+
 // ─── Page: Cover ─────────────────────────────────────────────────────────────
 function renderCover(doc: jsPDF, data: ReportData): void {
   // Prime text engine — prevents stray artifact on first doc.text() call
@@ -213,6 +367,8 @@ export function generatePDF(data: ReportData): Uint8Array {
 
   renderCover(doc, data);
   renderExecutiveSummary(doc, data);
+  renderFlags(doc, data);
+  renderRecommendations(doc, data);
 
   // Footer pass — all pages except cover (page 1)
   const totalPages = (doc as any).internal.getNumberOfPages();
