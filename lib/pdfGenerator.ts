@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import type { Flag, Recommendation } from "./generateReport";
+import type { Flag, Recommendation, TrendData } from "./generateReport";
 
 // ─── Page geometry ────────────────────────────────────────────────────────────
 const PAGE_W = 210;
@@ -75,9 +75,10 @@ function measureH(doc: jsPDF, text: string, maxWidth: number): number {
  * Otherwise returns y unchanged.
  * This is the ONLY place page breaks happen anywhere in the codebase.
  *
- * NOTE: callers that pass a callback which updates the outer `y` variable
- * should call cursor() without capturing the return value — the closure
- * update takes precedence over the returned START_Y.
+ * NOTE: when the callback updates the outer `y` variable beyond START_Y
+ * (e.g. by also drawing a section header), call cursor() without capturing
+ * the return value — the closure update takes precedence over the returned
+ * START_Y.
  */
 function cursor(
   y: number,
@@ -226,7 +227,6 @@ function drawFlags(
   y += drawHeader(doc, "WHAT WE FOUND", y) + 4;
 
   for (const flag of flags) {
-    // Pre-measure total card height
     const titleH = LINE_H + 2;
     const descH = measureH(doc, flag.description, CONTENT_W - 8);
     const metricH = flag.metric
@@ -234,9 +234,8 @@ function drawFlags(
       : 0;
     const totalH = titleH + descH + metricH + 14;
 
-    // cursor() is called for its side effect (addPage + callback).
-    // The callback updates the outer `y` via closure — do NOT assign
-    // the return value or the closure's y update would be overwritten.
+    // cursor() called without y= — callback advances y past the header;
+    // cursor's START_Y return would overwrite that if assigned.
     cursor(y, totalH, doc, () => {
       pageCounter.current++;
       drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
@@ -244,44 +243,35 @@ function drawFlags(
       y += drawHeader(doc, "WHAT WE FOUND", y) + 4;
     });
 
-    // Severity colour
     const sevColor =
       flag.severity === "critical" ? C.critical
       : flag.severity === "warning" ? C.warning
       : C.info;
 
-    // Dot: filled circle r=1.5mm centred at (MARGIN+1.5, y+2)
     doc.setFillColor(sevColor);
     doc.circle(MARGIN + 1.5, y + 2, 1.5, "F");
 
-    // Severity label: BODY_SIZE-2 pt bold, same colour, at (MARGIN+5, y+3)
     doc.setFontSize(BODY_SIZE - 2);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(sevColor);
     const sevText = flag.severity.toUpperCase();
     safeText(doc, sevText, MARGIN + 5, y + 3, CONTENT_W - 5);
-
-    // Measure severity label width while font is still at BODY_SIZE-2
     const sevW = doc.getTextWidth(sevText);
 
-    // Title: BODY_SIZE pt bold C.textDark, immediately right of severity label
     doc.setFontSize(BODY_SIZE);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(C.textDark);
     const titleX = MARGIN + 5 + sevW + 3;
-    const titleMaxW = MARGIN + CONTENT_W - titleX;
-    safeText(doc, flag.title, titleX, y + 3, titleMaxW);
+    safeText(doc, flag.title, titleX, y + 3, MARGIN + CONTENT_W - titleX);
 
     y += 7;
 
-    // Description: BODY_SIZE pt normal C.textMid
     doc.setFontSize(BODY_SIZE);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(C.textMid);
     safeText(doc, flag.description, MARGIN + 5, y, CONTENT_W - 8);
     y += measureH(doc, flag.description, CONTENT_W - 8) + 2;
 
-    // Metric (optional): BODY_SIZE-1 pt italic C.orange
     if (flag.metric) {
       const metricText = "Metric: " + flag.metric;
       doc.setFontSize(BODY_SIZE - 1);
@@ -291,7 +281,6 @@ function drawFlags(
       y += measureH(doc, metricText, CONTENT_W - 8) + 3;
     }
 
-    // Separator rule then 6mm gap
     drawRule(doc, y, C.rule);
     y += 6;
   }
@@ -313,27 +302,22 @@ function drawRecommendations(
 
   for (let i = 0; i < recs.length; i++) {
     const rec = recs[i];
-
-    // Pre-measure
     const titleH = LINE_H + 2;
     const detailH = measureH(doc, rec.detail, CONTENT_W - 10);
     const totalH = titleH + detailH + 10;
 
-    // Page break — callback sets y = START_Y, cursor returns START_Y,
-    // both agree so assigning is safe here. Closure update used for clarity.
+    // Callback sets y = START_Y; cursor also returns START_Y — assignment safe.
     cursor(y, totalH, doc, () => {
       pageCounter.current++;
       drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
       y = START_Y;
     });
 
-    // Number: BODY_SIZE+2 pt bold C.orange at (MARGIN, y+5)
     doc.setFontSize(BODY_SIZE + 2);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(C.orange);
     safeText(doc, String(i + 1), MARGIN, y + 5, 8);
 
-    // Title: BODY_SIZE pt bold C.textDark at (MARGIN+9, y+5)
     doc.setFontSize(BODY_SIZE);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(C.textDark);
@@ -341,14 +325,12 @@ function drawRecommendations(
 
     y += 8;
 
-    // Detail: BODY_SIZE pt normal C.textMid at (MARGIN+9, y)
     doc.setFontSize(BODY_SIZE);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(C.textMid);
     safeText(doc, rec.detail, MARGIN + 9, y, CONTENT_W - 10);
     y += detailH + 3;
 
-    // Orange rule between recs; plain gap after the last one
     if (i < recs.length - 1) {
       drawRule(doc, y, C.orange);
       y += 7;
@@ -358,8 +340,134 @@ function drawRecommendations(
   }
 }
 
+// ─── Trajectory + chart page (Financial Trend) ────────────────────────────────
+
+/** Parses a value that may arrive as a number or a formatted string. */
+function parseNum(v: number | string): number {
+  if (typeof v === "number") return v;
+  return parseFloat(String(v).replace(/[$,%]/g, "").replace(/,/g, "")) || 0;
+}
+
+function drawTrajectoryAndChart(
+  doc: jsPDF,
+  trajectoryText: string,
+  trendData: TrendData,
+  orgName: string,
+  pageCounter: { current: number; total: number },
+): void {
+  doc.addPage();
+  pageCounter.current++;
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+  let y = START_Y;
+  y += drawHeader(doc, "FINANCIAL TREND", y) + 4;
+
+  // Trajectory text
+  doc.setFontSize(BODY_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textMid);
+  safeText(doc, trajectoryText, MARGIN, y, CONTENT_W);
+  const trajH = measureH(doc, trajectoryText, CONTENT_W);
+  y += trajH + 8;
+
+  // Chart layout constants
+  const chartX = MARGIN + 14;
+  const chartW = CONTENT_W - 14;
+  const chartH = 65;
+
+  // Ensure the full chart block fits; callback sets y = START_Y, cursor also
+  // returns START_Y — assignment safe here.
+  y = cursor(y, chartH + 25, doc, () => {
+    pageCounter.current++;
+    drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+    y = START_Y;
+  });
+  const chartBottom = y + chartH;
+
+  // Collect and validate values
+  const s0vals = (trendData.series[0]?.values ?? []).map(parseNum);
+  const s1vals = (trendData.series[1]?.values ?? []).map(parseNum);
+  const allVals = [...s0vals, ...s1vals].filter(v => Number.isFinite(v) && v > 0);
+  const rawMax = allVals.length > 0 ? Math.max(...allVals) : 0;
+  const maxVal = Math.ceil(rawMax / 10000) * 10000;
+
+  if (!maxVal || isNaN(maxVal)) {
+    doc.setFontSize(BODY_SIZE);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textMid);
+    safeText(doc, "Chart data unavailable", MARGIN, y, CONTENT_W);
+    return;
+  }
+
+  // Gridlines + y-axis labels (0%, 25%, 50%, 75%, 100%)
+  for (const pct of [0, 0.25, 0.5, 0.75, 1.0]) {
+    const gridY = chartBottom - pct * chartH;
+    doc.setDrawColor(C.rule);
+    doc.setLineWidth(0.2);
+    doc.line(chartX, gridY, chartX + chartW, gridY);
+    const label = "$" + ((pct * maxVal) / 1000).toFixed(0) + "k";
+    doc.setFontSize(BODY_SIZE - 2);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textLight);
+    safeText(doc, label, MARGIN + 13, gridY + 1, 13, "right");
+  }
+
+  // Bars — always 6 groups, each with up to two bars
+  const groupW = chartW / 6;
+  const barW = groupW * 0.3;
+  const n = Math.min(trendData.labels.length, 6);
+
+  for (let i = 0; i < n; i++) {
+    const bar1X = chartX + i * groupW + groupW * 0.05;
+    const bar2X = bar1X + barW + 1.5;
+
+    // Series 0 — Revenue (orange)
+    const val1 = s0vals[i] ?? 0;
+    const barH1 = Math.max((val1 / maxVal) * chartH, 0);
+    doc.setFillColor(C.orange);
+    doc.rect(bar1X, chartBottom - barH1, barW, barH1, "F");
+
+    // Series 1 — Expenses (gray)
+    if (trendData.series[1]) {
+      const val2 = s1vals[i] ?? 0;
+      const barH2 = Math.max((val2 / maxVal) * chartH, 0);
+      doc.setFillColor("#9CA3AF");
+      doc.rect(bar2X, chartBottom - barH2, barW, barH2, "F");
+    }
+
+    // X-axis label centred under its group
+    const labelX = chartX + i * groupW + groupW / 2;
+    doc.setFontSize(BODY_SIZE - 2);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textLight);
+    safeText(doc, trendData.labels[i] ?? "", labelX, chartBottom + 5, groupW, "center");
+  }
+
+  // X-axis line
+  doc.setDrawColor(C.textMid);
+  doc.setLineWidth(0.5);
+  doc.line(chartX, chartBottom, chartX + chartW, chartBottom);
+
+  // Legend: two swatches centred on the page
+  const legendY = chartBottom + 12;
+  doc.setFillColor(C.orange);
+  doc.rect(80, legendY, 5, 3, "F");
+  doc.setFontSize(BODY_SIZE - 1);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textDark);
+  safeText(doc, "Total Revenue", 87, legendY + 2, 30);
+
+  doc.setFillColor("#9CA3AF");
+  doc.rect(110, legendY, 5, 3, "F");
+  doc.setFontSize(BODY_SIZE - 1);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textDark);
+  safeText(doc, "Total Expenses", 117, legendY + 2, 30);
+
+  y = chartBottom + 22;
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
-export { drawCover, drawSummary, drawFlags, drawRecommendations };
+export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart };
 export {
   PAGE_W, PAGE_H, MARGIN, CONTENT_W, CONTENT_BOTTOM, FOOTER_Y, START_Y,
   BODY_SIZE, HEADER_SIZE, LINE_H, HEADER_H, C,
