@@ -4,16 +4,16 @@
 export function sanitize(text: string | undefined | null): string {
   if (!text) return "";
   return String(text)
-    .replace(/[→➜➡↗]/g, "->")
-    .replace(/[↓⬇▼▽↘]/g, "(down)")
-    .replace(/[↑⬆▲△]/g, "(up)")
+    .replace(/[→➜➡↗]/g, " to ")
+    .replace(/[↓⬇▼▽↘]/g, " to ")
+    .replace(/[↑⬆▲△]/g, " to ")
     .replace(/[←⬅]/g, "<-")
     .replace(/[◆◇•·]/g, "-")
     .replace(/[–—]/g, "-")
     .replace(/['']/g, "'")
     .replace(/[""]/g, '"')
-    .replace(/!'/g, ">")
-    .replace(/%¼/g, "to")
+    .replace(/!'/g, " to ")
+    .replace(/%¼/g, " to ")
     .replace(/[^\x00-\x7E]/g, "");
 }
 
