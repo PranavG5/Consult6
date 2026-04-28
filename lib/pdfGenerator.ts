@@ -33,7 +33,9 @@ const C = {
 
 /**
  * Renders text clipped to maxWidth and the CONTENT_BOTTOM ceiling.
- * Never renders text outside x to x+maxWidth, never below CONTENT_BOTTOM.
+ * Each line is placed individually at y + i*LINE_H so spacing always
+ * matches the LINE_H constant regardless of font size or jsPDF defaults.
+ * Accepts an optional align option ("left" | "center" | "right").
  * Returns the number of lines actually rendered.
  */
 function safeText(
@@ -42,15 +44,23 @@ function safeText(
   x: number,
   y: number,
   maxWidth: number,
+  align?: "left" | "center" | "right",
 ): number {
   if (y >= CONTENT_BOTTOM) return 0;
   const lines: string[] = doc.splitTextToSize(text, maxWidth);
-  const visible = lines.filter(
-    (_: string, i: number) => y + i * LINE_H < CONTENT_BOTTOM,
-  );
-  if (visible.length === 0) return 0;
-  doc.text(visible, x, y);
-  return visible.length;
+  let rendered = 0;
+  const opts = align && align !== "left" ? { align } : undefined;
+  for (let i = 0; i < lines.length; i++) {
+    const lineY = y + i * LINE_H;
+    if (lineY >= CONTENT_BOTTOM) break;
+    if (opts) {
+      doc.text(lines[i], x, lineY, opts);
+    } else {
+      doc.text(lines[i], x, lineY);
+    }
+    rendered++;
+  }
+  return rendered;
 }
 
 /** Returns the height in mm that `text` would occupy at BODY_SIZE inside maxWidth. */
@@ -78,30 +88,29 @@ function cursor(
   return y;
 }
 
-/** Draws the page footer: white background, rule line, left/centre/right labels. */
+/**
+ * Draws the page footer: white background, rule line, left/centre/right labels.
+ * Intentionally uses raw doc.text() — footer lives below CONTENT_BOTTOM and
+ * must bypass safeText's content-ceiling guard.
+ */
 function drawFooter(
   doc: jsPDF,
   orgName: string,
   pageNum: number,
   totalPages: number,
 ): void {
-  // White background prevents content from bleeding into the footer area
   doc.setFillColor(C.white);
   doc.rect(0, FOOTER_Y - 2, PAGE_W, 10, "F");
 
-  // Horizontal rule
   doc.setDrawColor(C.rule);
   doc.setLineWidth(0.3);
   doc.line(MARGIN, FOOTER_Y - 3, MARGIN + CONTENT_W, FOOTER_Y - 3);
 
-  // Left / centre / right labels
   doc.setFontSize(BODY_SIZE - 2);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(C.textLight);
   doc.text(orgName, MARGIN, FOOTER_Y);
-  doc.text(`Page ${pageNum} of ${totalPages}`, PAGE_W / 2, FOOTER_Y, {
-    align: "center",
-  });
+  doc.text(`Page ${pageNum} of ${totalPages}`, PAGE_W / 2, FOOTER_Y, { align: "center" });
   doc.text("Consult6", MARGIN + CONTENT_W, FOOTER_Y, { align: "right" });
 }
 
@@ -130,8 +139,85 @@ function drawRule(doc: jsPDF, y: number, color: string): number {
   return 4;
 }
 
-// Page-rendering functions will be added in subsequent steps.
+// ─── Cover page ───────────────────────────────────────────────────────────────
+
+function drawCover(doc: jsPDF, orgName: string, dateStr: string): void {
+  // White background
+  doc.setFillColor(C.white);
+  doc.rect(0, 0, 210, 297, "F");
+
+  // Large "6" — 90pt bold orange, centered at (105, 90)
+  doc.setFontSize(90);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(C.orange);
+  safeText(doc, "6", 105, 90, CONTENT_W, "center");
+
+  // "CONSULT6" — 18pt bold textDark, centered at y=112
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(C.textDark);
+  safeText(doc, "CONSULT6", 105, 112, CONTENT_W, "center");
+
+  // 0.5pt orange rule, 40mm wide, centered (x=85 to x=125) at y=118
+  doc.setDrawColor(C.orange);
+  doc.setLineWidth(0.5);
+  doc.line(85, 118, 125, 118);
+
+  // "Executive Consulting Report" — BODY_SIZE pt textMid, centered at y=126
+  doc.setFontSize(BODY_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textMid);
+  safeText(doc, "Executive Consulting Report", 105, 126, CONTENT_W, "center");
+
+  // Org name — 16pt bold textDark, centered at y=148
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(C.textDark);
+  safeText(doc, orgName || "Your Organization", 105, 148, CONTENT_W, "center");
+
+  // Date — BODY_SIZE pt textLight, centered at y=158
+  doc.setFontSize(BODY_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textLight);
+  safeText(doc, dateStr, 105, 158, CONTENT_W, "center");
+
+  // Tagline — (BODY_SIZE-1) pt textLight, centered at y=167
+  doc.setFontSize(BODY_SIZE - 1);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textLight);
+  safeText(
+    doc,
+    "Senior financial insight, no consultant required.",
+    105,
+    167,
+    CONTENT_W,
+    "center",
+  );
+
+  doc.addPage();
+}
+
+// ─── Executive summary page ───────────────────────────────────────────────────
+
+function drawSummary(
+  doc: jsPDF,
+  summaryText: string,
+  orgName: string,
+  pageCounter: { current: number; total: number },
+): void {
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+
+  let y = START_Y;
+  y += drawHeader(doc, "EXECUTIVE SUMMARY", y) + 4;
+
+  doc.setFontSize(BODY_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textDark);
+  safeText(doc, summaryText, MARGIN, y, CONTENT_W);
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
+export { drawCover, drawSummary };
 export {
   PAGE_W, PAGE_H, MARGIN, CONTENT_W, CONTENT_BOTTOM, FOOTER_Y, START_Y,
   BODY_SIZE, HEADER_SIZE, LINE_H, HEADER_H, C,
