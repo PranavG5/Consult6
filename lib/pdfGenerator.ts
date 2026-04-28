@@ -479,44 +479,24 @@ function drawBenchmarks(
     { label: "Top 25%",      w: 18, x: 146 },
     { label: "Status",       w: 30, x: 164 },
   ];
-  const rowH = 9;
+  const HEADER_ROW_H = 9;
 
   const drawTableHeader = (hy: number): number => {
     doc.setFillColor(C.orange);
-    doc.rect(MARGIN, hy, CONTENT_W, rowH, "F");
+    doc.rect(MARGIN, hy, CONTENT_W, HEADER_ROW_H, "F");
     doc.setFontSize(BODY_SIZE - 1);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(C.white);
     for (const col of cols) {
-      doc.text(col.label, col.x + 2, hy + 6);
+      doc.text(col.label, col.x + 2, hy + 4);
     }
-    return rowH;
+    return HEADER_ROW_H;
   };
 
   y += drawTableHeader(y);
 
   for (let i = 0; i < comps.length; i++) {
     const comp = comps[i];
-
-    // cursor() without y= — callback redraws section header + table header,
-    // advancing y past START_Y; cursor's START_Y return would overwrite that.
-    cursor(y, rowH, doc, () => {
-      pageCounter.current++;
-      drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
-      y = START_Y;
-      y += drawHeader(doc, "INDUSTRY BENCHMARKS", y) + 4;
-      y += drawTableHeader(y);
-    });
-
-    doc.setFillColor(i % 2 === 0 ? C.white : C.orangeLight);
-    doc.rect(MARGIN, y, CONTENT_W, rowH, "F");
-
-    doc.setDrawColor(C.rule);
-    doc.setLineWidth(0.2);
-    for (const col of cols) {
-      doc.rect(col.x, y, col.w, rowH, "S");
-    }
-
     const statusStr =
       comp.status === "above_average" ? "Above Avg"
       : comp.status === "below_average" ? "Below Avg"
@@ -526,16 +506,61 @@ function drawBenchmarks(
       : comp.status === "below_average" ? C.critical
       : C.textMid;
 
+    // Measure line counts at spec widths to compute dynamic row height
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "normal");
+    const col0Lines = (doc.splitTextToSize(comp.metric,          63) as string[]).length;
+    const col1Lines = (doc.splitTextToSize(comp.yourValue,       33) as string[]).length;
+    const col2Lines = (doc.splitTextToSize(comp.industryAverage, 28) as string[]).length;
+    const col3Lines = (doc.splitTextToSize(comp.topQuartile,     16) as string[]).length;
+    const col4Lines = (doc.splitTextToSize(statusStr,            28) as string[]).length;
+    const maxLines = Math.max(col0Lines, col1Lines, col2Lines, col3Lines, col4Lines);
+    const rowH = Math.max(maxLines * LINE_H + 6, 12);
+
+    // cursor() without y= — callback redraws section + table headers,
+    // advancing y past START_Y; cursor's START_Y return would overwrite that.
+    cursor(y, rowH, doc, () => {
+      pageCounter.current++;
+      drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+      y = START_Y;
+      y += drawHeader(doc, "INDUSTRY BENCHMARKS", y) + 4;
+      y += drawTableHeader(y);
+    });
+
+    // Row background
+    doc.setFillColor(i % 2 === 0 ? C.white : C.orangeLight);
+    doc.rect(MARGIN, y, CONTENT_W, rowH, "F");
+
+    // Cell borders — all use the same dynamic rowH
+    doc.setDrawColor(C.rule);
+    doc.setLineWidth(0.2);
+    for (const col of cols) {
+      doc.rect(col.x, y, col.w, rowH, "S");
+    }
+
+    // Top-aligned cell text: y+4 baseline for first line, then +LINE_H per line
     doc.setFontSize(BODY_SIZE - 1);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(C.textDark);
-    safeText(doc, comp.metric,          cols[0].x + 2, y + 6, cols[0].w - 4);
-    safeText(doc, comp.yourValue,       cols[1].x + 2, y + 6, cols[1].w - 4);
-    safeText(doc, comp.industryAverage, cols[2].x + 2, y + 6, cols[2].w - 4);
-    safeText(doc, comp.topQuartile,     cols[3].x + 2, y + 6, cols[3].w - 4);
-    doc.setTextColor(statusColor);
+
+    (doc.splitTextToSize(comp.metric, cols[0].w - 4) as string[]).forEach((ln, idx) => {
+      doc.text(ln, cols[0].x + 2, y + 4 + idx * LINE_H);
+    });
+    (doc.splitTextToSize(comp.yourValue, cols[1].w - 4) as string[]).forEach((ln, idx) => {
+      doc.text(ln, cols[1].x + 2, y + 4 + idx * LINE_H);
+    });
+    (doc.splitTextToSize(comp.industryAverage, cols[2].w - 4) as string[]).forEach((ln, idx) => {
+      doc.text(ln, cols[2].x + 2, y + 4 + idx * LINE_H);
+    });
+    (doc.splitTextToSize(comp.topQuartile, cols[3].w - 4) as string[]).forEach((ln, idx) => {
+      doc.text(ln, cols[3].x + 2, y + 4 + idx * LINE_H);
+    });
+
     doc.setFont("helvetica", "bold");
-    safeText(doc, statusStr, cols[4].x + 2, y + 6, cols[4].w - 4);
+    doc.setTextColor(statusColor);
+    (doc.splitTextToSize(statusStr, cols[4].w - 4) as string[]).forEach((ln, idx) => {
+      doc.text(ln, cols[4].x + 2, y + 4 + idx * LINE_H);
+    });
 
     y += rowH;
   }
