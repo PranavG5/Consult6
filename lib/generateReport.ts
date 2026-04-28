@@ -97,8 +97,8 @@ export interface ReportData {
   analysis: AnalysisResult;
 }
 
-// Stub — full implementation will be wired in once pdfGenerator.ts is complete.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function generatePDF(_data: ReportData): Uint8Array {
-  return new Uint8Array();
+import { generateAndValidate } from "./pdfGenerator";
+
+export function generatePDF(data: ReportData): Uint8Array {
+  return generateAndValidate(data.analysis, data.orgName, data.generatedAt);
 }
