@@ -830,11 +830,16 @@ function runGeneratePDF(
     drawActionPlan(doc, analysis.actionPlan, orgName, pageCounter);
   }
 
-  // Back-fill correct total in every footer (page 1 = cover, no footer)
-  pageCounter.total = doc.getNumberOfPages();
-  for (let p = 2; p <= pageCounter.total; p++) {
-    doc.setPage(p);
-    drawFooter(doc, orgName, p, pageCounter.total);
+  // Back-fill correct total in every footer.
+  // Explicitly clear a generous area before each redraw so stale text
+  // (drawn during generation with total=0) is fully erased.
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    if (i === 1) continue; // cover has no footer
+    doc.setFillColor(C.white);
+    doc.rect(0, FOOTER_Y - 6, PAGE_W, 12, "F");
+    drawFooter(doc, orgName, i, totalPages);
   }
 }
 
