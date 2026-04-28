@@ -774,6 +774,137 @@ function drawActionPlan(
   }
 }
 
+// ─── Orchestrator ─────────────────────────────────────────────────────────────
+
+/**
+ * Draws all pages onto `doc` in order.
+ * All top-level page transitions are managed here; individual draw functions
+ * must NOT call doc.addPage() at their start.
+ * After rendering, back-fills every footer with the correct total page count.
+ */
+function runGeneratePDF(
+  doc: jsPDF,
+  analysis: AnalysisResult,
+  orgName: string,
+  dateStr: string,
+): void {
+  const pageCounter = { current: 1, total: 0 };
+  const inc = () => { pageCounter.current++; };
+
+  // Page 1 — cover (no footer; drawCover ends with doc.addPage())
+  drawCover(doc, orgName, dateStr);
+
+  // Page 2 — executive summary
+  inc();
+  drawSummary(doc, analysis.summary ?? "", orgName, pageCounter);
+
+  // Page 3 — flags
+  doc.addPage(); inc();
+  drawFlags(doc, analysis.flags ?? [], orgName, pageCounter);
+
+  // Page 4 — recommendations
+  doc.addPage(); inc();
+  drawRecommendations(doc, analysis.recommendations ?? [], orgName, pageCounter);
+
+  // Page 5+ — optional sections
+  if (analysis.trendData) {
+    doc.addPage(); inc();
+    drawTrajectoryAndChart(doc, analysis.trajectoryNote ?? "", analysis.trendData, orgName, pageCounter);
+  }
+
+  if (analysis.industryComparisons?.length) {
+    doc.addPage(); inc();
+    drawBenchmarks(doc, analysis.industryComparisons, orgName, pageCounter);
+  }
+
+  if (analysis.scenarios) {
+    doc.addPage(); inc();
+    drawScenarios(doc, analysis.scenarios, orgName, pageCounter);
+  }
+
+  if (analysis.riskMatrix?.length) {
+    doc.addPage(); inc();
+    drawRiskMatrix(doc, analysis.riskMatrix, orgName, pageCounter);
+  }
+
+  if (analysis.actionPlan) {
+    doc.addPage(); inc();
+    drawActionPlan(doc, analysis.actionPlan, orgName, pageCounter);
+  }
+
+  // Back-fill correct total in every footer (page 1 = cover, no footer)
+  pageCounter.total = doc.getNumberOfPages();
+  for (let p = 2; p <= pageCounter.total; p++) {
+    doc.setPage(p);
+    drawFooter(doc, orgName, p, pageCounter.total);
+  }
+}
+
+// ─── Validator ────────────────────────────────────────────────────────────────
+
+function validatePDF(doc: jsPDF): string[] {
+  const issues: string[] = [];
+  const totalPages = doc.getNumberOfPages();
+
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageContent = (doc.internal as any).pages[p];
+    if (!pageContent) continue;
+
+    // Scan PDF page stream for Td operators and check for coordinates that
+    // exceed the content-bottom ceiling (converted to jsPDF internal points).
+    const yMatches = pageContent.toString().match(/(\d+\.?\d*)\s+Td/g) ?? [];
+    const contentBottomPts = CONTENT_BOTTOM * 2.835;
+    for (const match of yMatches) {
+      const yVal = parseFloat(match);
+      if (yVal > contentBottomPts) {
+        issues.push(`Page ${p}: content found below CONTENT_BOTTOM at y=${yVal}`);
+      }
+    }
+  }
+
+  return issues;
+}
+
+// ─── Public entry point ───────────────────────────────────────────────────────
+
+/**
+ * Generates the full PDF report and returns raw bytes.
+ * Retries up to MAX_ATTEMPTS times if the internal validator finds issues.
+ * Always returns bytes — on final failure it returns the best-effort render.
+ */
+export function generateAndValidate(
+  analysis: AnalysisResult,
+  orgName: string,
+  dateStr: string,
+): Uint8Array {
+  const MAX_ATTEMPTS = 3;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    runGeneratePDF(doc, analysis, orgName, dateStr);
+
+    const issues = validatePDF(doc);
+
+    if (issues.length === 0) {
+      return doc.output("uint8array") as Uint8Array;
+    }
+
+    console.warn(`PDF attempt ${attempt} failed validation:`, issues);
+
+    if (attempt === MAX_ATTEMPTS) {
+      console.error("PDF validation failed after max attempts, returning best effort");
+      return doc.output("uint8array") as Uint8Array;
+    }
+  }
+
+  // Unreachable, but TypeScript requires a return path
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  runGeneratePDF(doc, analysis, orgName, dateStr);
+  return doc.output("uint8array") as Uint8Array;
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
 export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart };
 export { drawBenchmarks, drawScenarios, drawRiskMatrix, drawActionPlan };
