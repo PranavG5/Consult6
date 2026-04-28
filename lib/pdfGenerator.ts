@@ -874,10 +874,12 @@ function validatePDF(doc: jsPDF): string[] {
  * Retries up to MAX_ATTEMPTS times if the internal validator finds issues.
  * Always returns bytes — on final failure it returns the best-effort render.
  */
-// jsPDF types only declare "dataurl"/"datauri" overloads even though the
-// runtime supports "uint8array" — use any to bypass the stale type definition.
+// jsPDF 2.5.x types only declare string-returning overloads; "arraybuffer" is
+// supported at runtime but missing from the stubs. Cast through any.
+// "uint8array" is NOT a valid jsPDF output type — always use arraybuffer + wrap.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const docOutput = (doc: jsPDF): Uint8Array => (doc as any).output("uint8array") as Uint8Array;
+const docOutput = (doc: jsPDF): Uint8Array =>
+  new Uint8Array((doc as any).output("arraybuffer") as ArrayBuffer);
 
 export function generateAndValidate(
   analysis: AnalysisResult,
