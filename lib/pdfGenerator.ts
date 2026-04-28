@@ -748,8 +748,11 @@ function drawActionPlan(
     y += 4;
 
     for (const item of phase.items ?? []) {
-      const bulletLines = doc.splitTextToSize(item, CONTENT_W - 8) as string[];
-      const bulletH = bulletLines.length * LINE_H + 2;
+      doc.setFontSize(BODY_SIZE);
+      doc.setFont("helvetica", "normal");
+      // Split at reduced width so first line fits alongside the "- " prefix
+      const bulletLines = doc.splitTextToSize(item, CONTENT_W - 10) as string[];
+      const bulletH = bulletLines.length * LINE_H + 3;
 
       y = cursor(y, bulletH, doc, () => {
         pageCounter.current++;
@@ -757,14 +760,12 @@ function drawActionPlan(
         y = START_Y;
       });
 
-      doc.setFontSize(BODY_SIZE);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(C.orange);
-      safeText(doc, "-", MARGIN + 2, y + LINE_H - 1, 5);
-
-      doc.setFont("helvetica", "normal");
       doc.setTextColor(C.textDark);
-      safeText(doc, item, MARGIN + 7, y, CONTENT_W - 8);
+      // Dash and first line on the same line
+      doc.text("- " + bulletLines[0], MARGIN + 5, y);
+      for (let li = 1; li < bulletLines.length; li++) {
+        doc.text(bulletLines[li], MARGIN + 9, y + li * LINE_H);
+      }
       y += bulletH;
     }
 
