@@ -611,8 +611,120 @@ function drawScenarios(
   y += blockH + 4;
 }
 
+// ─── Risk matrix page ─────────────────────────────────────────────────────────
+
+function drawRiskMatrix(
+  doc: jsPDF,
+  risks: RiskMatrixItem[],
+  orgName: string,
+  pageCounter: { current: number; total: number },
+): void {
+  doc.addPage();
+  pageCounter.current++;
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+  let y = START_Y;
+  y += drawHeader(doc, "RISK MATRIX", y) + 4;
+
+  const cols = [
+    { label: "Risk",        w: 65, x: MARGIN },
+    { label: "Likelihood",  w: 22, x: 81 },
+    { label: "Impact",      w: 22, x: 103 },
+    { label: "Mitigation",  w: 69, x: 125 },
+  ];
+  const headerRowH = 9;
+
+  const drawTableHeader = (hy: number): number => {
+    doc.setFillColor(C.orange);
+    doc.rect(MARGIN, hy, CONTENT_W, headerRowH, "F");
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(C.white);
+    for (const col of cols) {
+      doc.text(col.label, col.x + 2, hy + 6);
+    }
+    return headerRowH;
+  };
+
+  y += drawTableHeader(y);
+
+  const getLevelColors = (level: string): [string, string] => {
+    switch (level.toLowerCase()) {
+      case "high":   return ["#FEE2E2", C.critical];
+      case "medium": return ["#FEF9C3", "#92400E"];
+      default:       return ["#DCFCE7", "#166534"];
+    }
+  };
+
+  for (const risk of risks) {
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "normal");
+    const riskLines = (doc.splitTextToSize(risk.risk, cols[0].w - 4) as string[]).length;
+    const mitLines  = (doc.splitTextToSize(risk.mitigation, cols[3].w - 4) as string[]).length;
+    const rowH = Math.max(Math.max(riskLines, mitLines) * LINE_H + 4, 13);
+
+    // cursor() without y= — callback redraws section header + table header,
+    // advancing y past START_Y; cursor's START_Y return would overwrite that.
+    cursor(y, rowH, doc, () => {
+      pageCounter.current++;
+      drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+      y = START_Y;
+      y += drawHeader(doc, "RISK MATRIX", y) + 4;
+      y += drawTableHeader(y);
+    });
+
+    const [likeBg, likeText] = getLevelColors(risk.likelihood);
+    const [impBg,  impText]  = getLevelColors(risk.impact);
+
+    doc.setFillColor(C.white);
+    doc.rect(MARGIN, y, CONTENT_W, rowH, "F");
+
+    doc.setDrawColor(C.rule);
+    doc.setLineWidth(0.2);
+    for (const col of cols) {
+      doc.rect(col.x, y, col.w, rowH, "S");
+    }
+
+    // Risk text
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textDark);
+    safeText(doc, risk.risk, cols[0].x + 2, y + LINE_H, cols[0].w - 4);
+
+    // Likelihood cell — coloured background, bold centred label
+    doc.setFillColor(likeBg);
+    doc.rect(cols[1].x, y, cols[1].w, rowH, "F");
+    doc.setDrawColor(C.rule);
+    doc.setLineWidth(0.2);
+    doc.rect(cols[1].x, y, cols[1].w, rowH, "S");
+    doc.setFontSize(BODY_SIZE - 2);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(likeText);
+    safeText(doc, risk.likelihood.toUpperCase(), cols[1].x + cols[1].w / 2, y + rowH / 2 + 1.5, cols[1].w, "center");
+
+    // Impact cell — coloured background, bold centred label
+    doc.setFillColor(impBg);
+    doc.rect(cols[2].x, y, cols[2].w, rowH, "F");
+    doc.setDrawColor(C.rule);
+    doc.setLineWidth(0.2);
+    doc.rect(cols[2].x, y, cols[2].w, rowH, "S");
+    doc.setFontSize(BODY_SIZE - 2);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(impText);
+    safeText(doc, risk.impact.toUpperCase(), cols[2].x + cols[2].w / 2, y + rowH / 2 + 1.5, cols[2].w, "center");
+
+    // Mitigation text
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textMid);
+    safeText(doc, risk.mitigation, cols[3].x + 2, y + LINE_H, cols[3].w - 4);
+
+    y += rowH;
+  }
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
-export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart, drawBenchmarks, drawScenarios };
+export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart };
+export { drawBenchmarks, drawScenarios, drawRiskMatrix };
 export {
   PAGE_W, PAGE_H, MARGIN, CONTENT_W, CONTENT_BOTTOM, FOOTER_Y, START_Y,
   BODY_SIZE, HEADER_SIZE, LINE_H, HEADER_H, C,
