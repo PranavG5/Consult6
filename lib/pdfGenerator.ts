@@ -549,8 +549,70 @@ function drawBenchmarks(
   }
 }
 
+// ─── Scenarios page ───────────────────────────────────────────────────────────
+
+function drawScenarios(
+  doc: jsPDF,
+  scenarios: Scenarios,
+  orgName: string,
+  pageCounter: { current: number; total: number },
+): void {
+  doc.addPage();
+  pageCounter.current++;
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+  let y = START_Y;
+  y += drawHeader(doc, "SCENARIO ANALYSIS", y) + 4;
+
+  const colW = (CONTENT_W - 8) / 3;
+  const colXs = [MARGIN, MARGIN + colW + 4, MARGIN + (colW + 4) * 2];
+  const colors = [C.orange, "#6B7280", C.critical];
+  const labels = ["Optimistic", "Base Case", "Pessimistic"];
+  const texts = [scenarios.optimistic, scenarios.base, scenarios.pessimistic];
+
+  let fontSize = BODY_SIZE;
+  doc.setFontSize(fontSize);
+  let maxTextH = Math.max(...texts.map(t => measureH(doc, t, colW - 4)));
+  let blockH = maxTextH + 18;
+  if (blockH > CONTENT_BOTTOM - y - 4) {
+    fontSize = BODY_SIZE - 1;
+    doc.setFontSize(fontSize);
+    maxTextH = Math.max(...texts.map(t => measureH(doc, t, colW - 4)));
+    blockH = maxTextH + 18;
+  }
+
+  // Callback sets y = START_Y; cursor also returns START_Y — assignment safe.
+  y = cursor(y, blockH, doc, () => {
+    pageCounter.current++;
+    drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+    y = START_Y;
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const cx = colXs[i];
+
+    doc.setFillColor(C.white);
+    doc.rect(cx, y, colW, blockH, "F");
+
+    doc.setDrawColor(colors[i]);
+    doc.setLineWidth(2);
+    doc.line(cx, y, cx + colW, y);
+
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colors[i]);
+    safeText(doc, labels[i], cx + 2, y + 7, colW - 4);
+
+    doc.setFontSize(fontSize);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textMid);
+    safeText(doc, texts[i], cx + 2, y + 14, colW - 4);
+  }
+
+  y += blockH + 4;
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
-export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart, drawBenchmarks };
+export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart, drawBenchmarks, drawScenarios };
 export {
   PAGE_W, PAGE_H, MARGIN, CONTENT_W, CONTENT_BOTTOM, FOOTER_Y, START_Y,
   BODY_SIZE, HEADER_SIZE, LINE_H, HEADER_H, C,
