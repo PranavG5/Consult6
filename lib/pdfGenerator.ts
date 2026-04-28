@@ -294,13 +294,13 @@ function drawRecommendations(
 ): void {
   drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
   let y = START_Y;
-  y += drawHeader(doc, "WHAT WE'D DO", y) + 4;
+  y += drawHeader(doc, "WHAT WE'D DO", y) + 10;
 
   for (let i = 0; i < recs.length; i++) {
     const rec = recs[i];
-    const titleH = LINE_H + 2;
     const detailH = measureH(doc, rec.detail, CONTENT_W - 10);
-    const totalH = titleH + detailH + 10;
+    // 11mm title advance + 8mm after detail + 8mm after rule
+    const totalH = detailH + 27;
 
     // Callback sets y = START_Y; cursor also returns START_Y — assignment safe.
     cursor(y, totalH, doc, () => {
@@ -319,17 +319,17 @@ function drawRecommendations(
     doc.setTextColor(C.textDark);
     safeText(doc, rec.title, MARGIN + 9, y + 5, CONTENT_W - 10);
 
-    y += 8;
+    y += 11; // 6mm gap between title baseline (y+5) and detail text
 
     doc.setFontSize(BODY_SIZE);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(C.textMid);
     safeText(doc, rec.detail, MARGIN + 9, y, CONTENT_W - 10);
-    y += detailH + 3;
+    y += detailH + 8; // 8mm gap before rule
 
     if (i < recs.length - 1) {
       drawRule(doc, y, C.orange);
-      y += 7;
+      y += 8; // 8mm gap after rule before next recommendation
     } else {
       y += 4;
     }
