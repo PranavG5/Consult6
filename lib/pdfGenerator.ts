@@ -874,6 +874,11 @@ function validatePDF(doc: jsPDF): string[] {
  * Retries up to MAX_ATTEMPTS times if the internal validator finds issues.
  * Always returns bytes — on final failure it returns the best-effort render.
  */
+// jsPDF types only declare "dataurl"/"datauri" overloads even though the
+// runtime supports "uint8array" — use any to bypass the stale type definition.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const docOutput = (doc: jsPDF): Uint8Array => (doc as any).output("uint8array") as Uint8Array;
+
 export function generateAndValidate(
   analysis: AnalysisResult,
   orgName: string,
@@ -888,21 +893,21 @@ export function generateAndValidate(
     const issues = validatePDF(doc);
 
     if (issues.length === 0) {
-      return doc.output("uint8array") as Uint8Array;
+      return docOutput(doc);
     }
 
     console.warn(`PDF attempt ${attempt} failed validation:`, issues);
 
     if (attempt === MAX_ATTEMPTS) {
       console.error("PDF validation failed after max attempts, returning best effort");
-      return doc.output("uint8array") as Uint8Array;
+      return docOutput(doc);
     }
   }
 
   // Unreachable, but TypeScript requires a return path
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   runGeneratePDF(doc, analysis, orgName, dateStr);
-  return doc.output("uint8array") as Uint8Array;
+  return docOutput(doc);
 }
 
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
