@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import type { Flag, Recommendation, TrendData, IndustryComparison, Scenarios, RiskMatrixItem } from "./generateReport";
+import type { Flag, Recommendation, TrendData, IndustryComparison, Scenarios, RiskMatrixItem, ActionPlan, AnalysisResult } from "./generateReport";
 
 // ─── Page geometry ────────────────────────────────────────────────────────────
 const PAGE_W = 210;
@@ -294,8 +294,6 @@ function drawRecommendations(
   orgName: string,
   pageCounter: { current: number; total: number },
 ): void {
-  doc.addPage();
-  pageCounter.current++;
   drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
   let y = START_Y;
   y += drawHeader(doc, "WHAT WE'D DO", y) + 4;
@@ -355,8 +353,6 @@ function drawTrajectoryAndChart(
   orgName: string,
   pageCounter: { current: number; total: number },
 ): void {
-  doc.addPage();
-  pageCounter.current++;
   drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
   let y = START_Y;
   y += drawHeader(doc, "FINANCIAL TREND", y) + 4;
@@ -474,8 +470,6 @@ function drawBenchmarks(
   orgName: string,
   pageCounter: { current: number; total: number },
 ): void {
-  doc.addPage();
-  pageCounter.current++;
   drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
   let y = START_Y;
   y += drawHeader(doc, "INDUSTRY BENCHMARKS", y) + 4;
@@ -557,8 +551,6 @@ function drawScenarios(
   orgName: string,
   pageCounter: { current: number; total: number },
 ): void {
-  doc.addPage();
-  pageCounter.current++;
   drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
   let y = START_Y;
   y += drawHeader(doc, "SCENARIO ANALYSIS", y) + 4;
@@ -619,8 +611,6 @@ function drawRiskMatrix(
   orgName: string,
   pageCounter: { current: number; total: number },
 ): void {
-  doc.addPage();
-  pageCounter.current++;
   drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
   let y = START_Y;
   y += drawHeader(doc, "RISK MATRIX", y) + 4;
@@ -722,9 +712,71 @@ function drawRiskMatrix(
   }
 }
 
+// ─── Action plan page (Next Steps) ───────────────────────────────────────────
+
+function drawActionPlan(
+  doc: jsPDF,
+  actionPlan: ActionPlan,
+  orgName: string,
+  pageCounter: { current: number; total: number },
+): void {
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+  let y = START_Y;
+  y += drawHeader(doc, "NEXT STEPS", y) + 4;
+
+  const phases = [
+    { label: "IMMEDIATE — 0 TO 30 DAYS",    items: actionPlan.immediate  },
+    { label: "SHORT TERM — 30 TO 90 DAYS",  items: actionPlan.shortTerm  },
+    { label: "LONG TERM — 90+ DAYS",         items: actionPlan.longTerm   },
+  ];
+
+  for (const phase of phases) {
+    // Ensure space for phase label + rule before checking bullets
+    y = cursor(y, 12, doc, () => {
+      pageCounter.current++;
+      drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+      y = START_Y;
+    });
+
+    doc.setFontSize(BODY_SIZE);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(C.orange);
+    safeText(doc, phase.label, MARGIN, y, CONTENT_W);
+    y += 5;
+
+    doc.setDrawColor(C.orange);
+    doc.setLineWidth(0.4);
+    doc.line(MARGIN, y, MARGIN + CONTENT_W, y);
+    y += 4;
+
+    for (const item of phase.items ?? []) {
+      const bulletLines = doc.splitTextToSize(item, CONTENT_W - 8) as string[];
+      const bulletH = bulletLines.length * LINE_H + 2;
+
+      y = cursor(y, bulletH, doc, () => {
+        pageCounter.current++;
+        drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+        y = START_Y;
+      });
+
+      doc.setFontSize(BODY_SIZE);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(C.orange);
+      safeText(doc, "-", MARGIN + 2, y + LINE_H - 1, 5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(C.textDark);
+      safeText(doc, item, MARGIN + 7, y, CONTENT_W - 8);
+      y += bulletH;
+    }
+
+    y += 8;
+  }
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
 export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart };
-export { drawBenchmarks, drawScenarios, drawRiskMatrix };
+export { drawBenchmarks, drawScenarios, drawRiskMatrix, drawActionPlan };
 export {
   PAGE_W, PAGE_H, MARGIN, CONTENT_W, CONTENT_BOTTOM, FOOTER_Y, START_Y,
   BODY_SIZE, HEADER_SIZE, LINE_H, HEADER_H, C,
