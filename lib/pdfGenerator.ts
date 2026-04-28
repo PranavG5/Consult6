@@ -203,8 +203,6 @@ function drawSummary(
   orgName: string,
   pageCounter: { current: number; total: number },
 ): void {
-  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
-
   let y = START_Y;
   y += drawHeader(doc, "EXECUTIVE SUMMARY", y) + 4;
 
