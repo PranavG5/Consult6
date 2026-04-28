@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import type { Flag, Recommendation, TrendData } from "./generateReport";
+import type { Flag, Recommendation, TrendData, IndustryComparison, Scenarios, RiskMatrixItem } from "./generateReport";
 
 // ─── Page geometry ────────────────────────────────────────────────────────────
 const PAGE_W = 210;
@@ -466,8 +466,91 @@ function drawTrajectoryAndChart(
   y = chartBottom + 22;
 }
 
+// ─── Industry benchmarks page ─────────────────────────────────────────────────
+
+function drawBenchmarks(
+  doc: jsPDF,
+  comps: IndustryComparison[],
+  orgName: string,
+  pageCounter: { current: number; total: number },
+): void {
+  doc.addPage();
+  pageCounter.current++;
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+  let y = START_Y;
+  y += drawHeader(doc, "INDUSTRY BENCHMARKS", y) + 4;
+
+  const cols = [
+    { label: "Metric",       w: 65, x: MARGIN },
+    { label: "Your Value",   w: 35, x: 81 },
+    { label: "Industry Avg", w: 30, x: 116 },
+    { label: "Top 25%",      w: 18, x: 146 },
+    { label: "Status",       w: 30, x: 164 },
+  ];
+  const rowH = 9;
+
+  const drawTableHeader = (hy: number): number => {
+    doc.setFillColor(C.orange);
+    doc.rect(MARGIN, hy, CONTENT_W, rowH, "F");
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(C.white);
+    for (const col of cols) {
+      doc.text(col.label, col.x + 2, hy + 6);
+    }
+    return rowH;
+  };
+
+  y += drawTableHeader(y);
+
+  for (let i = 0; i < comps.length; i++) {
+    const comp = comps[i];
+
+    // cursor() without y= — callback redraws section header + table header,
+    // advancing y past START_Y; cursor's START_Y return would overwrite that.
+    cursor(y, rowH, doc, () => {
+      pageCounter.current++;
+      drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+      y = START_Y;
+      y += drawHeader(doc, "INDUSTRY BENCHMARKS", y) + 4;
+      y += drawTableHeader(y);
+    });
+
+    doc.setFillColor(i % 2 === 0 ? C.white : C.orangeLight);
+    doc.rect(MARGIN, y, CONTENT_W, rowH, "F");
+
+    doc.setDrawColor(C.rule);
+    doc.setLineWidth(0.2);
+    for (const col of cols) {
+      doc.rect(col.x, y, col.w, rowH, "S");
+    }
+
+    const statusStr =
+      comp.status === "above_average" ? "Above Avg"
+      : comp.status === "below_average" ? "Below Avg"
+      : "Average";
+    const statusColor =
+      comp.status === "above_average" ? C.orange
+      : comp.status === "below_average" ? C.critical
+      : C.textMid;
+
+    doc.setFontSize(BODY_SIZE - 1);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textDark);
+    safeText(doc, comp.metric,          cols[0].x + 2, y + 6, cols[0].w - 4);
+    safeText(doc, comp.yourValue,       cols[1].x + 2, y + 6, cols[1].w - 4);
+    safeText(doc, comp.industryAverage, cols[2].x + 2, y + 6, cols[2].w - 4);
+    safeText(doc, comp.topQuartile,     cols[3].x + 2, y + 6, cols[3].w - 4);
+    doc.setTextColor(statusColor);
+    doc.setFont("helvetica", "bold");
+    safeText(doc, statusStr, cols[4].x + 2, y + 6, cols[4].w - 4);
+
+    y += rowH;
+  }
+}
+
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
-export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart };
+export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart, drawBenchmarks };
 export {
   PAGE_W, PAGE_H, MARGIN, CONTENT_W, CONTENT_BOTTOM, FOOTER_Y, START_Y,
   BODY_SIZE, HEADER_SIZE, LINE_H, HEADER_H, C,
