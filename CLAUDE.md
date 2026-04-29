@@ -9,18 +9,19 @@ Production deploys happen when a Vercel preview is manually promoted — NOT
 automatically on merge to `main`.
 
 ## CRITICAL: True Production Baseline
-**`main` is NOT the production baseline.** The live Vercel production deployment
-runs from `claude/deploy-consult6-production-ku4Od`, which is ahead of `main`
-by a large set of commits including a complete PDF rewrite (`lib/pdfGenerator.ts`),
-admin panel, billing history, contact page, and more.
+**`main` is NOT the production baseline.** Vercel production is promoted manually
+from feature branches and is frequently ahead of `main` by many commits.
 
 Before starting any new task:
-1. Run `git fetch origin claude/deploy-consult6-production-ku4Od`
-2. Check `git log --oneline origin/claude/deploy-consult6-production-ku4Od -5`
-   to confirm you are building on the right base
-3. Always branch off `origin/claude/deploy-consult6-production-ku4Od`, never off `main`
-4. Never read files from the local working tree without first confirming which
-   branch is checked out — the default checkout may be `main`, which is stale
+1. Use the Vercel MCP tool (`list_deployments` on project `prj_H9rT3aVqyGOlYOxJa6LH8ZSduqm2`,
+   team `team_pcgvm8jSr6idsK3koFYztW1G`) to find the most recent deployment
+   with `"target": "production"` and read its `meta.githubCommitRef` — that is
+   the true production branch.
+2. Run `git fetch origin <that-branch>` and branch off it for your work.
+3. Never read files from the local working tree without first confirming which
+   branch is checked out — the default checkout may be `main`, which is stale.
+4. Never branch off `main` without first verifying that it matches the current
+   production deployment.
 
 ## Stack
 - Next.js 15 (App Router), React 19, TypeScript
