@@ -495,28 +495,12 @@ export default function Home() {
               </button>
               {contextOpen && (
                 <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ gridColumn: "1" }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Company size</label>
-                    <select
-                      value={companySize}
-                      onChange={e => setCompanySize(e.target.value)}
-                      disabled={isRunning}
-                      style={{ width: "100%", background: "#3a3a3a", border: "1px solid #494949", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: companySize ? "#f0f0f0" : "#666" }}>
-                      <option value="">Select size</option>
-                      <option value="≤ 10 employees">≤ 10 employees</option>
-                      <option value="11–50 employees">11–50 employees</option>
-                      <option value="51–200 employees">51–200 employees</option>
-                      <option value="201–1,000 employees">201–1,000 employees</option>
-                      <option value="1,001–10,000 employees">1,001–10,000 employees</option>
-                      <option value="> 10,000 employees">&gt; 10,000 employees</option>
-                    </select>
-                  </div>
-                  <div style={{ gridColumn: "2" }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Industry / sector</label>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 6 }}>Organization type / sector</label>
                     <input
                       value={industry}
                       onChange={e => setIndustry(e.target.value)}
-                      placeholder="e.g. SaaS, Healthcare, Manufacturing"
+                      placeholder="e.g. youth sports club, HOA, nonprofit food bank, small retail business"
                       disabled={isRunning}
                       style={{ width: "100%", boxSizing: "border-box" }} />
                   </div>

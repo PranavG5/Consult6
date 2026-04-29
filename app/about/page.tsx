@@ -8,19 +8,27 @@ export default function AboutPage() {
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "72px 24px 96px" }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 12 }}>ABOUT</p>
-        <h1 style={{ fontSize: 40, fontWeight: 800, color: "#f0f0f0", margin: "0 0 24px", letterSpacing: -1, lineHeight: 1.15 }}>Financial clarity for every organisation</h1>
+        <h1 style={{ fontSize: 40, fontWeight: 800, color: "#f0f0f0", margin: "0 0 24px", letterSpacing: -1, lineHeight: 1.15 }}>Your organization&apos;s pocket consultant.</h1>
         <p style={{ fontSize: 16, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 was built on a simple premise: understanding your organisation's financial health should not require a team of expensive consultants or weeks of manual analysis. Whether you are a founder reviewing monthly burn, a finance manager benchmarking against peers, or a non-profit tracking restricted fund usage, your data deserves the same rigour that large enterprises take for granted.
+          Financial consulting firms charge $5,000 to $50,000+ for the kind of analysis that smaller organizations need just as much as large enterprises. The problem: most of those organizations are run by volunteer treasurers, part-time finance directors, or elected officials who don&apos;t have that budget — or that time. They&apos;re making significant financial decisions without proper analysis, not because they don&apos;t care, but because professional advice has always been priced out of reach.
+        </p>
+        <p style={{ fontSize: 16, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          Consult6 fixes that. Upload your spreadsheet, get a boardroom-ready executive report in seconds.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>What we do</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 analyses financial spreadsheets (uploaded as CSV or Excel files) and returns structured insights: critical flags, prioritised recommendations, a financial trajectory note, and in advanced mode, industry benchmarks, scenario projections, a risk matrix, and an action plan. Every report is downloadable as a professional PDF.
+          Consult6 analyses financial spreadsheets — uploaded as CSV or Excel files — and returns a structured executive report: critical flags, prioritised recommendations, a financial trajectory note, and in advanced mode, sector benchmarks, 12-month scenario projections, a risk matrix, and an action plan. Every report is downloadable as a professional PDF, ready to share with your board.
+        </p>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Built for real organizations of any type</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          Consult6 is not built for Fortune 500 finance teams. It&apos;s built for sports clubs, HOAs, nonprofits, student organizations, religious groups, small businesses, community associations, and professional associations — any organization where someone has been handed the treasurer role and needs to look sharp in front of a board without spending thousands on a consultant. The analysis adapts to your specific organization type, sector, and stated constraints.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Our approach</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          We believe good financial analysis should be fast, contextual, and actionable. Consult6 takes the context you provide (your industry, company size, constraints, and goals) and tailors every output to your specific situation. Generic advice is not advice; we aim to give you something you can act on today.
+          Fast, contextual, and actionable. We believe senior financial insight should take seconds, not weeks. Consult6 takes the context you provide — your organization type, sector, size, and constraints — and produces the kind of specific, first-person analysis you would expect from a consulting engagement, not a generic spreadsheet summary.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Infrastructure</h2>

@@ -263,25 +263,10 @@ export default function SettingsPage() {
                     placeholder="e.g. I'm a CFO at a mid-sized SaaS company focused on unit economics and runway management."
                     rows={3} style={{ width: "100%", boxSizing: "border-box", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 14px", fontSize: 13, resize: "vertical", fontFamily: "inherit" }} />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Industry / sector</label>
-                    <input value={profile.industry} onChange={e => setProfile(p => ({ ...p, industry: e.target.value }))}
-                      placeholder="e.g. SaaS, Healthcare, Manufacturing" style={{ width: "100%", boxSizing: "border-box" }} />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Company size</label>
-                    <select value={profile.company_size} onChange={e => setProfile(p => ({ ...p, company_size: e.target.value }))}
-                      style={{ width: "100%", background: "#3a3a3a", border: "1px solid #484848", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: profile.company_size ? "#f0f0f0" : "#666", boxSizing: "border-box" }}>
-                      <option value="">Select size</option>
-                      <option value="≤ 10 employees">≤ 10 employees</option>
-                      <option value="11–50 employees">11–50 employees</option>
-                      <option value="51–200 employees">51–200 employees</option>
-                      <option value="201–1,000 employees">201–1,000 employees</option>
-                      <option value="1,001–10,000 employees">1,001–10,000 employees</option>
-                      <option value="> 10,000 employees">&gt; 10,000 employees</option>
-                    </select>
-                  </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Organization type / sector</label>
+                  <input value={profile.industry} onChange={e => setProfile(p => ({ ...p, industry: e.target.value }))}
+                    placeholder="e.g. youth sports club, HOA, nonprofit food bank, small retail business" style={{ width: "100%", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ marginBottom: 24 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Other relevant context</label>
@@ -306,7 +291,7 @@ export default function SettingsPage() {
                   desc="Stop saving analysis reports to your history sidebar. Enabling this will also clear your existing history." />
                 <Toggle checked={privacy.disable_analysis_memory} onChange={v => setPrivacy(p => ({ ...p, disable_analysis_memory: v }))}
                   label="Disable analysis memory"
-                  desc="Prevent Consult6 from pre-filling your profile context (industry, company size, about me) into new analyses." />
+                  desc="Prevent Consult6 from pre-filling your profile context (organization type, about me) into new analyses." />
                 <Toggle checked={privacy.memory_local_only} onChange={v => setPrivacy(p => ({ ...p, memory_local_only: v }))}
                   label="Keep history local to this device"
                   desc="Store report history only in your browser's local storage, not linked to your account. Clearing your browser data will erase it." />

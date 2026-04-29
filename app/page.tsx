@@ -4,36 +4,47 @@ const features = [
   {
     icon: "⚑",
     title: "Financial Flags",
-    desc: "Automatically surface critical issues, warnings, and key observations from your raw data, with no manual review needed.",
+    desc: "Surface critical issues, warnings, and key observations from your raw data — the kind a senior consultant would flag in the first hour of an engagement.",
   },
   {
     icon: "◎",
     title: "Smart Recommendations",
-    desc: "Get prioritized, actionable next steps tailored to your organization's size, industry, and stated constraints.",
+    desc: "Get prioritized, boardroom-ready action items tailored to your organization's type, size, and stated constraints. Not generic advice — specific next steps.",
   },
   {
     icon: "▲",
     title: "Industry Benchmarks",
-    desc: "Compare your key metrics against sector averages and top-quartile performers to understand where you actually stand.",
+    desc: "Compare your key metrics against sector peers and top-quartile performers. Know exactly where you stand before your next board meeting.",
     badge: "Advanced",
   },
   {
     icon: "◈",
     title: "Scenario Planning",
-    desc: "Optimistic, base, and pessimistic 12-month financial forecasts based on your current trajectory and risk profile.",
+    desc: "Optimistic, base, and pessimistic 12-month forecasts based on your current trajectory — the kind of forward-looking analysis consultants charge thousands to produce.",
     badge: "Advanced",
   },
   {
     icon: "◉",
     title: "Risk Matrix",
-    desc: "Assess the likelihood and impact of key risks, with specific mitigation strategies for each.",
+    desc: "Assess the likelihood and impact of key risks, with specific mitigation strategies tailored to your organization.",
     badge: "Advanced",
   },
   {
     icon: "↓",
-    title: "PDF Reports",
-    desc: "Download a professional, branded report, ready to share with stakeholders, boards, or investors.",
+    title: "Executive PDF Report",
+    desc: "Download a professional, branded executive report — boardroom-ready in seconds, not weeks.",
   },
+];
+
+const orgTypes = [
+  "Sports clubs & leagues",
+  "HOAs & community associations",
+  "Nonprofits & charities",
+  "Student organizations",
+  "Religious groups",
+  "Small businesses",
+  "Professional associations",
+  "Any organization with a treasurer",
 ];
 
 const freeFeatures = [
@@ -41,7 +52,7 @@ const freeFeatures = [
   "1 advanced analysis per day",
   "Financial flags & recommendations",
   "Trajectory note",
-  "PDF report download",
+  "Executive PDF report download",
   "Single file upload (CSV / Excel)",
 ];
 
@@ -88,18 +99,18 @@ export default function LandingPage() {
       {/* Hero */}
       <section style={{ maxWidth: 720, margin: "0 auto", padding: "96px 24px 80px", textAlign: "center" }}>
         <div style={{ display: "inline-block", background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 20, padding: "4px 14px", fontSize: 12, fontWeight: 600, color: "#CC5500", letterSpacing: 1, marginBottom: 28 }}>
-          AI-POWERED · INSTANT · ACTIONABLE
+          POCKET CONSULTANT · 60 SECONDS · NO RETAINER
         </div>
         <h1 style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.08, margin: "0 0 24px", letterSpacing: -2 }}>
-          Financial health analysis<br />
-          <span style={{ color: "#CC5500" }}>that actually helps.</span>
+          Senior financial insight.<br />
+          <span style={{ color: "#CC5500" }}>No consultant fees.</span>
         </h1>
         <p style={{ fontSize: 18, color: "#888", lineHeight: 1.7, margin: "0 auto 40px", maxWidth: 560 }}>
-          Upload your financial data and get instant AI-generated flags, benchmarks, and tailored recommendations in under 30 seconds.
+          Consulting firms charge $10,000+ for a financial review. Consult6 gives your treasurer the same insight in under a minute, for a fraction of the cost.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 16, fontWeight: 700, textDecoration: "none", padding: "14px 32px", borderRadius: 9, display: "inline-block" }}>
-            Get Started Free →
+            Analyze My Financials →
           </Link>
           <Link href="/try" style={{ background: "#2d2d2d", color: "#ccc", fontSize: 16, fontWeight: 600, textDecoration: "none", padding: "14px 32px", borderRadius: 9, border: "1px solid #484848", display: "inline-block" }}>
             Try Without Account
@@ -108,10 +119,65 @@ export default function LandingPage() {
         <p style={{ marginTop: 20, fontSize: 13, color: "#555" }}>Free tier available · No credit card required · 1 free trial, no account needed</p>
       </section>
 
+      {/* Pain point comparison */}
+      <section style={{ background: "#212121", borderTop: "1px solid #272727", borderBottom: "1px solid #272727", padding: "72px 24px" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>THE PROBLEM</p>
+          <h2 style={{ fontSize: 22, fontWeight: 600, textAlign: "center", margin: "0 0 48px", color: "#888", lineHeight: 1.4 }}>Senior analysis shouldn&apos;t require a senior budget</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 1fr", gap: 0, alignItems: "start" }}>
+            <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "28px 24px" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#666", letterSpacing: 2, margin: "0 0 20px" }}>CONSULTING FIRM</p>
+              {[
+                { label: "Cost", value: "$10,000 – $50,000+" },
+                { label: "Turnaround", value: "Weeks of back-and-forth" },
+                { label: "Built for", value: "Fortune 500 companies" },
+              ].map(row => (
+                <div key={row.label} style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 11, color: "#555", margin: "0 0 3px", letterSpacing: 0.5 }}>{row.label.toUpperCase()}</p>
+                  <p style={{ fontSize: 14, color: "#aaa", margin: 0, lineHeight: 1.4 }}>{row.value}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 60 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#484848" }}>VS</span>
+            </div>
+            <div style={{ background: "#1e1000", border: "2px solid #CC5500", borderRadius: 12, padding: "28px 24px" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 2, margin: "0 0 20px" }}>CONSULT6</p>
+              {[
+                { label: "Cost", value: "A fraction of that" },
+                { label: "Turnaround", value: "Executive report in 60 seconds" },
+                { label: "Built for", value: "Organizations like yours" },
+              ].map(row => (
+                <div key={row.label} style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 11, color: "#CC5500", margin: "0 0 3px", letterSpacing: 0.5, opacity: 0.7 }}>{row.label.toUpperCase()}</p>
+                  <p style={{ fontSize: 14, color: "#f0f0f0", margin: 0, lineHeight: 1.4, fontWeight: 600 }}>{row.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Who this is for */}
+      <section style={{ maxWidth: 860, margin: "0 auto", padding: "72px 24px" }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>WHO THIS IS FOR</p>
+        <h2 style={{ fontSize: 22, fontWeight: 600, textAlign: "center", margin: "0 0 14px", color: "#888", lineHeight: 1.4 }}>Your treasurer shouldn&apos;t need a CFO budget to get CFO-level insight</h2>
+        <p style={{ fontSize: 15, color: "#666", textAlign: "center", margin: "0 0 40px", lineHeight: 1.7, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
+          Consult6 is built for elected or appointed treasurers, financial directors, and finance leads at any kind of organization — not just large enterprises.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+          {orgTypes.map(org => (
+            <div key={org} style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 9, padding: "14px 16px", textAlign: "center" }}>
+              <p style={{ fontSize: 13, color: "#ccc", margin: 0, lineHeight: 1.4 }}>{org}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px 96px" }}>
         <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>FEATURES</p>
-        <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Everything you need to understand your finances</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Everything your treasurer needs to look sharp in the boardroom</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {features.map(f => (
             <div key={f.title} style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 22px" }}>
@@ -132,12 +198,12 @@ export default function LandingPage() {
       <section id="how-it-works" style={{ borderTop: "1px solid #272727", borderBottom: "1px solid #272727", background: "#212121", padding: "96px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
           <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 10 }}>HOW IT WORKS</p>
-          <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Three steps to clarity</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Three steps to a boardroom-ready report</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
             {[
               { step: "1", title: "Upload your data", desc: "Drop in a CSV or Excel file. Basic supports one file; Advanced supports up to three." },
-              { step: "2", title: "Add context (optional)", desc: "Tell the AI your company size, industry, and any constraints for more tailored results." },
-              { step: "3", title: "Get your report", desc: "In under 30 seconds, receive flags, recommendations, benchmarks, and a downloadable PDF." },
+              { step: "2", title: "Add context (optional)", desc: "Tell the AI your organization type, sector, and any constraints for more tailored results." },
+              { step: "3", title: "Get your executive report", desc: "In under 60 seconds, receive flags, recommendations, benchmarks, and a boardroom-ready downloadable PDF." },
             ].map(s => (
               <div key={s.step} style={{ textAlign: "left" }}>
                 <div style={{ width: 36, height: 36, background: "#CC5500", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff", marginBottom: 14 }}>{s.step}</div>
@@ -230,6 +296,9 @@ export default function LandingPage() {
               <span style={{ fontWeight: 700, fontSize: 14, color: "#888" }}>Consult6</span>
             </div>
             <span style={{ fontSize: 13, color: "#484848" }}>© {new Date().getFullYear()} Consult6. All rights reserved.</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <span style={{ fontSize: 12, color: "#484848" }}>Senior financial insight, no consultant required.</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
             <Link href="/about" style={{ fontSize: 13, color: "#555", textDecoration: "none" }}>About</Link>
