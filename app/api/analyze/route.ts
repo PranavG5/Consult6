@@ -104,7 +104,7 @@ function aggregateCSV(rawText: string): AggregatedStats {
   };
 }
 
-const SYSTEM_BASIC = `You are a senior financial analyst. Analyze only what the data actually shows — do not mention any metric that is null, unavailable, or not present in the data. Tailor everything to the specific organization, size, and industry provided.
+const SYSTEM_BASIC = `You are a senior financial analyst. Analyze only what the data actually shows. Do not mention any metric that is null, unavailable, or not present in the data. Tailor everything to the specific organization, size, and industry provided.
 
 Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.
 
@@ -113,13 +113,13 @@ Return ONLY valid JSON with this exact structure. No explanation, no markdown, n
 Rules:
 - 2-4 flags. Only flag metrics that have real data values. Each description under 30 words. Metric must be a specific number or ratio from the data.
 - 2-3 recommendations that are realistic and specific to this organization. Under 30 words each.
-- Summary: 1-2 sentences, specific to this org — no generic statements.
+- Summary: 1-2 sentences, specific to this org. No generic statements.
 - trajectoryNote: 1 sentence on where this org is headed based on actual trends.
-- NEVER mention a field as "unavailable", "not provided", or "data not found" — simply omit it.
+- NEVER mention a field as "unavailable", "not provided", or "data not found". Simply omit it.
 - Never use raw data field names in the report. Do not write field names like churn_trend, cash_runway_months, avg_deal_size_trend, or any other underscore-separated name. Translate into plain English.
 - Write the entire report in first-person plural. Use 'we reviewed,' 'we identified,' 'we recommend,' and 'in our view' throughout.`;
 
-const SYSTEM_ADVANCED = `You are a senior business consultant with 20 years of experience advising companies ranging from startups to Fortune 500s. You have just reviewed your client's data and are delivering your assessment in person. You speak directly, confidently, and without jargon. You give real recommendations, not observations. You never say 'it appears' or 'data suggests' — you say what you see and what you'd do about it. Your client is not a financial expert. They are a business owner or organization leader who needs to understand what is happening and what to do next, in plain language. Analyze only what the data actually shows. Never reference metrics that are null, unavailable, or absent from the data — omit them entirely. Do not use placeholder language like "data unavailable" or "not provided".
+const SYSTEM_ADVANCED = `You are a senior business consultant with 20 years of experience advising companies ranging from startups to Fortune 500s. You have just reviewed your client's data and are delivering your assessment in person. You speak directly, confidently, and without jargon. You give real recommendations, not observations. You never say 'it appears' or 'data suggests'. You say what you see and what you'd do about it. Your client is not a financial expert. They are a business owner or organization leader who needs to understand what is happening and what to do next, in plain language. Analyze only what the data actually shows. Never reference metrics that are null, unavailable, or absent from the data. Omit them entirely. Do not use placeholder language like "data unavailable" or "not provided".
 
 Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.
 
@@ -145,8 +145,8 @@ Rules:
 - recommendations: 3-4 items, specific to this org's actual situation. Under 40 words each.
 - summary: 2-3 sentences. Name specific numbers. No generic statements.
 - trajectoryNote: 1-2 sentences grounded in actual trends from the data.
-- trendData: Exactly 6 labels and 6 values per series. Use real date/period labels from the data. 2 series max (e.g. Revenue vs Expenses). Values must reflect actual data — do not fabricate.
-- industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named "program_expenses", "program_costs", or "direct_service_costs" — never substitute "operating_expenses", "admin_expenses", or general overhead columns as a proxy for program expenses. If no clearly labeled program expense column is present, omit this benchmark entirely and substitute a more appropriate metric.
+- trendData: Exactly 6 labels and 6 values per series. Use real date/period labels from the data. 2 series max (e.g. Revenue vs Expenses). Values must reflect actual data. Do not fabricate.
+- industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named "program_expenses", "program_costs", or "direct_service_costs". Never substitute "operating_expenses", "admin_expenses", or general overhead columns as a proxy for program expenses. If no clearly labeled program expense column is present, omit this benchmark entirely and substitute a more appropriate metric.
 - scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.
 - riskMatrix: 3 risks, each under 30 words. Based on actual flags found in the data.
 - caseStudies: 1-2 entries. Do NOT fabricate specific named organizations or invent outcomes. Use a real documented case with a verifiable citation (e.g. "HBR, 2019"), OR set organization to "Illustrative example" and omit the source field entirely. Never invent organization names, challenge details, or outcomes. Keep challenge/solution/outcome under 20 words each.
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
     extraContext && `Additional Context: ${extraContext}`,
   ].filter(Boolean).join("\n");
 
-  // Server-side aggregation — works on the full dataset, constant output size regardless of file size.
+  // Server-side aggregation: works on the full dataset, constant output size regardless of file size.
   const aggregated = aggregateCSV(rawText);
 
   // Fix 2: compute cash_runway_months server-side so it is never null due to Claude guessing.
@@ -265,7 +265,7 @@ export async function POST(req: NextRequest) {
     system: "You are a financial data analyst. Return only raw JSON. No prose, no markdown, no code fences.",
     messages: [{
       role: "user",
-      content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the aggregated statistics provided. For fields where a column is not present, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "${aggregated.cash_runway_months ?? "null — columns not found"}",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nAggregated statistics:\n${JSON.stringify(aggregated)}`,
+      content: `Compute and return ONLY a JSON object with this exact structure. Fill every field using the aggregated statistics provided. For fields where a column is not present, use null.\n\n\`\`\`\n{\n  "columns_present": [],\n  "date_range": { "start": "", "end": "" },\n  "yoy_revenue_growth": { "2022_to_2023": "", "2023_to_2024": "" },\n  "gross_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "ebitda_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "net_margin_trend": { "earliest": "", "latest": "", "direction": "" },\n  "churn_trend": { "earliest": "", "latest": "", "worst_period": "", "direction": "" },\n  "customer_count_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "avg_deal_size_trend": { "earliest": "", "latest": "", "direction": "" },\n  "sales_cycle_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "nps_trend": { "earliest": 0, "latest": 0, "direction": "" },\n  "contraction_revenue_trend": { "earliest": "", "latest": "", "direction": "" },\n  "cash_runway_months": "${aggregated.cash_runway_months ?? "null: columns not found"}",\n  "contradictions_detected": [],\n  "capex_pattern": ""\n}\n\`\`\`\n\nAggregated statistics:\n${JSON.stringify(aggregated)}`,
     }],
     });
     const preAnalysisText = preAnalysisMsg.content[0].type === "text" ? preAnalysisMsg.content[0].text : "{}";
@@ -286,7 +286,7 @@ export async function POST(req: NextRequest) {
   const userMessage = `Organization: ${orgName || "Unknown"}
 File: ${fileName}${contextLines ? `\n${contextLines}` : ""}
 
-Aggregated statistics (computed from full dataset — use these as ground truth):
+Aggregated statistics (computed from full dataset, use these as ground truth):
 ${JSON.stringify(preAnalysisJson)}
 
 Raw data sample:
@@ -295,7 +295,7 @@ ${summary}
 Instructions:
 - Cross-reference the aggregated stats with the raw sample to identify real trends and anomalies.
 - Only include metrics and flags where you have actual data values.
-- If a field in the aggregated stats is null, skip it entirely — do not mention it.
+- If a field in the aggregated stats is null, skip it entirely. Do not mention it.
 - Contradictions between metrics (e.g. member count rising while dues revenue falls) should each become their own flag.`;
 
   const enc = new TextEncoder();

@@ -4,12 +4,12 @@ const features = [
   {
     icon: "⚑",
     title: "Financial Flags",
-    desc: "Surface critical issues, warnings, and key observations from your raw data — the kind a senior consultant would flag in the first hour of an engagement.",
+    desc: "Surface critical issues, warnings, and key observations from your raw data: the kind a senior consultant flags in the first hour of an engagement.",
   },
   {
     icon: "◎",
     title: "Smart Recommendations",
-    desc: "Get prioritized, boardroom-ready action items tailored to your organization's type, size, and stated constraints. Not generic advice — specific next steps.",
+    desc: "Get prioritized, boardroom-ready action items tailored to your organization's type, size, and stated constraints. Not generic advice. Specific next steps.",
   },
   {
     icon: "▲",
@@ -20,7 +20,7 @@ const features = [
   {
     icon: "◈",
     title: "Scenario Planning",
-    desc: "Optimistic, base, and pessimistic 12-month forecasts based on your current trajectory — the kind of forward-looking analysis consultants charge thousands to produce.",
+    desc: "Optimistic, base, and pessimistic 12-month forecasts based on your current trajectory: the kind of forward-looking analysis consultants charge thousands to produce.",
     badge: "Advanced",
   },
   {
@@ -32,7 +32,7 @@ const features = [
   {
     icon: "↓",
     title: "Executive PDF Report",
-    desc: "Download a professional, branded executive report — boardroom-ready in seconds, not weeks.",
+    desc: "Download a professional, branded executive report. Boardroom-ready in seconds, not weeks.",
   },
 ];
 
@@ -163,7 +163,7 @@ export default function LandingPage() {
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>WHO THIS IS FOR</p>
         <h2 style={{ fontSize: 22, fontWeight: 600, textAlign: "center", margin: "0 0 14px", color: "#888", lineHeight: 1.4 }}>Your treasurer shouldn&apos;t need a CFO budget to get CFO-level insight</h2>
         <p style={{ fontSize: 15, color: "#666", textAlign: "center", margin: "0 0 40px", lineHeight: 1.7, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
-          Consult6 is built for elected or appointed treasurers, financial directors, and finance leads at any kind of organization — not just large enterprises.
+          Consult6 is built for elected or appointed treasurers, financial directors, and finance leads at any kind of organization. Not just large enterprises.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {orgTypes.map(org => (

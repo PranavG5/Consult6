@@ -748,9 +748,9 @@ function drawActionPlan(
   y += drawHeader(doc, "NEXT STEPS", y) + 4;
 
   const phases = [
-    { label: "IMMEDIATE — 0 TO 30 DAYS",    items: actionPlan.immediate  },
-    { label: "SHORT TERM — 30 TO 90 DAYS",  items: actionPlan.shortTerm  },
-    { label: "LONG TERM — 90+ DAYS",         items: actionPlan.longTerm   },
+    { label: "IMMEDIATE: 0 TO 30 DAYS",    items: actionPlan.immediate  },
+    { label: "SHORT TERM: 30 TO 90 DAYS",  items: actionPlan.shortTerm  },
+    { label: "LONG TERM: 90+ DAYS",        items: actionPlan.longTerm   },
   ];
 
   for (const phase of phases) {

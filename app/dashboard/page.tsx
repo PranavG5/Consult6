@@ -214,7 +214,7 @@ export default function Home() {
     a.href = url;
     const monthYear = new Date(item.created_at).toLocaleString("en-US", { month: "long", year: "numeric" });
     const safeName = (item.org_name || item.label || "Report").replace(/[^a-zA-Z0-9 \-]/g, "").trim();
-    a.download = `Consult6 — ${safeName} Executive Report — ${monthYear}.pdf`;
+    a.download = `Consult6 ${safeName} Executive Report ${monthYear}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -382,7 +382,7 @@ export default function Home() {
     a.href = url;
     const monthYear = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
     const safeName = (orgName || "Report").replace(/[^a-zA-Z0-9 \-]/g, "").trim();
-    a.download = `Consult6 — ${safeName} Executive Report — ${monthYear}.pdf`;
+    a.download = `Consult6 ${safeName} Executive Report ${monthYear}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }

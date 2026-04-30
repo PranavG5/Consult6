@@ -4,7 +4,7 @@ import MobileGate from "@/components/MobileGate";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: "Consult6 — Your Pocket Financial Consultant",
+  title: "Consult6: Your Pocket Financial Consultant",
   description: "Senior financial insight in 60 seconds. No consultant fees. Boardroom-ready executive reports for treasurers and financial directors at organizations of any type and size.",
 };
 
