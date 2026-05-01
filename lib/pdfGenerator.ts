@@ -942,6 +942,120 @@ export function generateAndValidate(
 }
 
 export { safeText, measureH, cursor, drawFooter, drawHeader, drawRule };
+
+// ─── Deep-Dive PDF ────────────────────────────────────────────────────────────
+
+function drawDeepDiveCover(
+  doc: jsPDF,
+  orgName: string,
+  metricName: string,
+  dateStr: string,
+): void {
+  doc.setFillColor(C.white);
+  doc.rect(0, 0, 210, 297, "F");
+
+  doc.setFontSize(90);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(C.orange);
+  safeText(doc, "6", 105, 90, CONTENT_W, "center");
+
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(C.textDark);
+  safeText(doc, "CONSULT6", 105, 112, CONTENT_W, "center");
+
+  doc.setDrawColor(C.orange);
+  doc.setLineWidth(0.5);
+  doc.line(85, 118, 125, 118);
+
+  doc.setFontSize(BODY_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textMid);
+  safeText(doc, "Focused Metric Analysis", 105, 126, CONTENT_W, "center");
+
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(C.textDark);
+  safeText(doc, orgName || "Your Organization", 105, 148, CONTENT_W, "center");
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.orange);
+  safeText(doc, metricName + " Deep-Dive", 105, 160, CONTENT_W, "center");
+
+  doc.setFontSize(BODY_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textLight);
+  safeText(doc, dateStr, 105, 172, CONTENT_W, "center");
+
+  doc.setFontSize(BODY_SIZE - 1);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(C.textLight);
+  safeText(doc, "Senior financial insight, no consultant required.", 105, 181, CONTENT_W, "center");
+
+  doc.addPage();
+}
+
+/**
+ * Generates a deep-dive PDF from parsed text sections and returns raw bytes.
+ * Sections are the parsed output of parseDeepDive() — { title, content } pairs.
+ */
+export function generateDeepDivePDF(
+  sections: { title: string; content: string }[],
+  orgName: string,
+  metricName: string,
+  dateStr: string,
+): Uint8Array {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageCounter = { current: 1, total: 0 };
+
+  // Page 1: cover
+  drawDeepDiveCover(doc, orgName, metricName, dateStr);
+
+  // Page 2+: content sections
+  pageCounter.current++;
+  drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+  let y = START_Y;
+
+  for (let si = 0; si < sections.length; si++) {
+    const section = sections[si];
+    const contentH = measureH(doc, section.content, CONTENT_W);
+    const blockH = HEADER_H + 4 + contentH + 10;
+
+    if (si > 0) {
+      y = cursor(y, blockH, doc, () => {
+        pageCounter.current++;
+        drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
+        y = START_Y;
+      });
+    }
+
+    y += drawHeader(doc, section.title, y) + 4;
+
+    doc.setFontSize(BODY_SIZE);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(C.textMid);
+    safeText(doc, section.content, MARGIN, y, CONTENT_W);
+    y += contentH + 10;
+
+    if (si < sections.length - 1) {
+      drawRule(doc, y, C.rule);
+      y += 8;
+    }
+  }
+
+  // Back-fill correct total in every footer
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    if (i === 1) continue;
+    doc.setFillColor(C.white);
+    doc.rect(0, FOOTER_Y - 6, PAGE_W, 12, "F");
+    drawFooter(doc, orgName, i, totalPages);
+  }
+
+  return docOutput(doc);
+}
 export { drawCover, drawSummary, drawFlags, drawRecommendations, drawTrajectoryAndChart };
 export { drawBenchmarks, drawScenarios, drawRiskMatrix, drawActionPlan };
 export {

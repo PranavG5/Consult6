@@ -97,8 +97,17 @@ export interface ReportData {
   analysis: AnalysisResult;
 }
 
-import { generateAndValidate } from "./pdfGenerator";
+import { generateAndValidate, generateDeepDivePDF as _generateDeepDivePDF } from "./pdfGenerator";
 
 export function generatePDF(data: ReportData): Uint8Array {
   return generateAndValidate(data.analysis, data.orgName, data.generatedAt);
+}
+
+export function generateDeepDivePDF(
+  sections: { title: string; content: string }[],
+  orgName: string,
+  metricName: string,
+  dateStr: string,
+): Uint8Array {
+  return _generateDeepDivePDF(sections, orgName, metricName, dateStr);
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { generatePDF, type AnalysisResult } from "@/lib/generateReport";
+import { generatePDF, generateDeepDivePDF, type AnalysisResult } from "@/lib/generateReport";
 import Link from "next/link";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -114,6 +114,7 @@ export default function Home() {
   const [outputMode, setOutputMode] = useState<"report" | "deepdive">("report");
   const [metric, setMetric] = useState("");
   const [deepDiveResult, setDeepDiveResult] = useState<string | null>(null);
+  const [deepDivePdfBytes, setDeepDivePdfBytes] = useState<Uint8Array | null>(null);
   const [copied, setCopied] = useState(false);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -407,6 +408,20 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
+  function downloadDeepDivePDF() {
+    if (!deepDivePdfBytes) return;
+    const blob = new Blob([new Uint8Array(deepDivePdfBytes) as unknown as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const monthYear = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
+    const safeName = (orgName || "Report").replace(/[^a-zA-Z0-9 \-]/g, "").trim();
+    const safeMetric = metric.replace(/[^a-zA-Z0-9 \-]/g, "").trim();
+    a.download = `Consult6 ${safeName} ${safeMetric} Deep-Dive ${monthYear}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function reset() {
     stopProgress();
     setProgress(0);
@@ -422,6 +437,7 @@ export default function Home() {
     setContextOpen(false);
     setMetric("");
     setDeepDiveResult(null);
+    setDeepDivePdfBytes(null);
     setCopied(false);
   }
 
@@ -446,6 +462,7 @@ export default function Home() {
       fd.append("files", files[0]);
       fd.append("orgName", orgName);
       fd.append("metric", metric);
+      fd.append("mode", mode);
       if (industry) fd.append("industry", industry);
       if (constraints) fd.append("constraints", constraints);
 
@@ -473,7 +490,15 @@ export default function Home() {
         throw new Error(detail || "Analysis failed on server.");
       }
 
-      setDeepDiveResult(raw.trim());
+      const resultText = raw.trim();
+      setDeepDiveResult(resultText);
+
+      // Generate PDF immediately (client-side, synchronous)
+      const now = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
+      const pdfSections = parseDeepDive(resultText);
+      const pdfBytes = generateDeepDivePDF(pdfSections, orgName || "Your Organization", metric, now);
+      setDeepDivePdfBytes(pdfBytes);
+
       stopProgress();
       setProgress(100);
       setState("done");
@@ -705,6 +730,9 @@ export default function Home() {
               <div style={{ background: "#2a1800", border: "1px solid #CC5500", borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: "#CC5500", letterSpacing: 1 }}>DEEP-DIVE</span>
                 <span style={{ fontSize: 13, color: "#f0a060", fontWeight: 600 }}>{metric}</span>
+                <span style={{ marginLeft: "auto", background: mode === "advanced" ? "#2a1800" : "#333", border: `1px solid ${mode === "advanced" ? "#CC5500" : "#555"}`, color: mode === "advanced" ? "#CC5500" : "#888", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, letterSpacing: 0.5 }}>
+                  {mode === "advanced" ? "ADVANCED" : "BASIC"}
+                </span>
               </div>
               {parseDeepDive(deepDiveResult).map((section, i) => (
                 <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "14px 16px", marginBottom: 10 }}>
@@ -712,16 +740,24 @@ export default function Home() {
                   <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>{section.content}</div>
                 </div>
               ))}
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(deepDiveResult).then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  });
-                }}
-                style={{ marginTop: 4, background: copied ? "#1a3a1a" : "#2d2d2d", border: `1px solid ${copied ? "#2e7d32" : "#484848"}`, color: copied ? "#4caf50" : "#888", borderRadius: 7, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
-                {copied ? "Copied!" : "Copy to Clipboard"}
-              </button>
+              <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(deepDiveResult).then(() => {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    });
+                  }}
+                  style={{ background: copied ? "#1a3a1a" : "#2d2d2d", border: `1px solid ${copied ? "#2e7d32" : "#484848"}`, color: copied ? "#4caf50" : "#888", borderRadius: 7, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+                  {copied ? "Copied!" : "Copy to Clipboard"}
+                </button>
+                <button
+                  onClick={downloadDeepDivePDF}
+                  disabled={!deepDivePdfBytes}
+                  style={{ background: "#CC5500", border: "none", color: "#fff", borderRadius: 7, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: deepDivePdfBytes ? "pointer" : "default", opacity: deepDivePdfBytes ? 1 : 0.5 }}>
+                  Download Report
+                </button>
+              </div>
             </div>
           )}
 
