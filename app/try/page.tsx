@@ -37,6 +37,22 @@ const sevStyle: Record<string, { bg: string; border: string; label: string; labe
   info: { bg: "#0f1e30", border: "#2980b9", label: "INFO", labelBg: "#2980b9" },
 };
 
+function parseDeepDive(text: string): { title: string; content: string }[] {
+  const sections: { title: string; content: string }[] = [];
+  const lines = text.split("\n");
+  let current: { title: string; lines: string[] } | null = null;
+  for (const line of lines) {
+    if (line.startsWith("## ")) {
+      if (current) sections.push({ title: current.title, content: current.lines.join("\n").trim() });
+      current = { title: line.slice(3).trim(), lines: [] };
+    } else if (current) {
+      current.lines.push(line);
+    }
+  }
+  if (current) sections.push({ title: current.title, content: current.lines.join("\n").trim() });
+  return sections;
+}
+
 export default function TryPage() {
   const [alreadyUsed, setAlreadyUsed] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -48,6 +64,10 @@ export default function TryPage() {
   const [dragging, setDragging] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalReason, setModalReason] = useState<"pdf" | "advanced">("pdf");
+  const [outputMode, setOutputMode] = useState<"report" | "deepdive">("report");
+  const [metric, setMetric] = useState("");
+  const [deepDiveResult, setDeepDiveResult] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,6 +166,61 @@ export default function TryPage() {
     }
   }
 
+  async function runDeepDive() {
+    if (!files.length || !metric.trim()) return;
+    setState("uploading");
+    setErrorMsg("");
+    setDeepDiveResult(null);
+    startProgress(0, 15, 2000);
+
+    try {
+      const parsed = await parseFile(files[0]);
+      setState("analyzing");
+      startProgress(15, 90, 8000);
+
+      const fd = new FormData();
+      fd.append("data", parsed.rawText);
+      fd.append("files", files[0]);
+      fd.append("orgName", orgName);
+      fd.append("metric", metric);
+
+      const res = await fetch("/api/deep-dive-guest", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Analysis failed" }));
+        throw new Error(err.error ?? "Analysis failed");
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let raw = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+
+      if (raw.includes("__STREAM_ERROR__")) {
+        const marker = "__STREAM_ERROR__:";
+        const idx = raw.indexOf(marker);
+        const detail = idx !== -1 ? raw.slice(idx + marker.length).trim() : "";
+        throw new Error(detail || "Analysis failed on server.");
+      }
+
+      setDeepDiveResult(raw.trim());
+      localStorage.setItem(GUEST_USED_KEY, "1");
+      setAlreadyUsed(true);
+      stopProgress();
+      setProgress(100);
+      setState("done");
+    } catch (err) {
+      stopProgress();
+      setProgress(0);
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      setState("error");
+    }
+  }
+
   function handleAdvancedClick() {
     setModalReason("advanced");
     setShowModal(true);
@@ -229,7 +304,7 @@ export default function TryPage() {
         <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 28 }}>
           {state === "done" && (
             <div style={{ marginBottom: 20 }}>
-              <button onClick={() => { setState("idle"); setAnalysis(null); setFiles([]); setOrgName(""); setProgress(0); }}
+              <button onClick={() => { setState("idle"); setAnalysis(null); setDeepDiveResult(null); setFiles([]); setOrgName(""); setMetric(""); setCopied(false); setProgress(0); }}
                 style={{ width: "100%", background: "#2d2d2d", border: "1px solid #5a5a5a", color: "#ccc", borderRadius: 9, padding: "11px 0", fontSize: 14, fontWeight: 600 }}>
                 ← New Analysis
               </button>
@@ -267,6 +342,36 @@ export default function TryPage() {
             )}
           </div>
 
+          {/* Output mode toggle */}
+          {state !== "done" && !isRunning && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "inline-flex", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: 3 }}>
+                <button
+                  onClick={() => setOutputMode("report")}
+                  style={{ background: outputMode === "report" ? "#CC5500" : "transparent", color: outputMode === "report" ? "#fff" : "#888", border: "none", borderRadius: 6, padding: "7px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}>
+                  Full Report
+                </button>
+                <button
+                  onClick={() => setOutputMode("deepdive")}
+                  style={{ background: outputMode === "deepdive" ? "#CC5500" : "transparent", color: outputMode === "deepdive" ? "#fff" : "#888", border: "none", borderRadius: 6, padding: "7px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}>
+                  Deep-Dive
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Metric input (deep-dive only) */}
+          {outputMode === "deepdive" && state !== "done" && !isRunning && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Which metric do you want to focus on?</label>
+              <input
+                value={metric}
+                onChange={e => setMetric(e.target.value)}
+                placeholder="e.g. revenue, cash reserves, payroll costs, inventory, donor count, membership dues"
+                style={{ width: "100%", boxSizing: "border-box" }} />
+            </div>
+          )}
+
           {isRunning && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ height: 6, background: "#484848", borderRadius: 3, overflow: "hidden" }}>
@@ -283,7 +388,33 @@ export default function TryPage() {
             <div style={{ background: "#2d1010", border: "1px solid #c0392b", borderRadius: 8, padding: "12px 16px", color: "#e74c3c", fontSize: 13, marginBottom: 20 }}>⚠ {errorMsg}</div>
           )}
 
-          {state === "done" && analysis && (
+          {/* Deep-dive result */}
+          {state === "done" && outputMode === "deepdive" && deepDiveResult && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ background: "#2a1800", border: "1px solid #CC5500", borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#CC5500", letterSpacing: 1 }}>DEEP-DIVE</span>
+                <span style={{ fontSize: 13, color: "#f0a060", fontWeight: 600 }}>{metric}</span>
+              </div>
+              {parseDeepDive(deepDiveResult).map((section, i) => (
+                <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "14px 16px", marginBottom: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: "#CC5500", letterSpacing: 1, margin: "0 0 8px" }}>{section.title}</p>
+                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>{section.content}</div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(deepDiveResult).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  });
+                }}
+                style={{ marginTop: 4, background: copied ? "#1a3a1a" : "#2d2d2d", border: `1px solid ${copied ? "#2e7d32" : "#484848"}`, color: copied ? "#4caf50" : "#888", borderRadius: 7, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+                {copied ? "Copied!" : "Copy to Clipboard"}
+              </button>
+            </div>
+          )}
+
+          {state === "done" && outputMode === "report" && analysis && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, marginBottom: 8 }}>EXECUTIVE SUMMARY</p>
@@ -329,17 +460,21 @@ export default function TryPage() {
           )}
 
           <div>
-            {state === "done" ? (
+            {state === "done" && outputMode === "report" ? (
               <button onClick={handleDownloadClick}
                 style={{ width: "100%", background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
                 Download PDF Report
               </button>
-            ) : (
-              <button onClick={runAnalysis} disabled={isRunning || !files.length}
-                style={{ width: "100%", background: isRunning || !files.length ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: isRunning || !files.length ? 0.6 : 1 }}>
-                {isRunning ? (state === "uploading" ? "Parsing file..." : "Generating analysis...") : "Generate Report →"}
+            ) : state !== "done" ? (
+              <button
+                onClick={() => outputMode === "deepdive" ? runDeepDive() : runAnalysis()}
+                disabled={isRunning || !files.length || (outputMode === "deepdive" && !metric.trim())}
+                style={{ width: "100%", background: (isRunning || !files.length || (outputMode === "deepdive" && !metric.trim())) ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: (isRunning || !files.length || (outputMode === "deepdive" && !metric.trim())) ? 0.6 : 1 }}>
+                {isRunning
+                  ? (state === "uploading" ? "Parsing file..." : outputMode === "deepdive" ? "Analyzing..." : "Generating analysis...")
+                  : outputMode === "deepdive" ? "Run Deep-Dive →" : "Generate Report →"}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </main>

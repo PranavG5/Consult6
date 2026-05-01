@@ -72,6 +72,22 @@ async function parseFile(file: File): Promise<{ rawText: string; headers: string
   return { rawText, ...parsed };
 }
 
+function parseDeepDive(text: string): { title: string; content: string }[] {
+  const sections: { title: string; content: string }[] = [];
+  const lines = text.split("\n");
+  let current: { title: string; lines: string[] } | null = null;
+  for (const line of lines) {
+    if (line.startsWith("## ")) {
+      if (current) sections.push({ title: current.title, content: current.lines.join("\n").trim() });
+      current = { title: line.slice(3).trim(), lines: [] };
+    } else if (current) {
+      current.lines.push(line);
+    }
+  }
+  if (current) sections.push({ title: current.title, content: current.lines.join("\n").trim() });
+  return sections;
+}
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>("basic");
   const [files, setFiles] = useState<File[]>([]);
@@ -95,6 +111,10 @@ export default function Home() {
   const [historyAccountType, setHistoryAccountType] = useState<string>("free");
   const [noContextWarnShown, setNoContextWarnShown] = useState(false);
   const [showNoContextModal, setShowNoContextModal] = useState(false);
+  const [outputMode, setOutputMode] = useState<"report" | "deepdive">("report");
+  const [metric, setMetric] = useState("");
+  const [deepDiveResult, setDeepDiveResult] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -400,6 +420,70 @@ export default function Home() {
     setConstraints("");
     setExtraContext("");
     setContextOpen(false);
+    setMetric("");
+    setDeepDiveResult(null);
+    setCopied(false);
+  }
+
+  async function runDeepDive() {
+    if (!files.length || !metric.trim()) return;
+    setState("uploading");
+    setErrorMsg("");
+    setDeepDiveResult(null);
+    startProgress(0, 15, 2000);
+
+    try {
+      const parsed = await Promise.all(files.map(f => parseFile(f)));
+      const combinedRawText = parsed.map((p, i) =>
+        files.length > 1 ? `=== File ${i + 1}: ${files[i].name} ===\n${p.rawText}` : p.rawText
+      ).join("\n\n");
+
+      setState("analyzing");
+      startProgress(15, 90, 8000);
+
+      const fd = new FormData();
+      fd.append("data", combinedRawText);
+      fd.append("files", files[0]);
+      fd.append("orgName", orgName);
+      fd.append("metric", metric);
+      if (industry) fd.append("industry", industry);
+      if (constraints) fd.append("constraints", constraints);
+
+      const res = await fetch("/api/deep-dive", { method: "POST", body: fd });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Analysis failed" }));
+        throw new Error(err.error ?? "Analysis failed");
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let raw = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+
+      if (raw.includes("__STREAM_ERROR__")) {
+        const marker = "__STREAM_ERROR__:";
+        const idx = raw.indexOf(marker);
+        const detail = idx !== -1 ? raw.slice(idx + marker.length).trim() : "";
+        throw new Error(detail || "Analysis failed on server.");
+      }
+
+      setDeepDiveResult(raw.trim());
+      stopProgress();
+      setProgress(100);
+      setState("done");
+      fetchUsage();
+    } catch (err) {
+      stopProgress();
+      setProgress(0);
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      setState("error");
+    }
   }
 
   const isRunning = state === "uploading" || state === "analyzing";
@@ -565,6 +649,36 @@ export default function Home() {
             )}
           </div>
 
+          {/* Output mode toggle */}
+          {state !== "done" && !isRunning && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "inline-flex", background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: 3 }}>
+                <button
+                  onClick={() => setOutputMode("report")}
+                  style={{ background: outputMode === "report" ? "#CC5500" : "transparent", color: outputMode === "report" ? "#fff" : "#888", border: "none", borderRadius: 6, padding: "7px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}>
+                  Full Report
+                </button>
+                <button
+                  onClick={() => setOutputMode("deepdive")}
+                  style={{ background: outputMode === "deepdive" ? "#CC5500" : "transparent", color: outputMode === "deepdive" ? "#fff" : "#888", border: "none", borderRadius: 6, padding: "7px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}>
+                  Deep-Dive
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Metric input (deep-dive only) */}
+          {outputMode === "deepdive" && state !== "done" && !isRunning && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Which metric do you want to focus on?</label>
+              <input
+                value={metric}
+                onChange={e => setMetric(e.target.value)}
+                placeholder="e.g. revenue, cash reserves, payroll costs, inventory, donor count, membership dues"
+                style={{ width: "100%", boxSizing: "border-box" }} />
+            </div>
+          )}
+
           {/* Progress bar */}
           {isRunning && (
             <div style={{ marginBottom: 20 }}>
@@ -585,8 +699,34 @@ export default function Home() {
             </div>
           )}
 
+          {/* Deep-dive result */}
+          {state === "done" && outputMode === "deepdive" && deepDiveResult && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ background: "#2a1800", border: "1px solid #CC5500", borderRadius: 8, padding: "8px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#CC5500", letterSpacing: 1 }}>DEEP-DIVE</span>
+                <span style={{ fontSize: 13, color: "#f0a060", fontWeight: 600 }}>{metric}</span>
+              </div>
+              {parseDeepDive(deepDiveResult).map((section, i) => (
+                <div key={i} style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "14px 16px", marginBottom: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: "#CC5500", letterSpacing: 1, margin: "0 0 8px" }}>{section.title}</p>
+                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>{section.content}</div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(deepDiveResult).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  });
+                }}
+                style={{ marginTop: 4, background: copied ? "#1a3a1a" : "#2d2d2d", border: `1px solid ${copied ? "#2e7d32" : "#484848"}`, color: copied ? "#4caf50" : "#888", borderRadius: 7, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+                {copied ? "Copied!" : "Copy to Clipboard"}
+              </button>
+            </div>
+          )}
+
           {/* Results */}
-          {state === "done" && analysis && (
+          {state === "done" && outputMode === "report" && analysis && (
             <div style={{ marginBottom: 20 }}>
               {/* Summary */}
               <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 10, padding: 16, marginBottom: 16 }}>
@@ -780,22 +920,22 @@ export default function Home() {
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 10 }}>
-            {state === "done" ? (
+            {state === "done" && outputMode === "report" ? (
               <button onClick={downloadPDF} style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
                 Download PDF Report
               </button>
-            ) : (
+            ) : state !== "done" ? (
               <button
-                onClick={() => runAnalysis()}
-                disabled={isRunning || !files.length}
-                style={{ flex: 1, background: isRunning || !files.length ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: isRunning || !files.length ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                onClick={() => outputMode === "deepdive" ? runDeepDive() : runAnalysis()}
+                disabled={isRunning || !files.length || (outputMode === "deepdive" && !metric.trim())}
+                style={{ flex: 1, background: (isRunning || !files.length || (outputMode === "deepdive" && !metric.trim())) ? "#4a2800" : "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: (isRunning || !files.length || (outputMode === "deepdive" && !metric.trim())) ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {isRunning ? (
-                  <>{state === "uploading" ? "Parsing files..." : "Generating analysis..."}</>
+                  <>{state === "uploading" ? "Parsing files..." : outputMode === "deepdive" ? "Analyzing..." : "Generating analysis..."}</>
                 ) : (
-                  <>Generate {mode === "advanced" ? "Advanced " : ""}Report →</>
+                  <>{outputMode === "deepdive" ? "Run Deep-Dive →" : `Generate ${mode === "advanced" ? "Advanced " : ""}Report →`}</>
                 )}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </main>
