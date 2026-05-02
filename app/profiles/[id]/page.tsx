@@ -33,6 +33,7 @@ export default function ProfileDetailPage() {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null);
 
   // Upload form
   const [periodLabel, setPeriodLabel] = useState("");
@@ -88,6 +89,16 @@ export default function ProfileDetailPage() {
     } finally {
       setMetricsLoading(false);
     }
+  }
+
+  async function deleteUpload(uploadId: string) {
+    setDeletingUploadId(uploadId);
+    const res = await fetch(`/api/profiles/${id}/uploads/${uploadId}`, { method: "DELETE" });
+    if (res.ok) {
+      setUploads(prev => prev.filter(u => u.id !== uploadId));
+      fetchMetrics();
+    }
+    setDeletingUploadId(null);
   }
 
   function handleDragStart(index: number) {
@@ -410,6 +421,15 @@ export default function ProfileDetailPage() {
                       <span>{new Date(u.uploaded_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                     </div>
                   </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteUpload(u.id); }}
+                    disabled={deletingUploadId === u.id}
+                    title="Delete upload"
+                    style={{ background: "none", border: "none", color: "#555", fontSize: 18, lineHeight: 1, cursor: "pointer", padding: "4px 6px", borderRadius: 4, flexShrink: 0, transition: "color 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#e74c3c")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
+                    {deletingUploadId === u.id ? "…" : "×"}
+                  </button>
                 </div>
               ))}
             </div>
