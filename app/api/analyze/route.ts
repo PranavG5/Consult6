@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
   }
 
   let rawText: string, fileName: string, orgName: string, mode: string;
-  let companySize: string, industry: string, constraints: string, extraContext: string;
+  let companySize: string, industry: string, constraints: string, extraContext: string, profileId: string;
   const ct = req.headers.get("content-type") ?? "";
 
   if (ct.includes("multipart/form-data")) {
@@ -184,6 +184,7 @@ export async function POST(req: NextRequest) {
     industry = (fd.get("industry") as string) ?? "";
     constraints = (fd.get("constraints") as string) ?? "";
     extraContext = (fd.get("extraContext") as string) ?? "";
+    profileId = (fd.get("profileId") as string) ?? "";
   } else {
     const body = await req.json();
     rawText = body.rawText ?? body.data ?? "";
@@ -194,6 +195,7 @@ export async function POST(req: NextRequest) {
     industry = body.industry ?? "";
     constraints = body.constraints ?? "";
     extraContext = body.extraContext ?? "";
+    profileId = body.profileId ?? "";
   }
 
   if (!rawText) {
@@ -224,12 +226,42 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Fetch historical context from profile if provided
+  let historicalContext = "";
+  if (profileId) {
+    try {
+      const { data: metricsRows } = await supabase
+        .from("profile_metrics")
+        .select("period_label, metric_name, metric_value")
+        .eq("profile_id", profileId)
+        .order("period_label", { ascending: true });
+
+      if (metricsRows?.length) {
+        const seriesMap: Record<string, Record<string, number>> = {};
+        const periodsSet = new Set<string>();
+        for (const row of metricsRows) {
+          if (!seriesMap[row.metric_name]) seriesMap[row.metric_name] = {};
+          seriesMap[row.metric_name][row.period_label] = Number(row.metric_value);
+          periodsSet.add(row.period_label);
+        }
+        const periods = Array.from(periodsSet).sort().slice(-6);
+        const lines = ["Historical trend data:"];
+        for (const [metricName, periodValues] of Object.entries(seriesMap)) {
+          const entries = periods.map(p => `${p}: ${periodValues[p] ?? "N/A"}`).join(", ");
+          lines.push(`  ${metricName}: ${entries}`);
+        }
+        historicalContext = lines.join("\n");
+      }
+    } catch {}
+  }
+
   const summary = summarize(rawText, mode);
   const contextLines = [
     companySize && `Company Size: ${companySize}`,
     industry && `Industry/Sector: ${industry}`,
     constraints && `Key Constraints: ${constraints}`,
     extraContext && `Additional Context: ${extraContext}`,
+    historicalContext && historicalContext,
   ].filter(Boolean).join("\n");
 
   // Server-side aggregation: works on the full dataset, constant output size regardless of file size.

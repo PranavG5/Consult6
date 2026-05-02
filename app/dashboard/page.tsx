@@ -116,6 +116,8 @@ export default function Home() {
   const [deepDiveResult, setDeepDiveResult] = useState<string | null>(null);
   const [deepDivePdfBytes, setDeepDivePdfBytes] = useState<Uint8Array | null>(null);
   const [copied, setCopied] = useState(false);
+  const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -166,7 +168,18 @@ export default function Home() {
     setNoContextWarnShown(localStorage.getItem("consult6_no_context_warn_shown") === "true");
     fetchUsage();
     fetchHistory();
+    fetchProfiles();
   }, []);
+
+  async function fetchProfiles() {
+    try {
+      const res = await fetch("/api/profiles");
+      if (res.ok) {
+        const json = await res.json();
+        setProfiles(json.profiles ?? []);
+      }
+    } catch {}
+  }
 
   async function fetchUsage() {
     try {
@@ -320,6 +333,7 @@ export default function Home() {
       fd.append("files", files[0]);
       fd.append("orgName", orgName);
       fd.append("mode", mode);
+      if (selectedProfileId) fd.append("profileId", selectedProfileId);
       if (mode === "advanced") {
         if (companySize) fd.append("companySize", companySize);
         if (industry) fd.append("industry", industry);
@@ -439,6 +453,7 @@ export default function Home() {
     setDeepDiveResult(null);
     setDeepDivePdfBytes(null);
     setCopied(false);
+    setSelectedProfileId("");
   }
 
   async function runDeepDive() {
@@ -463,6 +478,7 @@ export default function Home() {
       fd.append("orgName", orgName);
       fd.append("metric", metric);
       fd.append("mode", mode);
+      if (selectedProfileId) fd.append("profileId", selectedProfileId);
       if (industry) fd.append("industry", industry);
       if (constraints) fd.append("constraints", constraints);
 
@@ -544,6 +560,7 @@ export default function Home() {
               <span style={{ background: "#484848", color: "#aaa", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>FREE</span>
             )}
             <span style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
+            <Link href="/profiles" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Profiles</Link>
             <Link href="/settings" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
             <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
           </div>
@@ -591,6 +608,34 @@ export default function Home() {
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>Organization name</label>
             <input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Acme Corp, Sunrise Foundation" disabled={isRunning || state === "done"} />
           </div>
+
+          {/* Profile selector */}
+          {profiles.length > 0 && state !== "done" && !isRunning && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>
+                Company profile <span style={{ fontWeight: 400, color: "#666" }}>(optional — adds historical context)</span>
+              </label>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <select
+                  value={selectedProfileId}
+                  onChange={e => {
+                    const pid = e.target.value;
+                    setSelectedProfileId(pid);
+                    if (pid) {
+                      const found = profiles.find(p => p.id === pid);
+                      if (found && !orgName) setOrgName(found.name);
+                    }
+                  }}
+                  style={{ flex: 1, background: "#3a3a3a", border: `1px solid ${selectedProfileId ? "#CC5500" : "#494949"}`, borderRadius: 6, padding: "9px 10px", fontSize: 13, color: "#f0f0f0", boxSizing: "border-box" }}>
+                  <option value="">No profile selected</option>
+                  {profiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.sector})</option>
+                  ))}
+                </select>
+                <Link href="/profiles" style={{ fontSize: 12, color: "#CC5500", textDecoration: "none", whiteSpace: "nowrap" }}>Manage →</Link>
+              </div>
+            </div>
+          )}
 
           {/* Additional context (advanced only) */}
           {mode === "advanced" && (

@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
   let rawText: string, fileName: string, orgName: string, metric: string,
     industry: string, constraints: string, mode: string;
 
+  let profileId = "";
   if (ct.includes("multipart/form-data")) {
     const fd = await req.formData();
     rawText = fd.get("data") as string;
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
     industry = (fd.get("industry") as string) ?? "";
     constraints = (fd.get("constraints") as string) ?? "";
     mode = (fd.get("mode") as string) ?? "basic";
+    profileId = (fd.get("profileId") as string) ?? "";
   } else {
     const body = await req.json();
     rawText = body.rawText ?? body.data ?? "";
@@ -120,6 +122,7 @@ export async function POST(req: NextRequest) {
     industry = body.industry ?? "";
     constraints = body.constraints ?? "";
     mode = body.mode ?? "basic";
+    profileId = body.profileId ?? "";
   }
 
   if (!rawText) {
@@ -155,10 +158,40 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Fetch historical context from profile if provided
+  let historicalContext = "";
+  if (profileId) {
+    try {
+      const { data: metricsRows } = await supabase
+        .from("profile_metrics")
+        .select("period_label, metric_name, metric_value")
+        .eq("profile_id", profileId)
+        .order("period_label", { ascending: true });
+
+      if (metricsRows?.length) {
+        const seriesMap: Record<string, Record<string, number>> = {};
+        const periodsSet = new Set<string>();
+        for (const row of metricsRows) {
+          if (!seriesMap[row.metric_name]) seriesMap[row.metric_name] = {};
+          seriesMap[row.metric_name][row.period_label] = Number(row.metric_value);
+          periodsSet.add(row.period_label);
+        }
+        const periods = Array.from(periodsSet).sort().slice(-6);
+        const lines = ["Historical trend data for this organization:"];
+        for (const [metricName, periodValues] of Object.entries(seriesMap)) {
+          const entries = periods.map(p => `${p}: ${periodValues[p] ?? "N/A"}`).join(", ");
+          lines.push(`  ${metricName}: ${entries}`);
+        }
+        historicalContext = lines.join("\n");
+      }
+    } catch {}
+  }
+
   const summary = mode === "advanced" ? summarizeAdvanced(rawText) : summarizeBasic(rawText);
   const contextLines = [
     industry && `Organization type/sector: ${industry}`,
     constraints && `Key constraints: ${constraints}`,
+    historicalContext && historicalContext,
   ].filter(Boolean).join("\n");
 
   const userMessage = `Organization: ${orgName || "Unknown"}
