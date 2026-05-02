@@ -15,6 +15,7 @@ interface Upload {
   uploaded_at: string;
   row_count: number;
   column_headers: string[];
+  sort_order: number;
 }
 
 interface MetricSeries {
@@ -50,6 +51,10 @@ export default function ProfileDetailPage() {
   const [copied, setCopied] = useState(false);
   const [metricsLoading, setMetricsLoading] = useState(false);
 
+  // Drag-and-drop reordering
+  const dragItem = useRef<number | null>(null);
+  const dragOver = useRef<number | null>(null);
+
   useEffect(() => {
     fetchProfile();
     fetchMetrics();
@@ -83,6 +88,35 @@ export default function ProfileDetailPage() {
     } finally {
       setMetricsLoading(false);
     }
+  }
+
+  function handleDragStart(index: number) {
+    dragItem.current = index;
+  }
+
+  function handleDragEnter(index: number) {
+    dragOver.current = index;
+    if (dragItem.current === null || dragItem.current === index) return;
+    setUploads(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragItem.current!, 1);
+      next.splice(index, 0, moved);
+      dragItem.current = index;
+      return next;
+    });
+  }
+
+  async function handleDragEnd() {
+    dragItem.current = null;
+    dragOver.current = null;
+    // Persist new order
+    const orderedIds = uploads.map(u => u.id);
+    await fetch(`/api/profiles/${id}/reorder`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds }),
+    });
+    fetchMetrics();
   }
 
   async function handleUpload() {
@@ -340,13 +374,29 @@ export default function ProfileDetailPage() {
           </div>
         )}
 
-        {/* Uploads list */}
+        {/* Uploads list with drag-to-reorder */}
         {uploads.length > 0 && (
           <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 16px" }}>UPLOAD HISTORY</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: 0 }}>UPLOAD HISTORY</p>
+              <span style={{ fontSize: 11, color: "#555" }}>Drag rows to set chronological order</span>
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {uploads.map(u => (
-                <div key={u.id} style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 8, padding: "12px 14px", display: "flex", alignItems: "center", gap: 14 }}>
+              {uploads.map((u, i) => (
+                <div
+                  key={u.id}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragEnter={() => handleDragEnter(i)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={e => e.preventDefault()}
+                  style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 8, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, cursor: "grab", userSelect: "none" }}>
+                  {/* Drag handle */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, opacity: 0.4 }}>
+                    <div style={{ width: 14, height: 2, background: "#888", borderRadius: 1 }} />
+                    <div style={{ width: 14, height: 2, background: "#888", borderRadius: 1 }} />
+                    <div style={{ width: 14, height: 2, background: "#888", borderRadius: 1 }} />
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0" }}>{u.period_label}</span>

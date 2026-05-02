@@ -7,7 +7,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Verify profile ownership
   const { data: profile } = await supabase
     .from("company_profiles")
     .select("id, name")
@@ -17,31 +16,42 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (!profile) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Fetch uploads in user-defined sort order to determine period ordering
+  const { data: uploads } = await supabase
+    .from("profile_uploads")
+    .select("id, period_label, sort_order")
+    .eq("profile_id", profileId)
+    .order("sort_order", { ascending: true })
+    .order("uploaded_at", { ascending: true });
+
+  // Build an ordered list of unique period labels (deduped, preserving sort_order)
+  const seenPeriods = new Set<string>();
+  const periods: string[] = [];
+  for (const u of uploads ?? []) {
+    if (!seenPeriods.has(u.period_label)) {
+      seenPeriods.add(u.period_label);
+      periods.push(u.period_label);
+    }
+  }
+
   const { data: metrics, error } = await supabase
     .from("profile_metrics")
     .select("period_label, metric_name, metric_value")
-    .eq("profile_id", profileId)
-    .order("period_label", { ascending: true });
+    .eq("profile_id", profileId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Group by metric name to get series data
   const seriesMap: Record<string, Record<string, number>> = {};
-  const periodsSet = new Set<string>();
-
   for (const row of metrics ?? []) {
     if (!seriesMap[row.metric_name]) seriesMap[row.metric_name] = {};
     seriesMap[row.metric_name][row.period_label] = Number(row.metric_value);
-    periodsSet.add(row.period_label);
   }
 
-  const periods = Array.from(periodsSet).sort();
   const series = Object.entries(seriesMap).map(([name, values]) => ({
     name,
     values: periods.map(p => values[p] ?? null),
   }));
 
-  // Generate historical context summary for use in analysis
   const contextLines: string[] = [`Historical data for ${profile.name}:`];
   for (const [metricName, periodValues] of Object.entries(seriesMap)) {
     const entries = periods.map(p => `${p}: ${periodValues[p] ?? "N/A"}`).join(", ");

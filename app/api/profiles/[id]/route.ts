@@ -18,9 +18,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data: uploads } = await supabase
     .from("profile_uploads")
-    .select("id, period_label, period_type, uploaded_at, row_count, column_headers")
+    .select("id, period_label, period_type, uploaded_at, row_count, column_headers, sort_order")
     .eq("profile_id", id)
-    .order("uploaded_at", { ascending: false });
+    .order("sort_order", { ascending: true })
+    .order("uploaded_at", { ascending: true });
 
   return NextResponse.json({ profile: data, uploads: uploads ?? [] });
 }
