@@ -172,7 +172,7 @@ export default function ProfileDetailPage() {
   const chartData = periods.map((period, i) => ({
     period,
     value: selectedSeries?.values[i] ?? null,
-  })).filter(d => d.value !== null);
+  }));
 
   if (loading) {
     return (
@@ -304,7 +304,7 @@ export default function ProfileDetailPage() {
             </div>
 
             {/* Line chart */}
-            {chartData.length > 0 ? (
+            {chartData.some(d => d.value !== null) ? (
               <div style={{ height: 240, marginBottom: 20 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
