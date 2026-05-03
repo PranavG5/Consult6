@@ -3,6 +3,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 
+export const metadata = { title: "Company Profiles | Consult6" };
+
+function SkeletonCard() {
+  return (
+    <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "20px 20px 16px" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+        <div className="skeleton" style={{ width: 38, height: 38, borderRadius: 8 }} />
+        <div className="skeleton" style={{ width: 60, height: 20, borderRadius: 20 }} />
+      </div>
+      <div className="skeleton" style={{ height: 16, width: "70%", marginBottom: 8, borderRadius: 4 }} />
+      <div className="skeleton" style={{ height: 13, width: "45%", marginBottom: 14, borderRadius: 4 }} />
+      <div className="skeleton" style={{ height: 11, width: "55%", borderRadius: 4 }} />
+    </div>
+  );
+}
+
 interface Profile {
   id: string;
   name: string;
@@ -96,15 +112,19 @@ export default function ProfilesPage() {
 
         {/* Content */}
         {loading ? (
-          <div style={{ textAlign: "center", padding: "80px 0", color: "#555", fontSize: 14 }}>Loading profiles...</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         ) : profiles.length === 0 ? (
           <div style={{ background: "#333333", border: "2px dashed #484848", borderRadius: 16, padding: "60px 40px", textAlign: "center" }}>
             <div style={{ width: 56, height: 56, background: "#2a1800", border: "2px solid #CC5500", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, margin: "0 auto 20px" }}>
-              📊
+              📁
             </div>
             <p style={{ fontSize: 18, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>No profiles yet</p>
             <p style={{ fontSize: 14, color: "#777", margin: "0 0 28px", lineHeight: 1.6, maxWidth: 400, marginLeft: "auto", marginRight: "auto" }}>
-              Create a profile for each organization you analyze. Upload data for each period to track trends and automatically enrich your reports with historical context.
+              Create a company profile to start tracking your organization&apos;s finances over time.
             </p>
             <button
               onClick={() => setShowModal(true)}
