@@ -1,33 +1,24 @@
 # Consult6 – Claude Instructions
 
-## CRITICAL: Production Branch is `rebrand-work` — NEVER touch `main`
+## Rule: every change goes straight to production
 
-The live Vercel production deployment tracks `rebrand-work`. Every push to
-`rebrand-work` triggers an automatic Vercel production deploy. `main` is stale
-and must never be committed to, merged into, or pushed.
+Production = `rebrand-work` branch. Pushing to it triggers an automatic Vercel
+production deploy. Do this after every task, no exceptions.
 
-A SessionStart hook (`.claude/settings.json`) automatically runs
-`git checkout rebrand-work && git pull origin rebrand-work` at the start of
-every session. A pre-push git hook blocks any push to `main`.
+```
+git add <files>
+git commit -m "..."
+git push origin rebrand-work
+```
 
-### Workflow for every task
-1. Confirm you are on `rebrand-work`: `git branch --show-current`
-2. Make all edits directly on `rebrand-work` (small changes) or on a feature
-   branch cut from `rebrand-work` (larger changes)
-3. Commit, then push to `rebrand-work`:
-   `git push origin rebrand-work`
-4. That push deploys to production automatically via Vercel's GitHub integration
+`main` does not exist for our purposes. Never read it, branch from it, or push to it.
 
-### Never do these
-- `git checkout main`
-- `git merge <anything> main`
-- `git push origin main`
-- Branch off `main` for new work
-
-## Deployment
-`git push origin rebrand-work` = production deploy. No other step needed.
-`npx vercel deploy --prod --yes` will fail to authenticate in the sandbox —
-ignore it, the git push is sufficient.
+## Start of every session
+The SessionStart hook checks out `rebrand-work` and pulls automatically.
+If for any reason the working tree is not on `rebrand-work`, run:
+```
+git fetch origin && git checkout rebrand-work && git pull origin rebrand-work
+```
 
 ## Stack
 - Next.js 15 (App Router), React 19, TypeScript
@@ -35,7 +26,3 @@ ignore it, the git push is sufficient.
 - Tailwind CSS + inline styles (dark theme, primary orange #CC5500)
 - Anthropic Claude SDK for AI analysis
 - jsPDF for client-side PDF generation
-
-## Branch
-Feature branches follow the pattern `claude/<feature>-<id>`.
-Always cut from `rebrand-work`. Always merge back into `rebrand-work`.
