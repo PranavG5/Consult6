@@ -269,7 +269,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/contact" style={{ display: "block", textAlign: "center", background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
+            <Link href="/contact" style={{ display: "block", textAlign: "center", background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
               Discuss Custom Pricing →
             </Link>
           </div>
