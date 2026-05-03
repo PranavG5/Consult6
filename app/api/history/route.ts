@@ -2,9 +2,9 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 
 const HISTORY_LIMITS = {
-  free: 5,
-  paid: 20,
-  admin: 20,
+  free: 20,
+  paid: 10000,
+  admin: 10000,
 };
 
 export async function GET() {

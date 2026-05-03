@@ -208,7 +208,7 @@ export default function Home() {
 
       const acctType: string = profile?.account_type ?? "free";
       setHistoryAccountType(acctType);
-      const limit = acctType === "free" ? 5 : 20;
+      const limit = acctType === "free" ? 20 : Infinity;
 
       const items = loadHistoryFromStorage(user.id).slice(0, limit);
       setHistory(items);
@@ -221,7 +221,7 @@ export default function Home() {
       if (!user) return;
 
       const acctType: string = historyAccountType || "free";
-      const limit = acctType === "free" ? 5 : 20;
+      const limit = acctType === "free" ? 20 : Infinity;
 
       const newItem: HistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -611,8 +611,7 @@ export default function Home() {
             )}
             <span style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
             <Link href="/profiles" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Profiles</Link>
-            <Link href="/history" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>History</Link>
-            <Link href="/settings" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
+<Link href="/settings" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
             <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
           </div>
         )}
@@ -1096,13 +1095,7 @@ export default function Home() {
           ) : history.length === 0 ? (
             <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5 }}>No analyses yet. Run your first report to see history here.</p>
           ) : (
-            <div style={{
-              overflowY: historyAccountType !== "free" ? "auto" : "visible",
-              maxHeight: historyAccountType !== "free" ? 480 : "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}>
+            <div style={{ overflowY: "auto", maxHeight: 480, display: "flex", flexDirection: "column", gap: 8 }}>
               {history.map(item => {
                 const date = new Date(item.created_at);
                 const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
