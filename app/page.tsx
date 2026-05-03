@@ -195,8 +195,6 @@ export default function LandingPage() {
           {/* Enterprise */}
           <div style={{ background: "#0a160e", border: "2px solid #16a34a", borderRadius: 14, padding: 28, position: "relative" }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#16a34a", margin: "0 0 8px", letterSpacing: 0.5 }}>ENTERPRISE</p>
-            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$40</p>
-            <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
             <div style={{ borderTop: "1px solid #16a34a33", paddingTop: 20, marginBottom: 28 }}>
               {enterpriseFeatures.map(f => (
                 <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
@@ -205,8 +203,8 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
-              Get Started with Enterprise
+            <Link href="/contact" style={{ display: "block", textAlign: "center", background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
+              Discuss Custom Pricing →
             </Link>
           </div>
 
