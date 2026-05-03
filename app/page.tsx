@@ -261,13 +261,6 @@ export default function LandingPage() {
           {/* Enterprise */}
           <div style={{ background: "#0a160e", border: "2px solid #16a34a", borderRadius: 14, padding: 28, position: "relative" }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#16a34a", margin: "0 0 8px", letterSpacing: 0.5 }}>ENTERPRISE</p>
-            <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$40</p>
-            <p style={{ fontSize: 13, color: "#555", margin: "0 0 6px" }}>per month</p>
-            <p style={{ fontSize: 12, color: "#16a34a", margin: "0 0 20px", background: "#0d2a18", border: "1px solid #16a34a33", borderRadius: 6, padding: "6px 10px", lineHeight: 1.5 }}>
-              Need custom limits or a team deal?{" "}
-              <Link href="/contact" style={{ color: "#4ade80", fontWeight: 600, textDecoration: "none" }}>Contact us</Link>
-              {" "}to discuss pricing and usage packages.
-            </p>
             <div style={{ borderTop: "1px solid #16a34a33", paddingTop: 20, marginBottom: 28 }}>
               {enterpriseFeatures.map(f => (
                 <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
@@ -276,10 +269,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/auth/signup" style={{ display: "block", textAlign: "center", background: "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8, marginBottom: 10 }}>
-              Get Started with Enterprise
-            </Link>
-            <Link href="/contact" style={{ display: "block", textAlign: "center", background: "transparent", border: "1px solid #16a34a55", color: "#4ade80", fontSize: 13, fontWeight: 600, textDecoration: "none", padding: "10px 0", borderRadius: 8 }}>
+            <Link href="/contact" style={{ display: "block", textAlign: "center", background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", padding: "12px 0", borderRadius: 8 }}>
               Discuss Custom Pricing →
             </Link>
           </div>

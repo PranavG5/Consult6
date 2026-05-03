@@ -1,27 +1,20 @@
 # Consult6 – Claude Instructions
 
+## CRITICAL: Production Branch is `rebrand-work`
+**`main` is NOT production. Do not touch `main`.**
+
+The live Vercel production deployment always tracks the `rebrand-work` branch.
+- ALL changes must be developed on a feature branch cut from `rebrand-work`
+- ALL merges to deploy go into `rebrand-work`, never `main`
+- Before starting any task, run `git fetch origin && git checkout rebrand-work && git pull origin rebrand-work` to ensure you are on the correct, up-to-date production baseline
+- Never read files or make edits without first confirming `git branch --show-current` returns `rebrand-work` (or a feature branch cut from it)
+
 ## Deployment
-After every push, always attempt to deploy via `npx vercel deploy --yes`.
-The Vercel CLI may not have internet access in the sandbox environment; if it
-fails to authenticate, note that pushing to the git branch triggers an
-automatic Vercel preview deployment via the GitHub git integration.
-Production deploys happen when a Vercel preview is manually promoted — NOT
-automatically on merge to `main`.
-
-## CRITICAL: True Production Baseline
-**`main` is NOT the production baseline.** Vercel production is promoted manually
-from feature branches and is frequently ahead of `main` by many commits.
-
-Before starting any new task:
-1. Use the Vercel MCP tool (`list_deployments` on project `prj_H9rT3aVqyGOlYOxJa6LH8ZSduqm2`,
-   team `team_pcgvm8jSr6idsK3koFYztW1G`) to find the most recent deployment
-   with `"target": "production"` and read its `meta.githubCommitRef` — that is
-   the true production branch.
-2. Run `git fetch origin <that-branch>` and branch off it for your work.
-3. Never read files from the local working tree without first confirming which
-   branch is checked out — the default checkout may be `main`, which is stale.
-4. Never branch off `main` without first verifying that it matches the current
-   production deployment.
+After completing changes:
+1. Commit on your feature branch
+2. Merge to `rebrand-work` and push: `git checkout rebrand-work && git merge <feature-branch> && git push origin rebrand-work`
+3. That push triggers the automatic Vercel production deployment via the GitHub git integration
+4. Also attempt `npx vercel deploy --prod --yes`; it will likely fail to authenticate in the sandbox — the push to `rebrand-work` is what actually deploys
 
 ## Stack
 - Next.js 15 (App Router), React 19, TypeScript
@@ -32,4 +25,5 @@ Before starting any new task:
 
 ## Branch
 Feature branches follow the pattern `claude/<feature>-<id>`.
-Always develop on the designated branch and push when done.
+Always cut feature branches from `rebrand-work`, not `main`.
+Merge back into `rebrand-work` to deploy.
