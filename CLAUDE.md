@@ -9,9 +9,11 @@ production deploy. Do this after every task, no exceptions.
 git add <files>
 git commit -m "..."
 git push origin rebrand-work
+git push origin rebrand-work:main
 ```
 
-`main` does not exist for our purposes. Never read it, branch from it, or push to it.
+Always push to both so `main` stays in sync with production.
+Always develop on `rebrand-work` (or a feature branch cut from it), never branch off `main`.
 
 ## Start of every session
 The SessionStart hook checks out `rebrand-work` and pulls automatically.

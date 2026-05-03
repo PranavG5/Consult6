@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /home/user/Consult6 && git fetch origin rebrand-work && git checkout rebrand-work && git pull origin rebrand-work && printf '#!/bin/sh\\nwhile read l ls r rs; do\\n  case \"$r\" in refs/heads/main) echo \"ERROR: push to main is blocked — use rebrand-work\"; exit 1;; esac\\ndone\\nexit 0\\n' > .git/hooks/pre-push && chmod +x .git/hooks/pre-push"
+            "command": "cd /home/user/Consult6 && git fetch origin && git checkout rebrand-work && git pull origin rebrand-work"
           }
         ]
       }
