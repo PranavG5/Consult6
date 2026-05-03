@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/user/Consult6 && git fetch origin rebrand-work && git checkout rebrand-work && git pull origin rebrand-work"
+          }
+        ]
+      }
+    ]
+  }
+}
