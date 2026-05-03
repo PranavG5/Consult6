@@ -239,7 +239,7 @@ export default function LandingPage() {
 
           {/* Free */}
           <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 14, padding: 28 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#888", margin: "0 0 8px", letterSpacing: 0.5 }}>FREE</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: "#888", margin: "0 0 12px", letterSpacing: 0.5 }}>FREE</p>
             <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$0</p>
             <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
             <div style={{ borderTop: "1px solid #2f2f2f", paddingTop: 20, marginBottom: 28 }}>
@@ -258,7 +258,7 @@ export default function LandingPage() {
           {/* Pro */}
           <div style={{ background: "#1e1000", border: "2px solid #CC5500", borderRadius: 14, padding: 28, position: "relative" }}>
             <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#CC5500", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 12px", borderRadius: 20, letterSpacing: 0.5, whiteSpace: "nowrap" }}>BEST VALUE</div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#CC5500", margin: "0 0 8px", letterSpacing: 0.5 }}>PRO</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: "#CC5500", margin: "0 0 12px", letterSpacing: 0.5 }}>PRO</p>
             <p style={{ fontSize: 38, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>$10</p>
             <p style={{ fontSize: 13, color: "#555", margin: "0 0 24px" }}>per month</p>
             <div style={{ borderTop: "1px solid #2a1800", paddingTop: 20, marginBottom: 28 }}>
@@ -276,7 +276,7 @@ export default function LandingPage() {
 
           {/* Enterprise */}
           <div style={{ background: "#0a160e", border: "2px solid #16a34a", borderRadius: 14, padding: 28, position: "relative" }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#16a34a", margin: "0 0 8px", letterSpacing: 0.5 }}>ENTERPRISE</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: "#16a34a", margin: "0 0 12px", letterSpacing: 0.5 }}>ENTERPRISE</p>
             <p style={{ fontSize: 12, color: "#16a34a", margin: "0 0 20px", background: "#0d2a18", border: "1px solid #16a34a33", borderRadius: 6, padding: "6px 10px", lineHeight: 1.5 }}>
               Need custom limits or a team deal?{" "}
               <Link href="/contact" style={{ color: "#4ade80", fontWeight: 600, textDecoration: "none" }}>Contact us</Link>
