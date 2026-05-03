@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import Link from "next/link";
 
+export const metadata = { title: "Settings | Consult6" };
+
 type Tab = "profile" | "privacy" | "billing" | "account" | "admin";
 
 interface SubHistoryEntry {

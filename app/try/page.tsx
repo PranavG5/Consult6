@@ -4,6 +4,9 @@ import { generatePDF, type AnalysisResult } from "@/lib/generateReport";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import Link from "next/link";
+import ErrorBanner from "@/app/components/ErrorBanner";
+
+export const metadata = { title: "Try Consult6 | Consult6" };
 
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
 
@@ -98,9 +101,16 @@ export default function TryPage() {
   function handleFiles(newFiles: File[]) {
     const maxBytes = 5 * 1024 * 1024;
     const valid = newFiles.filter(f => {
-      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls");
-      if (validType && f.size > maxBytes) { setErrorMsg(`"${f.name}" exceeds the 5 MB limit.`); return false; }
-      return validType;
+      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls") || f.type === "text/csv";
+      if (!validType) {
+        setErrorMsg("This file type isn't supported. Please upload a CSV or Excel file (.csv, .xlsx, .xls).");
+        return false;
+      }
+      if (f.size > maxBytes) {
+        setErrorMsg("This file is too large. Consult6 supports files up to 5MB. Try removing unused columns or splitting into smaller date ranges.");
+        return false;
+      }
+      return true;
     });
     setFiles(prev => [...prev, ...valid].slice(0, 1));
   }
@@ -115,12 +125,13 @@ export default function TryPage() {
     setState("uploading");
     setErrorMsg("");
     setAnalysis(null);
-    startProgress(0, 15, 2000);
+    stopProgress();
+    setProgress(2);
 
     try {
       const parsed = await parseFile(files[0]);
       setState("analyzing");
-      startProgress(15, 90, 10000);
+      setProgress(5);
 
       const fd = new FormData();
       fd.append("data", parsed.rawText);
@@ -136,19 +147,24 @@ export default function TryPage() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
+      const estimatedTotal = 1200; // chars for guest basic analysis
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
+        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
+        setProgress(chunkProgress);
       }
       raw += decoder.decode();
-      if (raw.includes("__STREAM_ERROR__")) throw new Error("Analysis failed on server.");
+      setProgress(95);
+      if (raw.includes("__STREAM_ERROR__")) throw new Error("__ANTHROPIC_ERROR__");
 
       const jsonStart = raw.indexOf("{");
       const jsonEnd = raw.lastIndexOf("}");
-      if (jsonStart === -1 || jsonEnd === -1) throw new Error("Invalid response from server.");
+      if (jsonStart === -1 || jsonEnd === -1) throw new Error("__EMPTY_RESPONSE__");
 
       const result: AnalysisResult = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+      if (!result.summary && !result.flags?.length) throw new Error("__EMPTY_RESPONSE__");
       setAnalysis(result);
 
       // Mark guest trial as used
@@ -161,7 +177,16 @@ export default function TryPage() {
     } catch (err) {
       stopProgress();
       setProgress(0);
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      const raw = err instanceof Error ? err.message : "Something went wrong.";
+      if (raw === "__ANTHROPIC_ERROR__" || raw.toLowerCase().includes("anthropic")) {
+        setErrorMsg("Something went wrong with the analysis. Please try again in a moment.");
+      } else if (raw === "__EMPTY_RESPONSE__" || raw.toLowerCase().includes("invalid response")) {
+        setErrorMsg("The analysis came back incomplete. Please try again — if the issue persists, try a smaller file.");
+      } else if (raw.toLowerCase().includes("failed to fetch") || raw.toLowerCase().includes("networkerror")) {
+        setErrorMsg("Something went wrong. Check your connection and try again.");
+      } else {
+        setErrorMsg(raw);
+      }
       setState("error");
     }
   }
@@ -171,12 +196,13 @@ export default function TryPage() {
     setState("uploading");
     setErrorMsg("");
     setDeepDiveResult(null);
-    startProgress(0, 15, 2000);
+    stopProgress();
+    setProgress(2);
 
     try {
       const parsed = await parseFile(files[0]);
       setState("analyzing");
-      startProgress(15, 90, 8000);
+      setProgress(5);
 
       const fd = new FormData();
       fd.append("data", parsed.rawText);
@@ -193,12 +219,16 @@ export default function TryPage() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
+      const estimatedTotal = 1500;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
+        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
+        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      setProgress(95);
 
       if (raw.includes("__STREAM_ERROR__")) {
         const marker = "__STREAM_ERROR__:";
@@ -216,7 +246,12 @@ export default function TryPage() {
     } catch (err) {
       stopProgress();
       setProgress(0);
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      const raw = err instanceof Error ? err.message : "Something went wrong.";
+      if (raw.toLowerCase().includes("failed to fetch") || raw.toLowerCase().includes("networkerror")) {
+        setErrorMsg("Something went wrong. Check your connection and try again.");
+      } else {
+        setErrorMsg(raw || "Something went wrong with the analysis. Please try again in a moment.");
+      }
       setState("error");
     }
   }
@@ -384,8 +419,12 @@ export default function TryPage() {
             </div>
           )}
 
-          {state === "error" && (
-            <div style={{ background: "#2d1010", border: "1px solid #c0392b", borderRadius: 8, padding: "12px 16px", color: "#e74c3c", fontSize: 13, marginBottom: 20 }}>⚠ {errorMsg}</div>
+          {state === "error" && errorMsg && (
+            <ErrorBanner
+              title="Analysis failed"
+              message={errorMsg}
+              onDismiss={() => { setErrorMsg(""); setState("idle"); }}
+            />
           )}
 
           {/* Deep-dive result */}

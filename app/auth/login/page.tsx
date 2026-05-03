@@ -3,6 +3,8 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import Link from "next/link";
 
+export const metadata = { title: "Sign In | Consult6" };
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

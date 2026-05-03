@@ -7,6 +7,9 @@ import * as XLSX from "xlsx";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
+import ErrorBanner from "@/app/components/ErrorBanner";
+
+export const metadata = { title: "Profile | Consult6" };
 
 interface Upload {
   id: string;
@@ -158,7 +161,19 @@ export default function ProfileDetailPage() {
 
       const res = await fetch(`/api/profiles/${id}/upload`, { method: "POST", body: fd });
       const json = await res.json();
-      if (!res.ok) { setUploadError(json.error ?? "Upload failed."); return; }
+      if (!res.ok) {
+        const msg: string = json.error ?? "Upload failed.";
+        if (msg.toLowerCase().includes("parse") || msg.toLowerCase().includes("csv")) {
+          setUploadError("We couldn't parse this file. Make sure it's a valid CSV with headers in the first row.");
+        } else if (msg.toLowerCase().includes("numeric") || msg.toLowerCase().includes("no metric")) {
+          setUploadError("This file doesn't contain any numeric columns. Add at least one numeric column and try again.");
+        } else if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("already") || msg.toLowerCase().includes("period")) {
+          setUploadError("You've already uploaded data for this period. Delete the existing upload first, or use a different period label.");
+        } else {
+          setUploadError(msg);
+        }
+        return;
+      }
 
       setUploadSuccess(`Uploaded successfully. ${json.metrics_extracted} metric columns extracted.`);
       setPeriodLabel("");
@@ -187,8 +202,47 @@ export default function ProfileDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#272727", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#555", fontSize: 14 }}>Loading profile...</span>
+      <div style={{ minHeight: "100vh", background: "#272727" }}>
+        {/* Navbar skeleton */}
+        <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center" }}>
+          <div className="skeleton" style={{ width: 32, height: 32, borderRadius: 7, marginRight: 10 }} />
+          <div className="skeleton" style={{ width: 80, height: 16, borderRadius: 4 }} />
+        </nav>
+        <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 20px" }}>
+          {/* Header skeleton */}
+          <div style={{ marginBottom: 32 }}>
+            <div className="skeleton" style={{ height: 28, width: 220, borderRadius: 6, marginBottom: 10 }} />
+            <div className="skeleton" style={{ height: 13, width: 140, borderRadius: 4 }} />
+          </div>
+          {/* Upload panel skeleton */}
+          <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <div className="skeleton" style={{ height: 11, width: 120, borderRadius: 4, marginBottom: 16 }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div className="skeleton" style={{ height: 38, borderRadius: 6 }} />
+              <div className="skeleton" style={{ height: 38, borderRadius: 6 }} />
+            </div>
+            <div className="skeleton" style={{ height: 60, borderRadius: 8, marginBottom: 16 }} />
+            <div className="skeleton" style={{ height: 38, width: 120, borderRadius: 8 }} />
+          </div>
+          {/* Metric selector skeleton */}
+          <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 24, marginBottom: 24 }}>
+            <div className="skeleton" style={{ height: 11, width: 120, borderRadius: 4, marginBottom: 16 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="skeleton" style={{ height: 32, borderRadius: 20, width: `${60 + i * 8}%` }} />
+              ))}
+            </div>
+            {/* Chart area skeleton */}
+            <div className="skeleton" style={{ height: 240, borderRadius: 8, marginBottom: 20 }} />
+          </div>
+          {/* Uploads table skeleton */}
+          <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 24 }}>
+            <div className="skeleton" style={{ height: 11, width: 120, borderRadius: 4, marginBottom: 16 }} />
+            {[1, 2, 3].map(i => (
+              <div key={i} className="skeleton" style={{ height: 56, borderRadius: 8, marginBottom: 8 }} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -238,9 +292,11 @@ export default function ProfileDetailPage() {
           <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 16px" }}>UPLOAD PERIOD DATA</p>
 
           {uploadError && (
-            <div style={{ background: "#2d1010", border: "1px solid #c0392b", borderRadius: 8, padding: "10px 14px", color: "#e74c3c", fontSize: 13, marginBottom: 16 }}>
-              {uploadError}
-            </div>
+            <ErrorBanner
+              title="Upload failed"
+              message={uploadError}
+              onDismiss={() => setUploadError("")}
+            />
           )}
           {uploadSuccess && (
             <div style={{ background: "#0d2a0d", border: "1px solid #27ae60", borderRadius: 8, padding: "10px 14px", color: "#4caf50", fontSize: 13, marginBottom: 16 }}>
@@ -382,6 +438,24 @@ export default function ProfileDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Empty state for no uploads */}
+        {uploads.length === 0 && !metricsLoading && (
+          <div style={{ background: "#333333", border: "2px dashed #484848", borderRadius: 16, padding: "48px 40px", textAlign: "center", marginBottom: 24 }}>
+            <div style={{ width: 52, height: 52, background: "#2a1800", border: "2px solid #CC5500", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, margin: "0 auto 18px" }}>
+              📊
+            </div>
+            <p style={{ fontSize: 17, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>No data uploaded yet</p>
+            <p style={{ fontSize: 14, color: "#777", margin: "0 0 24px", lineHeight: 1.6, maxWidth: 360, marginLeft: "auto", marginRight: "auto" }}>
+              Upload your first CSV to start tracking this organization&apos;s metrics over time.
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+              Upload Data
+            </button>
           </div>
         )}
 

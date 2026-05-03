@@ -5,6 +5,9 @@ import { generatePDF, generateDeepDivePDF, type AnalysisResult } from "@/lib/gen
 import Link from "next/link";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import ErrorBanner from "@/app/components/ErrorBanner";
+
+export const metadata = { title: "Dashboard | Consult6" };
 
 type Mode = "basic" | "advanced";
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
@@ -117,6 +120,7 @@ export default function Home() {
   const [deepDivePdfBytes, setDeepDivePdfBytes] = useState<Uint8Array | null>(null);
   const [copied, setCopied] = useState(false);
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -172,13 +176,16 @@ export default function Home() {
   }, []);
 
   async function fetchProfiles() {
+    setProfilesLoading(true);
     try {
       const res = await fetch("/api/profiles");
       if (res.ok) {
         const json = await res.json();
         setProfiles(json.profiles ?? []);
       }
-    } catch {}
+    } catch {} finally {
+      setProfilesLoading(false);
+    }
   }
 
   async function fetchUsage() {
@@ -277,10 +284,16 @@ export default function Home() {
     const maxFiles = mode === "advanced" ? 3 : 1;
     const maxBytes = 5 * 1024 * 1024;
     const valid = newFiles.filter(f => {
-      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls");
-      const validSize = f.size <= maxBytes;
-      if (validType && !validSize) setErrorMsg(`"${f.name}" exceeds the 5 MB limit.`);
-      return validType && validSize;
+      const validType = f.name.endsWith(".csv") || f.name.endsWith(".xlsx") || f.name.endsWith(".xls") || f.type === "text/csv";
+      if (!validType) {
+        setErrorMsg("This file type isn't supported. Please upload a CSV or Excel file (.csv, .xlsx, .xls).");
+        return false;
+      }
+      if (f.size > maxBytes) {
+        setErrorMsg("This file is too large. Consult6 supports files up to 5MB. Try removing unused columns or splitting into smaller date ranges.");
+        return false;
+      }
+      return true;
     });
     setFiles(prev => [...prev, ...valid].slice(0, maxFiles));
   }
@@ -317,7 +330,8 @@ export default function Home() {
     setErrorMsg("");
     setAnalysis(null);
     setPdfBytes(null);
-    startProgress(0, 15, 2000);
+    stopProgress();
+    setProgress(2);
 
     try {
       const parsed = await Promise.all(files.map(f => parseFile(f)));
@@ -326,7 +340,7 @@ export default function Home() {
       ).join("\n\n");
 
       setState("analyzing");
-      startProgress(15, 90, mode === "advanced" ? 30000 : 10000);
+      setProgress(5);
 
       const fd = new FormData();
       fd.append("data", combinedRawText);
@@ -350,35 +364,45 @@ export default function Home() {
 
       // Handle non-streaming error responses
       if (!res.ok) {
+        if (res.status === 401) throw new Error("Your session has expired. Please sign in again.");
         const err = await res.json().catch(() => ({ error: "Analysis failed" }));
         throw new Error(err.error ?? "Analysis failed");
       }
 
-      // Read stream
+      // Read stream — drive progress from chunk arrival
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
+      const estimatedTotal = mode === "advanced" ? 6000 : 1500; // chars
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
+        // Drive progress from 5% → 90% based on accumulated content
+        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
+        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      setProgress(95);
 
       if (raw.includes("__STREAM_ERROR__")) {
         const marker = "__STREAM_ERROR__:";
         const idx = raw.indexOf(marker);
         const detail = idx !== -1 ? raw.slice(idx + marker.length).trim() : "";
-        throw new Error(detail || "Analysis failed on server.");
+        if (detail.toLowerCase().includes("rate limit") || detail.toLowerCase().includes("429")) {
+          throw new Error("__RATE_LIMIT__");
+        }
+        throw new Error(detail || "__ANTHROPIC_ERROR__");
       }
 
       // Extract JSON
       const jsonStart = raw.indexOf("{");
       const jsonEnd = raw.lastIndexOf("}");
-      if (jsonStart === -1 || jsonEnd === -1) throw new Error("Invalid response from server.");
+      if (jsonStart === -1 || jsonEnd === -1) throw new Error("__EMPTY_RESPONSE__");
 
       const result: AnalysisResult = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+      if (!result.summary && !result.flags?.length) throw new Error("__EMPTY_RESPONSE__");
       setAnalysis(result);
 
       const now = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
@@ -404,7 +428,20 @@ export default function Home() {
     } catch (err) {
       stopProgress();
       setProgress(0);
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      const raw = err instanceof Error ? err.message : "Something went wrong.";
+      if (raw === "__RATE_LIMIT__" || raw.toLowerCase().includes("rate limit")) {
+        setErrorMsg("This analysis took too long to complete. Try using Basic mode, or reduce your file size and try again.");
+      } else if (raw === "__ANTHROPIC_ERROR__" || raw.toLowerCase().includes("anthropic") || raw.toLowerCase().includes("overloaded")) {
+        setErrorMsg("Something went wrong with the analysis. Please try again in a moment.");
+      } else if (raw === "__EMPTY_RESPONSE__" || raw.toLowerCase().includes("invalid response")) {
+        setErrorMsg("The analysis came back incomplete. Please try again — if the issue persists, try a smaller file or Basic mode.");
+      } else if (raw.toLowerCase().includes("daily") && raw.toLowerCase().includes("limit")) {
+        setErrorMsg(raw);
+      } else if (raw.toLowerCase().includes("failed to fetch") || raw.toLowerCase().includes("networkerror")) {
+        setErrorMsg("Something went wrong. Check your connection and try again.");
+      } else {
+        setErrorMsg(raw);
+      }
       setState("error");
     }
   }
@@ -461,7 +498,8 @@ export default function Home() {
     setState("uploading");
     setErrorMsg("");
     setDeepDiveResult(null);
-    startProgress(0, 15, 2000);
+    stopProgress();
+    setProgress(2);
 
     try {
       const parsed = await Promise.all(files.map(f => parseFile(f)));
@@ -470,7 +508,7 @@ export default function Home() {
       ).join("\n\n");
 
       setState("analyzing");
-      startProgress(15, 90, 8000);
+      setProgress(5);
 
       const fd = new FormData();
       fd.append("data", combinedRawText);
@@ -485,6 +523,7 @@ export default function Home() {
       const res = await fetch("/api/deep-dive", { method: "POST", body: fd });
 
       if (!res.ok) {
+        if (res.status === 401) throw new Error("Your session has expired. Please sign in again.");
         const err = await res.json().catch(() => ({ error: "Analysis failed" }));
         throw new Error(err.error ?? "Analysis failed");
       }
@@ -492,12 +531,16 @@ export default function Home() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
+      const estimatedTotal = 2000; // chars for deep-dive
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
+        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
+        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      setProgress(95);
 
       if (raw.includes("__STREAM_ERROR__")) {
         const marker = "__STREAM_ERROR__:";
@@ -522,7 +565,14 @@ export default function Home() {
     } catch (err) {
       stopProgress();
       setProgress(0);
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+      const raw = err instanceof Error ? err.message : "Something went wrong.";
+      if (raw.toLowerCase().includes("rate limit") || raw.toLowerCase().includes("429")) {
+        setErrorMsg("This analysis took too long to complete. Try using Basic mode, or reduce your file size and try again.");
+      } else if (raw.toLowerCase().includes("failed to fetch") || raw.toLowerCase().includes("networkerror")) {
+        setErrorMsg("Something went wrong. Check your connection and try again.");
+      } else {
+        setErrorMsg(raw || "Something went wrong with the analysis. Please try again in a moment.");
+      }
       setState("error");
     }
   }
@@ -561,6 +611,7 @@ export default function Home() {
             )}
             <span style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
             <Link href="/profiles" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Profiles</Link>
+            <Link href="/history" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>History</Link>
             <Link href="/settings" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
             <button onClick={handleSignOut} style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
           </div>
@@ -610,31 +661,38 @@ export default function Home() {
           </div>
 
           {/* Profile selector */}
-          {profiles.length > 0 && state !== "done" && !isRunning && (
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>
-                Company profile <span style={{ fontWeight: 400, color: "#666" }}>(optional — adds historical context)</span>
-              </label>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <select
-                  value={selectedProfileId}
-                  onChange={e => {
-                    const pid = e.target.value;
-                    setSelectedProfileId(pid);
-                    if (pid) {
-                      const found = profiles.find(p => p.id === pid);
-                      if (found && !orgName) setOrgName(found.name);
-                    }
-                  }}
-                  style={{ flex: 1, background: "#3a3a3a", border: `1px solid ${selectedProfileId ? "#CC5500" : "#494949"}`, borderRadius: 6, padding: "9px 10px", fontSize: 13, color: "#f0f0f0", boxSizing: "border-box" }}>
-                  <option value="">No profile selected</option>
-                  {profiles.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.sector})</option>
-                  ))}
-                </select>
-                <Link href="/profiles" style={{ fontSize: 12, color: "#CC5500", textDecoration: "none", whiteSpace: "nowrap" }}>Manage →</Link>
+          {state !== "done" && !isRunning && (
+            profilesLoading ? (
+              <div style={{ marginBottom: 20 }}>
+                <div className="skeleton" style={{ height: 13, width: 140, borderRadius: 4, marginBottom: 8 }} />
+                <div className="skeleton" style={{ height: 38, width: "100%", borderRadius: 6 }} />
               </div>
-            </div>
+            ) : profiles.length > 0 ? (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>
+                  Company profile <span style={{ fontWeight: 400, color: "#666" }}>(optional — adds historical context)</span>
+                </label>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <select
+                    value={selectedProfileId}
+                    onChange={e => {
+                      const pid = e.target.value;
+                      setSelectedProfileId(pid);
+                      if (pid) {
+                        const found = profiles.find(p => p.id === pid);
+                        if (found && !orgName) setOrgName(found.name);
+                      }
+                    }}
+                    style={{ flex: 1, background: "#3a3a3a", border: `1px solid ${selectedProfileId ? "#CC5500" : "#494949"}`, borderRadius: 6, padding: "9px 10px", fontSize: 13, color: "#f0f0f0", boxSizing: "border-box" }}>
+                    <option value="">No profile selected</option>
+                    {profiles.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.sector})</option>
+                    ))}
+                  </select>
+                  <Link href="/profiles" style={{ fontSize: 12, color: "#CC5500", textDecoration: "none", whiteSpace: "nowrap" }}>Manage →</Link>
+                </div>
+              </div>
+            ) : null
           )}
 
           {/* Additional context (advanced only) */}
@@ -763,10 +821,12 @@ export default function Home() {
           )}
 
           {/* Error */}
-          {state === "error" && (
-            <div style={{ background: "#2d1010", border: "1px solid #c0392b", borderRadius: 8, padding: "12px 16px", color: "#e74c3c", fontSize: 13, marginBottom: 20 }}>
-              ⚠ {errorMsg}
-            </div>
+          {state === "error" && errorMsg && (
+            <ErrorBanner
+              title="Analysis failed"
+              message={errorMsg}
+              onDismiss={() => { setErrorMsg(""); setState("idle"); }}
+            />
           )}
 
           {/* Deep-dive result */}

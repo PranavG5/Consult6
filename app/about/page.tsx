@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import InfoNav from "@/components/InfoNav";
+
+export const metadata: Metadata = { title: "About | Consult6" };
 
 export default function AboutPage() {
   return (
