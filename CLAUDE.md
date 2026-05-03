@@ -1,11 +1,11 @@
 # Consult6 – Claude Instructions
 
 ## Deployment
-After every push, always attempt to deploy via `npx vercel deploy --yes`.
-The Vercel CLI may not have internet access in the sandbox environment; if it
-fails to authenticate, note that pushing to the git branch triggers an
-automatic Vercel preview deployment via the GitHub git integration.
-Production deploys happen when changes are merged to `main`.
+After every push, always deploy to production by merging to `main` and pushing.
+The user has granted permission to merge feature branches to `main` for production deploys.
+Also attempt `npx vercel deploy --prod --yes`; if the Vercel CLI fails to authenticate
+in the sandbox, the merge to `main` triggers an automatic Vercel production deployment
+via the GitHub git integration.
 
 ## Stack
 - Next.js 15 (App Router), React 19, TypeScript
