@@ -34,6 +34,22 @@ const features = [
     title: "Executive PDF Report",
     desc: "Download a professional, branded executive report. Boardroom-ready in seconds, not weeks.",
   },
+  {
+    icon: "⊕",
+    title: "Deep Dive Analyses",
+    desc: "Go beyond the summary. Deep dive mode runs a richer, multi-layered analysis across benchmarks, scenarios, and risk — all in a single comprehensive report.",
+    badge: "Advanced",
+  },
+  {
+    icon: "◑",
+    title: "Company Profiles",
+    desc: "Save your organization's financial data as a persistent profile. Pick up where you left off and track progress across multiple reporting periods.",
+  },
+  {
+    icon: "◐",
+    title: "Metric Tracking",
+    desc: "Monitor key financial metrics over time across your saved profiles. Spot trends, regressions, and improvements at a glance — period over period.",
+  },
 ];
 
 const orgTypes = [
