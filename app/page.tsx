@@ -261,6 +261,11 @@ export default function LandingPage() {
           {/* Enterprise */}
           <div style={{ background: "#0a160e", border: "2px solid #16a34a", borderRadius: 14, padding: 28, position: "relative" }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#16a34a", margin: "0 0 8px", letterSpacing: 0.5 }}>ENTERPRISE</p>
+            <p style={{ fontSize: 12, color: "#16a34a", margin: "0 0 20px", background: "#0d2a18", border: "1px solid #16a34a33", borderRadius: 6, padding: "6px 10px", lineHeight: 1.5 }}>
+              Need custom limits or a team deal?{" "}
+              <Link href="/contact" style={{ color: "#4ade80", fontWeight: 600, textDecoration: "none" }}>Contact us</Link>
+              {" "}to discuss pricing and usage packages.
+            </p>
             <div style={{ borderTop: "1px solid #16a34a33", paddingTop: 20, marginBottom: 28 }}>
               {enterpriseFeatures.map(f => (
                 <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
