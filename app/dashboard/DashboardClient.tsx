@@ -1127,7 +1127,7 @@ export default function Home() {
           )}
           {!profileContext?.disable_pdf_history && (
             <p style={{ fontSize: 10, color: "#5a5a5a", margin: "10px 0 0", textAlign: "center" }}>
-              {historyAccountType === "free" ? "Free: last 5 reports" : "Pro/Admin: last 20 reports"}
+              {historyAccountType === "free" ? "Free accounts: capped at 20 reports" : ""}
             </p>
           )}
         </div>
