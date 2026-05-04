@@ -409,7 +409,7 @@ export default function Home() {
       setAnalysis(result);
 
       // Show dedup banner if any rows were cleaned
-      const ds = (result as Record<string, unknown>).dedupStats as { removedExact?: number; removedNearDupe?: number; removedSummary?: number } | undefined;
+      const ds = ((result as unknown) as Record<string, unknown>).dedupStats as { removedExact?: number; removedNearDupe?: number; removedSummary?: number } | undefined;
       if (ds && (ds.removedExact || ds.removedNearDupe || ds.removedSummary)) {
         const dupCount = (ds.removedExact ?? 0) + (ds.removedNearDupe ?? 0);
         const sumCount = ds.removedSummary ?? 0;
