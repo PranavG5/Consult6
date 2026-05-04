@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { deduplicateCSV } from "@/lib/deduplicateCSV";
+import Papa from "papaparse";
 
 export const maxDuration = 60;
 
@@ -60,6 +62,21 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Deduplicate CSV before analysis
+  let dedupStats = { removedExact: 0, removedNearDupe: 0, removedSummary: 0 };
+  try {
+    const parsed = Papa.parse<Record<string, string>>(rawText, { header: true, skipEmptyLines: true });
+    const headers = parsed.meta.fields ?? [];
+    const rows = parsed.data;
+    if (headers.length && rows.length) {
+      const deduped = deduplicateCSV(rows, headers);
+      dedupStats = { removedExact: deduped.removedExact, removedNearDupe: deduped.removedNearDupe, removedSummary: deduped.removedSummary };
+      if (deduped.removedExact + deduped.removedNearDupe + deduped.removedSummary > 0) {
+        rawText = [headers.join(","), ...deduped.rows.map(r => headers.map((h: string) => r[h] ?? "").join(","))].join("\n");
+      }
+    }
+  } catch { /* non-fatal */ }
+
   const summary = summarize(rawText);
   const userMessage = `Organization: ${orgName || "Unknown"}
 File: ${fileName}
@@ -81,7 +98,7 @@ ${summary}`;
         });
 
         const text = msg.content[0].type === "text" ? msg.content[0].text : "";
-        controller.enqueue(enc.encode(text));
+        controller.enqueue(enc.encode(text + `\n__DEDUP__:${JSON.stringify(dedupStats)}`));
       } catch (err) {
         const is429 = (err as { status?: number })?.status === 429;
         const errMsg = is429

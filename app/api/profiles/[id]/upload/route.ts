@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { deduplicateCSV } from "@/lib/deduplicateCSV";
+import { normalizeColumnName, fuzzyMatchColumns } from "@/lib/normalizeColumns";
 
 function parseCSVText(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const lines = text.trim().split("\n").filter(Boolean);
@@ -60,8 +62,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "period_type must be monthly, quarterly, or annual." }, { status: 400 });
   }
 
-  const { headers, rows } = parseCSVText(rawText);
-  const numericMetrics = extractNumericMetrics(headers, rows);
+  const { headers: rawHeaders, rows: rawRows } = parseCSVText(rawText);
+
+  // Deduplicate rows
+  const deduped = rawHeaders.length && rawRows.length
+    ? deduplicateCSV(rawRows, rawHeaders)
+    : { rows: rawRows, removedExact: 0, removedNearDupe: 0, removedSummary: 0 };
+  const rows = deduped.rows;
+
+  // Fetch existing canonical metric names for this profile
+  const { data: existingMetrics } = await supabase
+    .from("profile_metrics")
+    .select("metric_name")
+    .eq("profile_id", profileId);
+  const rawCanonicals = (existingMetrics ?? []).map((m: { metric_name: string }) => m.metric_name as string);
+  const existingCanonicals: string[] = Array.from(new Set(rawCanonicals));
+
+  // Build column name mapping: raw → canonical
+  const columnMap = fuzzyMatchColumns(rawHeaders, existingCanonicals);
+
+  // Build column mappings array for response (only show where raw != canonical)
+  const columnMappings = rawHeaders.map(raw => ({
+    raw,
+    canonical: columnMap.get(raw) ?? normalizeColumnName(raw),
+  })).filter(m => m.raw !== m.canonical);
+
+  const numericMetrics = extractNumericMetrics(rawHeaders, rows);
 
   // Create the upload record
   const { data: upload, error: uploadErr } = await supabase
@@ -73,26 +99,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       period_type: periodType,
       row_count: rows.length,
       csv_summary: rawText.slice(0, 2000),
-      column_headers: headers,
+      column_headers: rawHeaders,
     })
     .select()
     .single();
 
   if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 });
 
-  // Insert metric rows
+  // Insert metric rows with canonical names
   if (numericMetrics.length > 0) {
     const metricsToInsert = numericMetrics.map(m => ({
       profile_id: profileId,
       upload_id: upload.id,
       period_label: periodLabel,
-      metric_name: m.metric_name,
+      metric_name: columnMap.get(m.metric_name) ?? normalizeColumnName(m.metric_name),
       metric_value: m.metric_value,
+      raw_column_name: m.metric_name,
     }));
 
     const { error: metricsErr } = await supabase.from("profile_metrics").insert(metricsToInsert);
     if (metricsErr) console.error("Metrics insert error (non-fatal):", metricsErr);
   }
 
-  return NextResponse.json({ upload, metrics_extracted: numericMetrics.length }, { status: 201 });
+  return NextResponse.json({
+    upload,
+    metrics_extracted: numericMetrics.length,
+    dedupStats: { removedExact: deduped.removedExact, removedNearDupe: deduped.removedNearDupe, removedSummary: deduped.removedSummary },
+    columnMappings,
+  }, { status: 201 });
 }

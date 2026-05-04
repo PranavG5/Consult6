@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase-server";
+import { deduplicateCSV } from "@/lib/deduplicateCSV";
+import Papa from "papaparse";
 
 export const maxDuration = 120;
 
@@ -255,6 +257,21 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
 
+  // Deduplicate CSV before analysis
+  let dedupStats = { removedExact: 0, removedNearDupe: 0, removedSummary: 0 };
+  try {
+    const parsed = Papa.parse<Record<string, string>>(rawText, { header: true, skipEmptyLines: true });
+    const headers = parsed.meta.fields ?? [];
+    const rows = parsed.data;
+    if (headers.length && rows.length) {
+      const deduped = deduplicateCSV(rows, headers);
+      dedupStats = { removedExact: deduped.removedExact, removedNearDupe: deduped.removedNearDupe, removedSummary: deduped.removedSummary };
+      if (deduped.removedExact + deduped.removedNearDupe + deduped.removedSummary > 0) {
+        rawText = [headers.join(","), ...deduped.rows.map(r => headers.map((h: string) => r[h] ?? "").join(","))].join("\n");
+      }
+    }
+  } catch { /* non-fatal: proceed with original rawText */ }
+
   const summary = summarize(rawText, mode);
   const contextLines = [
     companySize && `Company Size: ${companySize}`,
@@ -361,7 +378,7 @@ Instructions:
           resultJson = basicJson;
         }
 
-        controller.enqueue(enc.encode(JSON.stringify(resultJson)));
+        controller.enqueue(enc.encode(JSON.stringify({ ...resultJson, dedupStats })));
 
         // Update usage count
         try {

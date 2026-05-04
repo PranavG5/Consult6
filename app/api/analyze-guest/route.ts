@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { deduplicateCSV } from "@/lib/deduplicateCSV";
+import Papa from "papaparse";
 
 export const maxDuration = 60;
 
@@ -46,6 +48,21 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Deduplicate CSV before analysis
+  let dedupStats = { removedExact: 0, removedNearDupe: 0, removedSummary: 0 };
+  try {
+    const parsed = Papa.parse<Record<string, string>>(rawText, { header: true, skipEmptyLines: true });
+    const headers = parsed.meta.fields ?? [];
+    const rows = parsed.data;
+    if (headers.length && rows.length) {
+      const deduped = deduplicateCSV(rows, headers);
+      dedupStats = { removedExact: deduped.removedExact, removedNearDupe: deduped.removedNearDupe, removedSummary: deduped.removedSummary };
+      if (deduped.removedExact + deduped.removedNearDupe + deduped.removedSummary > 0) {
+        rawText = [headers.join(","), ...deduped.rows.map(r => headers.map((h: string) => r[h] ?? "").join(","))].join("\n");
+      }
+    }
+  } catch { /* non-fatal */ }
+
   const summary = summarize(rawText);
   const userMessage = `Organization: ${orgName || "Unknown"}\nFile: ${fileName}\n\nData:\n${summary}`;
   const enc = new TextEncoder();
@@ -60,7 +77,7 @@ export async function POST(req: NextRequest) {
           messages: [{ role: "user", content: userMessage }],
         });
         const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
-        controller.enqueue(enc.encode(JSON.stringify(extractJson(text))));
+        controller.enqueue(enc.encode(JSON.stringify({ ...extractJson(text), dedupStats })));
       } catch (err) {
         console.error("Guest stream error:", err);
         controller.enqueue(enc.encode("\n__STREAM_ERROR__"));

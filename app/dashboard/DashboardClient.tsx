@@ -6,6 +6,7 @@ import Link from "next/link";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import ErrorBanner from "@/app/components/ErrorBanner";
+import InfoBanner from "@/app/components/InfoBanner";
 
 export const metadata = { title: "Dashboard | Consult6" };
 
@@ -119,6 +120,7 @@ export default function Home() {
   const [deepDiveResult, setDeepDiveResult] = useState<string | null>(null);
   const [deepDivePdfBytes, setDeepDivePdfBytes] = useState<Uint8Array | null>(null);
   const [copied, setCopied] = useState(false);
+  const [dedupMessage, setDedupMessage] = useState<string>("");
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
@@ -330,6 +332,7 @@ export default function Home() {
     setErrorMsg("");
     setAnalysis(null);
     setPdfBytes(null);
+    setDedupMessage("");
     stopProgress();
     setProgress(2);
 
@@ -404,6 +407,17 @@ export default function Home() {
       const result: AnalysisResult = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
       if (!result.summary && !result.flags?.length) throw new Error("__EMPTY_RESPONSE__");
       setAnalysis(result);
+
+      // Show dedup banner if any rows were cleaned
+      const ds = (result as Record<string, unknown>).dedupStats as { removedExact?: number; removedNearDupe?: number; removedSummary?: number } | undefined;
+      if (ds && (ds.removedExact || ds.removedNearDupe || ds.removedSummary)) {
+        const dupCount = (ds.removedExact ?? 0) + (ds.removedNearDupe ?? 0);
+        const sumCount = ds.removedSummary ?? 0;
+        const parts: string[] = [];
+        if (dupCount > 0) parts.push(`${dupCount} duplicate row${dupCount !== 1 ? "s" : ""}`);
+        if (sumCount > 0) parts.push(`${sumCount} summary row${sumCount !== 1 ? "s" : ""}`);
+        setDedupMessage(`We cleaned your data before analysis: removed ${parts.join(" and ")}. Your report reflects the deduplicated dataset.`);
+      }
 
       const now = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
       const pdf = generatePDF({
@@ -480,6 +494,7 @@ export default function Home() {
     setErrorMsg("");
     setAnalysis(null);
     setPdfBytes(null);
+    setDedupMessage("");
     setFiles([]);
     setCompanySize("");
     setIndustry("");
@@ -498,6 +513,7 @@ export default function Home() {
     setState("uploading");
     setErrorMsg("");
     setDeepDiveResult(null);
+    setDedupMessage("");
     stopProgress();
     setProgress(2);
 
@@ -549,7 +565,24 @@ export default function Home() {
         throw new Error(detail || "Analysis failed on server.");
       }
 
-      const resultText = raw.trim();
+      // Extract and strip dedup stats marker from deep-dive result
+      const DEDUP_MARKER = "\n__DEDUP__:";
+      const dedupIdx = raw.indexOf(DEDUP_MARKER);
+      let resultText = raw.trim();
+      if (dedupIdx !== -1) {
+        try {
+          const ddStats = JSON.parse(raw.slice(dedupIdx + DEDUP_MARKER.length).trim()) as { removedExact?: number; removedNearDupe?: number; removedSummary?: number };
+          if (ddStats && (ddStats.removedExact || ddStats.removedNearDupe || ddStats.removedSummary)) {
+            const dupCount = (ddStats.removedExact ?? 0) + (ddStats.removedNearDupe ?? 0);
+            const sumCount = ddStats.removedSummary ?? 0;
+            const parts: string[] = [];
+            if (dupCount > 0) parts.push(`${dupCount} duplicate row${dupCount !== 1 ? "s" : ""}`);
+            if (sumCount > 0) parts.push(`${sumCount} summary row${sumCount !== 1 ? "s" : ""}`);
+            setDedupMessage(`We cleaned your data before analysis: removed ${parts.join(" and ")}. Your report reflects the deduplicated dataset.`);
+          }
+        } catch { /* non-fatal */ }
+        resultText = raw.slice(0, dedupIdx).trim();
+      }
       setDeepDiveResult(resultText);
 
       // Generate PDF immediately (client-side, synchronous)
@@ -826,6 +859,11 @@ export default function Home() {
               message={errorMsg}
               onDismiss={() => { setErrorMsg(""); setState("idle"); }}
             />
+          )}
+
+          {/* Dedup info banner */}
+          {state === "done" && dedupMessage && (
+            <InfoBanner message={dedupMessage} onDismiss={() => setDedupMessage("")} />
           )}
 
           {/* Deep-dive result */}

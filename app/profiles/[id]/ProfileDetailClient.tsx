@@ -55,6 +55,9 @@ export default function ProfileDetailPage() {
   const [copied, setCopied] = useState(false);
   const [metricsLoading, setMetricsLoading] = useState(false);
 
+  // Column mappings from last upload
+  const [lastColumnMappings, setLastColumnMappings] = useState<{ raw: string; canonical: string }[]>([]);
+
   // Drag-and-drop reordering
   const dragItem = useRef<number | null>(null);
   const dragOver = useRef<number | null>(null);
@@ -176,6 +179,11 @@ export default function ProfileDetailPage() {
       }
 
       setUploadSuccess(`Uploaded successfully. ${json.metrics_extracted} metric columns extracted.`);
+      if (json.columnMappings?.length) {
+        setLastColumnMappings(json.columnMappings);
+      } else {
+        setLastColumnMappings([]);
+      }
       setPeriodLabel("");
       setUploadFile(null);
       fetchProfile();
@@ -299,8 +307,20 @@ export default function ProfileDetailPage() {
             />
           )}
           {uploadSuccess && (
-            <div style={{ background: "#0d2a0d", border: "1px solid #27ae60", borderRadius: 8, padding: "10px 14px", color: "#4caf50", fontSize: 13, marginBottom: 16 }}>
-              {uploadSuccess}
+            <div style={{ background: "#0d2a0d", border: "1px solid #27ae60", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+              <p style={{ color: "#4caf50", fontSize: 13, margin: 0 }}>{uploadSuccess}</p>
+              {lastColumnMappings.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#27ae60", margin: "0 0 6px", letterSpacing: 0.5 }}>COLUMN NAME NORMALIZATIONS</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {lastColumnMappings.map((m, i) => (
+                      <span key={i} style={{ background: "#1a3a1a", border: "1px solid #2e7d32", borderRadius: 6, padding: "3px 8px", fontSize: 11, color: "#81c784" }}>
+                        {m.raw} → {m.canonical}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
