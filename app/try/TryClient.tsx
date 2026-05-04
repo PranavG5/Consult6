@@ -296,6 +296,7 @@ export default function TryPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#272727" }}>
+      <style>{`input::placeholder, textarea::placeholder { color: #4a4a4a !important; }`}</style>
       {/* Navbar */}
       <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>

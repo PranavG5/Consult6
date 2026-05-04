@@ -42,7 +42,7 @@ export default function TermsPage() {
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Accounts and plans</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          You are responsible for maintaining the security of your account credentials. Plan limits (number of analyses per day) are enforced at the account level. We reserve the right to modify plan limits or pricing with reasonable notice. Paid subscriptions are subject to the billing terms presented at the time of purchase.
+          You are responsible for maintaining the security of your account credentials. Plan limits (number of analyses per day) are enforced at the account level. We reserve the right to modify plan limits or pricing with reasonable notice. Paid subscriptions are subject to the billing terms presented at the time of purchase. Report history (analysis results and metadata) is stored server-side and associated with your account; deleting your account permanently removes this data along with your profile and usage records.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Intellectual property</h2>

@@ -34,9 +34,14 @@ export default function AboutPage() {
           Fast, contextual, and actionable. We believe senior financial insight should take seconds, not weeks. Consult6 takes the context you provide (your organization type, sector, size, and constraints) and produces the kind of specific, first-person analysis you would expect from a consulting engagement, not a generic spreadsheet summary.
         </p>
 
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Company Profiles</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          Consult6 includes a Company Profiles feature that lets you save organisations as persistent profiles. You can upload multiple periods of financial data to each profile, and track key metrics over time with visual charts. This gives your analyses historical context and helps you spot trends that would be invisible in a one-off report.
+        </p>
+
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Infrastructure</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 is a web application built on modern cloud infrastructure. User authentication and account credentials are managed securely through Supabase, a PostgreSQL-based backend platform. File data you upload is processed in memory during analysis and is not permanently stored on our servers.
+          Consult6 is a web application built on modern cloud infrastructure. User authentication and account credentials are managed securely through Supabase, a PostgreSQL-based backend platform. File data you upload is processed in memory during analysis and is not permanently stored on our servers. Report history — your previous analysis results and metadata — is saved to your account server-side, so it is accessible across all your devices wherever you sign in.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Where we are headed</h2>

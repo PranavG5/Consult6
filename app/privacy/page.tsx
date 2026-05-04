@@ -27,8 +27,11 @@ export default function PrivacyPage() {
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
           CSV and Excel files you upload are processed in memory on our servers during the analysis and are <strong style={{ color: "#ccc" }}>not permanently stored</strong>. Once the analysis is complete, the raw file data is discarded. We do not retain copies of your spreadsheets.
         </p>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
+          The structured output of each analysis (the findings, flags, and recommendations) is stored <strong style={{ color: "#ccc" }}>server-side in your account</strong> so that your report history is accessible across all your devices. This enables your history sidebar to stay in sync whether you are on your laptop, phone, or another computer. You can disable this in <strong style={{ color: "#ccc" }}>Settings → Privacy</strong> by turning on &ldquo;Disable PDF history&rdquo;, which will stop new results from being saved and clear your existing history.
+        </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          The structured output of each analysis (the findings, flags, and recommendations) is stored locally in your browser using <strong style={{ color: "#ccc" }}>localStorage</strong>, keyed to your account. This data never leaves your device unless you explicitly download a PDF. You can clear your analysis history at any time from the Privacy section of your settings.
+          Raw file data (your spreadsheets) is never stored — only the structured analysis result and metadata (organisation name, file name, date, and analysis mode) are saved to your account record.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Usage data</h2>
