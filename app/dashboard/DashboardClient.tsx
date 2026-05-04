@@ -170,13 +170,12 @@ export default function Home() {
     } catch {}
   }
 
-  async function saveToHistory(result: AnalysisResult, label: string, currentMode: Mode, currentOrgName: string, currentFileNames: string) {
+  async function saveToHistory(result: AnalysisResult, _label: string, currentMode: Mode, currentOrgName: string, currentFileNames: string) {
     try {
       const res = await fetch("/api/history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          label,
           mode: currentMode,
           orgName: currentOrgName,
           fileName: currentFileNames,
