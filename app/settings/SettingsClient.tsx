@@ -30,6 +30,12 @@ interface AdminUser {
   provider: string;
 }
 
+interface ReportCount {
+  user_id: string;
+  mode: string;
+  count: number;
+}
+
 interface ProfileData {
   about_me: string;
   industry: string;
@@ -83,6 +89,8 @@ export default function SettingsPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminSearch, setAdminSearch] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
+  const [reportCounts, setReportCounts] = useState<ReportCount[]>([]);
+  const [reportCountsLoading, setReportCountsLoading] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<AdminUser | null>(null);
   const [upgradePlan, setUpgradePlan] = useState("free");
   const [upgradeNote, setUpgradeNote] = useState("");
@@ -126,6 +134,14 @@ export default function SettingsPage() {
               flash("Admin API error: " + (err?.message ?? "unknown"), false);
               setAdminLoading(false);
             });
+          setReportCountsLoading(true);
+          fetch("/api/admin/report-counts")
+            .then(r => r.json())
+            .then(d => {
+              setReportCounts(d.counts ?? []);
+              setReportCountsLoading(false);
+            })
+            .catch(() => setReportCountsLoading(false));
         }
       }
     }
@@ -466,6 +482,67 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Report Usage */}
+                <div style={{ marginTop: 32 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px" }}>Report Usage</p>
+                  <p style={{ fontSize: 13, color: "#666", margin: "0 0 16px" }}>Total reports run per user, broken down by analysis type.</p>
+                  {reportCountsLoading ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {[1, 2, 3].map(i => (
+                        <div key={i} style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 8, padding: "14px 16px", display: "flex", gap: 16 }}>
+                          <div className="skeleton" style={{ height: 14, width: "40%", borderRadius: 4 }} />
+                          <div className="skeleton" style={{ height: 14, width: "15%", borderRadius: 4 }} />
+                          <div className="skeleton" style={{ height: 14, width: "15%", borderRadius: 4 }} />
+                          <div className="skeleton" style={{ height: 14, width: "10%", borderRadius: 4 }} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (() => {
+                    // Build per-user totals
+                    const userMap: Record<string, { basic: number; advanced: number }> = {};
+                    for (const rc of reportCounts) {
+                      if (!userMap[rc.user_id]) userMap[rc.user_id] = { basic: 0, advanced: 0 };
+                      if (rc.mode === "basic") userMap[rc.user_id].basic += rc.count;
+                      else if (rc.mode === "advanced") userMap[rc.user_id].advanced += rc.count;
+                    }
+                    const rows = Object.entries(userMap)
+                      .map(([uid, counts]) => {
+                        const u = adminUsers.find(au => au.id === uid);
+                        return { uid, email: u?.email ?? uid, basic: counts.basic, advanced: counts.advanced, total: counts.basic + counts.advanced };
+                      })
+                      .filter(r => r.total > 0)
+                      .sort((a, b) => b.total - a.total);
+
+                    if (rows.length === 0) {
+                      return <p style={{ fontSize: 13, color: "#555", textAlign: "center", padding: 20 }}>No report data yet.</p>;
+                    }
+
+                    return (
+                      <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, overflow: "hidden" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: "#3a3a3a" }}>
+                              {["Email", "Basic", "Advanced", "Total"].map(h => (
+                                <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: "#CC5500", fontWeight: 700, fontSize: 11, letterSpacing: 0.5 }}>{h.toUpperCase()}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((r, i) => (
+                              <tr key={r.uid} style={{ borderTop: i === 0 ? "none" : "1px solid #3a3a3a" }}>
+                                <td style={{ padding: "10px 14px", color: "#f0f0f0", fontSize: 12, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email}</td>
+                                <td style={{ padding: "10px 14px", color: "#aaa" }}>{r.basic}</td>
+                                <td style={{ padding: "10px 14px", color: "#aaa" }}>{r.advanced}</td>
+                                <td style={{ padding: "10px 14px", color: "#f0f0f0", fontWeight: 700 }}>{r.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             )}
 

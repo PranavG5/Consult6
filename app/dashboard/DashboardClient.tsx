@@ -31,26 +31,6 @@ interface HistoryItem {
   analysis_result: AnalysisResult;
 }
 
-const HISTORY_STORAGE_KEY = "consult6_history";
-
-function loadHistoryFromStorage(userId: string): HistoryItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(`${HISTORY_STORAGE_KEY}_${userId}`);
-    if (!raw) return [];
-    return JSON.parse(raw) as HistoryItem[];
-  } catch {
-    return [];
-  }
-}
-
-function saveHistoryToStorage(userId: string, items: HistoryItem[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(`${HISTORY_STORAGE_KEY}_${userId}`, JSON.stringify(items));
-  } catch {}
-}
-
 function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const result = Papa.parse(text, { header: true, skipEmptyLines: true });
   return { headers: result.meta.fields ?? [], rows: result.data as Record<string, string>[] };
@@ -133,23 +113,6 @@ export default function Home() {
       if (!data.user) return;
       setUser({ email: data.user.email ?? "" });
 
-      // Transfer any pending guest analysis into this account's history
-      const pending = localStorage.getItem("consult6_guest_pending");
-      if (pending) {
-        try {
-          const p = JSON.parse(pending);
-          const newItem = {
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            created_at: p.createdAt ?? new Date().toISOString(),
-            label: p.label, mode: p.mode, org_name: p.orgName ?? "", file_name: p.fileName ?? "",
-            analysis_result: p.analysisResult,
-          };
-          const existing = loadHistoryFromStorage(data.user.id);
-          saveHistoryToStorage(data.user.id, [newItem, ...existing].slice(0, 5));
-        } catch {}
-        localStorage.removeItem("consult6_guest_pending");
-      }
-
       // Load profile settings
       const { data: prof } = await supabase.from("profiles").select("about_me,industry,company_size,other_context,disable_pdf_history,disable_analysis_memory,settings_popup_shown").eq("id", data.user.id).single();
       if (prof) {
@@ -199,46 +162,30 @@ export default function Home() {
 
   async function fetchHistory() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("account_type")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const acctType: string = profile?.account_type ?? "free";
-      setHistoryAccountType(acctType);
-      const limit = acctType === "free" ? 20 : Infinity;
-
-      const items = loadHistoryFromStorage(user.id).slice(0, limit);
-      setHistory(items);
+      const res = await fetch("/api/history");
+      if (!res.ok) return;
+      const json = await res.json();
+      setHistory(json.history ?? []);
+      setHistoryAccountType(json.accountType ?? "free");
     } catch {}
   }
 
   async function saveToHistory(result: AnalysisResult, label: string, currentMode: Mode, currentOrgName: string, currentFileNames: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const acctType: string = historyAccountType || "free";
-      const limit = acctType === "free" ? 20 : Infinity;
-
-      const newItem: HistoryItem = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        created_at: new Date().toISOString(),
-        label,
-        mode: currentMode,
-        org_name: currentOrgName,
-        file_name: currentFileNames,
-        analysis_result: result,
-      };
-
-      const existing = loadHistoryFromStorage(user.id);
-      const updated = [newItem, ...existing].slice(0, limit);
-      saveHistoryToStorage(user.id, updated);
-      setHistory(updated);
+      const res = await fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label,
+          mode: currentMode,
+          orgName: currentOrgName,
+          fileName: currentFileNames,
+          analysisResult: result,
+        }),
+      });
+      if (res.ok) {
+        fetchHistory();
+      }
     } catch {}
   }
 
@@ -623,6 +570,7 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#272727" }}>
+      <style>{`input::placeholder, textarea::placeholder { color: #4a4a4a !important; }`}</style>
       {/* Navbar */}
       <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
