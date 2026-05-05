@@ -101,7 +101,7 @@ export default function LandingPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Navbar */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "#1e1e1e", borderBottom: "1px solid #2d2d2d", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav className="landing-nav" style={{ position: "sticky", top: 0, zIndex: 100, background: "#1e1e1e", borderBottom: "1px solid #2d2d2d", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <div style={{ width: 30, height: 30, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Consult6</span>
@@ -113,7 +113,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Link href="/auth/login" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "7px 16px" }}>Sign in</Link>
-          <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Get Started Free</Link>
+          <Link href="/auth/signup" className="landing-signup-btn" style={{ background: "#CC5500", color: "#fff", fontWeight: 600, textDecoration: "none", borderRadius: 7 }}>Get Started Free</Link>
         </div>
       </nav>
 

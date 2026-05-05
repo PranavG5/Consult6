@@ -14,7 +14,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 /* offset sticky navbar for anchor links */
 section[id] { scroll-margin-top: 72px; }
@@ -55,6 +55,8 @@ button { cursor: pointer; font-family: inherit; }
 .landing-steps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 .landing-pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 .landing-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.landing-nav { padding: 0 32px; }
+.landing-signup-btn { padding: 8px 18px; font-size: 14px; }
 
 /* ---- AUTH PAGES ---- */
 .auth-card { padding: 28px; }
@@ -76,6 +78,8 @@ button { cursor: pointer; font-family: inherit; }
 @media (max-width: 768px) {
   /* Landing nav */
   .landing-nav-links { display: none; }
+  .landing-nav { padding: 0 16px !important; }
+  .landing-signup-btn { padding: 7px 12px !important; font-size: 13px !important; }
 
   /* Landing hero */
   .landing-hero { padding: 56px 20px 48px; }
