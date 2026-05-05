@@ -280,7 +280,7 @@ export default function ProfileDetailPage() {
           <button
             className="dash-nav-mobile"
             onClick={() => setMobileMenuOpen(o => !o)}
-            style={{ background: "none", border: "none", color: "#aaa", padding: "4px 6px", display: "flex", flexDirection: "column", gap: 5, justifyContent: "center", alignItems: "center" }}
+            style={{ background: "none", border: "none", color: "#aaa", padding: "4px 6px", flexDirection: "column", gap: 5, justifyContent: "center", alignItems: "center" }}
             aria-label="Menu"
           >
             <span style={{ display: "block", width: 22, height: 2, background: "#aaa", borderRadius: 1 }} />

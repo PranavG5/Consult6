@@ -605,7 +605,7 @@ export default function Home() {
               <button
                 className="dash-nav-mobile"
                 onClick={() => setMobileMenuOpen(o => !o)}
-                style={{ background: "none", border: "none", color: "#aaa", padding: "4px 6px", fontSize: 20, lineHeight: 1, display: "flex", flexDirection: "column", gap: 5, justifyContent: "center", alignItems: "center" }}
+                style={{ background: "none", border: "none", color: "#aaa", padding: "4px 6px", fontSize: 20, lineHeight: 1, flexDirection: "column", gap: 5, justifyContent: "center", alignItems: "center" }}
                 aria-label="Menu"
               >
                 <span style={{ display: "block", width: 22, height: 2, background: "#aaa", borderRadius: 1 }} />
