@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (existing) {
-    const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://consult6.vercel.app"}/r/${existing.share_token}`;
+    const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://consult6.app"}/r/${existing.share_token}`;
     return new Response(JSON.stringify({ token: existing.share_token, url }), { headers: { "Content-Type": "application/json" } });
   }
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   if (error || !created) return new Response(JSON.stringify({ error: "Failed to create share" }), { status: 500 });
 
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://consult6.vercel.app"}/r/${created.share_token}`;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://consult6.app"}/r/${created.share_token}`;
   return new Response(JSON.stringify({ token: created.share_token, url }), { headers: { "Content-Type": "application/json" } });
 }
 

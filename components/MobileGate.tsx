@@ -72,7 +72,7 @@ export default function MobileGate({ children }: { children: React.ReactNode }) 
       }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 2, margin: "0 0 8px" }}>YOUR URL</p>
         <p style={{ fontSize: 13, color: "#ccc", margin: 0, wordBreak: "break-all" }}>
-          {typeof window !== "undefined" ? window.location.hostname : "consult6.vercel.app"}
+          {typeof window !== "undefined" ? window.location.hostname : "consult6.app"}
         </p>
       </div>
     </div>
