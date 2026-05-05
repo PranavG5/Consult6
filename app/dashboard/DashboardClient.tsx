@@ -598,12 +598,12 @@ export default function Home() {
       </nav>
 
       {/* Main */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 20, padding: "40px 20px" }}>
+      <div className="dashboard-layout" style={{ justifyContent: "center", padding: "40px 20px", overflowX: "hidden" }}>
       <main style={{ width: "100%", maxWidth: 760, flexShrink: 1 }}>
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="mode-selector">
             {(["basic", "advanced"] as Mode[]).map(m => (
               <button key={m} onClick={() => { setMode(m); reset(); }}
                 style={{ background: mode === m ? "#2a1800" : "#333333", border: `2px solid ${mode === m ? "#CC5500" : "#484848"}`, borderRadius: 10, padding: "14px 16px", textAlign: "left", cursor: "pointer", transition: "all 0.15s" }}>
@@ -1066,7 +1066,7 @@ export default function Home() {
       </main>
 
       {/* History Sidebar */}
-      <aside style={{ width: 220, flexShrink: 0, position: "sticky", top: 76 }}>
+      <aside className="dashboard-sidebar" style={{ position: "sticky", top: 76 }}>
         <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 14px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 12px" }}>REPORT HISTORY</p>
           {profileContext?.disable_pdf_history ? (

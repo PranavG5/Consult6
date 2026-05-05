@@ -64,8 +64,8 @@ export default function ContactClient() {
             <p style={{ fontSize: 15, color: '#777', margin: 0, lineHeight: 1.6 }}>Thanks for reaching out — we&apos;ll get back to you within one business day.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ background: '#232323', border: '1px solid #2f2f2f', borderRadius: 12, padding: '32px', marginBottom: 32 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <form className="contact-form" onSubmit={handleSubmit} style={{ background: '#232323', border: '1px solid #2f2f2f', borderRadius: 12, padding: '32px', marginBottom: 32 }}>
+            <div className="contact-name-email-grid" style={{ marginBottom: 16 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 6 }}>Name <span style={{ color: '#CC5500' }}>*</span></label>
                 <input

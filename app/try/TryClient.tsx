@@ -313,7 +313,7 @@ export default function TryPage() {
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="mode-selector">
             {/* Basic - active */}
             <div style={{ background: "#2a1800", border: "2px solid #CC5500", borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>

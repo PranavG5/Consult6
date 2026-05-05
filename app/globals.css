@@ -41,3 +41,105 @@ input, textarea {
 input:focus, textarea:focus { border-color: var(--orange); }
 
 button { cursor: pointer; font-family: inherit; }
+
+/* ===================== RESPONSIVE ===================== */
+
+body { overflow-x: hidden; }
+
+/* ---- LANDING PAGE ---- */
+.landing-nav-links { display: flex; align-items: center; gap: 4px; }
+.landing-hero { padding: 96px 24px 80px; }
+.landing-h1 { font-size: 60px; letter-spacing: -2px; }
+.landing-vs-grid { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; align-items: start; }
+.landing-who-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.landing-features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.landing-steps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.landing-pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.landing-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+
+/* ---- AUTH PAGES ---- */
+.auth-card { padding: 28px; }
+
+/* ---- CONTACT FORM ---- */
+.contact-name-email-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ---- DASHBOARD ---- */
+.dashboard-layout { display: flex; gap: 24px; align-items: flex-start; }
+.dashboard-sidebar { width: 220px; flex-shrink: 0; }
+.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ---- LEGAL PAGES ---- */
+.legal-main { padding: 72px 40px 96px; max-width: 720px; margin: 0 auto; }
+
+/* ---- GENERAL ---- */
+.responsive-section { padding: 0 24px; }
+
+@media (max-width: 768px) {
+  /* Landing nav */
+  .landing-nav-links { display: none; }
+
+  /* Landing hero */
+  .landing-hero { padding: 56px 20px 48px; }
+  .landing-h1 { font-size: 44px; letter-spacing: -1px; }
+
+  /* Landing VS grid */
+  .landing-vs-grid { grid-template-columns: 1fr; }
+  .landing-vs-divider { padding: 12px 0 !important; text-align: center; }
+
+  /* Landing who grid */
+  .landing-who-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Landing features grid */
+  .landing-features-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Landing steps grid */
+  .landing-steps-grid { grid-template-columns: 1fr; }
+
+  /* Landing pricing grid */
+  .landing-pricing-grid { grid-template-columns: 1fr; }
+
+  /* Landing footer */
+  .landing-footer { flex-direction: column; align-items: flex-start; gap: 20px; }
+
+  /* Auth */
+  .auth-card { padding: 20px; }
+
+  /* Contact */
+  .contact-name-email-grid { grid-template-columns: 1fr; }
+
+  /* Dashboard */
+  .dashboard-layout { flex-direction: column; }
+  .dashboard-sidebar { width: 100%; position: static !important; }
+
+  /* Legal */
+  .legal-main { padding: 40px 20px 60px; }
+}
+
+@media (max-width: 480px) {
+  /* Landing hero */
+  .landing-hero { padding: 48px 16px 40px; }
+  .landing-h1 { font-size: 36px; letter-spacing: -1px; }
+
+  /* Landing who grid */
+  .landing-who-grid { grid-template-columns: 1fr; }
+
+  /* Landing features grid */
+  .landing-features-grid { grid-template-columns: 1fr; }
+
+  /* Mode selector */
+  .mode-selector { grid-template-columns: 1fr; }
+
+  /* Auth inputs — prevent iOS zoom */
+  .auth-card input,
+  .auth-card textarea { font-size: 16px !important; }
+
+  /* Contact inputs — prevent iOS zoom */
+  .contact-form input,
+  .contact-form textarea { font-size: 16px !important; }
+
+  /* General inputs */
+  input, textarea { font-size: 16px !important; }
+
+  /* Legal */
+  .legal-main { padding: 32px 16px 48px; }
+}

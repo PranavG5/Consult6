@@ -106,7 +106,7 @@ export default function LandingPage() {
           <div style={{ width: 30, height: 30, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Consult6</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <a href="#features" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>Features</a>
           <a href="#how-it-works" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>How it Works</a>
           <a href="#pricing" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>Pricing</a>
@@ -118,11 +118,11 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section style={{ maxWidth: 720, margin: "0 auto", padding: "96px 24px 80px", textAlign: "center" }}>
+      <section className="landing-hero" style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
         <div style={{ display: "inline-block", background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 20, padding: "4px 14px", fontSize: 12, fontWeight: 600, color: "#CC5500", letterSpacing: 1, marginBottom: 28 }}>
           POCKET CONSULTANT · 60 SECONDS · NO RETAINER
         </div>
-        <h1 style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.08, margin: "0 0 24px", letterSpacing: -2 }}>
+        <h1 className="landing-h1" style={{ fontWeight: 800, lineHeight: 1.08, margin: "0 0 24px" }}>
           Senior financial insight.<br />
           <span style={{ color: "#CC5500" }}>No consultant fees.</span>
         </h1>
@@ -145,7 +145,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>THE PROBLEM</p>
           <h2 style={{ fontSize: 22, fontWeight: 600, textAlign: "center", margin: "0 0 48px", color: "#888", lineHeight: 1.4 }}>Senior analysis shouldn&apos;t require a senior budget</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 1fr", gap: 0, alignItems: "start" }}>
+          <div className="landing-vs-grid">
             <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "28px 24px" }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#666", letterSpacing: 2, margin: "0 0 20px" }}>CONSULTING FIRM</p>
               {[
@@ -159,7 +159,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 60 }}>
+            <div className="landing-vs-divider" style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 60 }}>
               <span style={{ fontSize: 13, fontWeight: 800, color: "#484848" }}>VS</span>
             </div>
             <div style={{ background: "#1e1000", border: "2px solid #CC5500", borderRadius: 12, padding: "28px 24px" }}>
@@ -186,7 +186,7 @@ export default function LandingPage() {
         <p style={{ fontSize: 15, color: "#666", textAlign: "center", margin: "0 0 40px", lineHeight: 1.7, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
           Consult6 is built for elected or appointed treasurers, financial directors, and finance leads at any kind of organization. Not just large enterprises.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <div className="landing-who-grid">
           {orgTypes.map(org => (
             <div key={org} style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 9, padding: "14px 16px", textAlign: "center" }}>
               <p style={{ fontSize: 13, color: "#ccc", margin: 0, lineHeight: 1.4 }}>{org}</p>
@@ -199,7 +199,7 @@ export default function LandingPage() {
       <section id="features" style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px 96px" }}>
         <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>FEATURES</p>
         <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Everything your treasurer needs to look sharp in the boardroom</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+        <div className="landing-features-grid">
           {features.map(f => (
             <div key={f.title} style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 22px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -220,7 +220,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
           <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 10 }}>HOW IT WORKS</p>
           <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Three steps to a boardroom-ready report</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
+          <div className="landing-steps-grid">
             {[
               { step: "1", title: "Upload your data", desc: "Drop in a CSV or Excel file. Basic supports one file; Advanced supports up to three." },
               { step: "2", title: "Add context (optional)", desc: "Tell the AI your organization type, sector, and any constraints for more tailored results." },
@@ -240,7 +240,7 @@ export default function LandingPage() {
       <section id="pricing" style={{ maxWidth: 1060, margin: "0 auto", padding: "96px 24px" }}>
         <p style={{ fontSize: 32, fontWeight: 700, color: "#CC5500", letterSpacing: 3, textAlign: "center", marginBottom: 10 }}>PRICING</p>
         <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: "center", margin: "0 0 48px", letterSpacing: 0, lineHeight: 1.4, color: "#888" }}>Simple, transparent pricing</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+        <div className="landing-pricing-grid">
 
           {/* Free */}
           <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 14, padding: 28 }}>
@@ -305,7 +305,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #272727", padding: "24px 40px" }}>
-        <div style={{ maxWidth: 1060, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <div className="landing-footer" style={{ maxWidth: 1060, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 26, height: 26, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff" }}>6</div>

@@ -6,7 +6,7 @@ export default function PrivacyPage() {
     <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <InfoNav />
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "72px 24px 96px" }}>
+      <main className="legal-main">
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 12 }}>PRIVACY POLICY</p>
         <h1 style={{ fontSize: 40, fontWeight: 800, color: "#f0f0f0", margin: "0 0 8px", letterSpacing: -1, lineHeight: 1.15 }}>Your privacy, clearly explained</h1>
         <p style={{ fontSize: 13, color: "#555", margin: "0 0 32px" }}>Last updated: April 2026</p>
