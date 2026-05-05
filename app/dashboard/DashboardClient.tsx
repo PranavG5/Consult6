@@ -7,6 +7,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import ErrorBanner from "@/app/components/ErrorBanner";
 import InfoBanner from "@/app/components/InfoBanner";
+import AdUnit from "@/components/AdUnit";
 
 export const metadata = { title: "Dashboard | Consult6" };
 
@@ -714,6 +715,12 @@ export default function Home() {
 
       {/* Main */}
       <div className="dashboard-layout" style={{ justifyContent: "center", padding: "40px 20px", overflowX: "hidden" }}>
+      {/* Left ad column — free users only */}
+      {usage?.accountType === "free" && (
+        <div className="dashboard-ad-left">
+          <AdUnit slot="9012847365" format="vertical" style={{ minHeight: 600, width: 160 }} />
+        </div>
+      )}
       <main style={{ width: "100%", maxWidth: 760, flexShrink: 1 }}>
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>

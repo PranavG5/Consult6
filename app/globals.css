@@ -67,6 +67,7 @@ button { cursor: pointer; font-family: inherit; }
 /* ---- DASHBOARD ---- */
 .dashboard-layout { display: flex; gap: 24px; align-items: flex-start; }
 .dashboard-sidebar { width: 220px; flex-shrink: 0; }
+.dashboard-ad-left { width: 160px; flex-shrink: 0; position: sticky; top: 76px; }
 .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dash-nav-desktop { display: inline-flex; align-items: center; }
 .dash-nav-mobile { display: none; }
@@ -122,6 +123,7 @@ button { cursor: pointer; font-family: inherit; }
   /* Dashboard */
   .dashboard-layout { flex-direction: column; }
   .dashboard-sidebar { width: 100%; position: static !important; }
+  .dashboard-ad-left { display: none !important; }
   .dash-nav-desktop { display: none !important; }
   .dash-nav-mobile { display: flex; }
   .info-nav-email { display: none !important; }

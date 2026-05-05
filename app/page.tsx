@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AdUnit from "@/components/AdUnit";
 
 export const metadata: Metadata = {
   title: "Consult6 | Senior Financial Insight, No Consultant Fees",
@@ -215,6 +216,11 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Ad — between Features and How it Works */}
+      <div style={{ maxWidth: 860, margin: "0 auto 48px", padding: "0 24px" }}>
+        <AdUnit slot="2847391056" format="horizontal" style={{ minHeight: 90 }} />
+      </div>
+
       {/* How it works */}
       <section id="how-it-works" style={{ borderTop: "1px solid #272727", borderBottom: "1px solid #272727", background: "#212121", padding: "96px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
@@ -235,6 +241,11 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Ad — between How it Works and Pricing */}
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 0" }}>
+        <AdUnit slot="5193820473" format="horizontal" style={{ minHeight: 90 }} />
+      </div>
 
       {/* Pricing */}
       <section id="pricing" style={{ maxWidth: 1060, margin: "0 auto", padding: "96px 24px" }}>
