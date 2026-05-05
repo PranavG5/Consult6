@@ -102,6 +102,10 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [dedupMessage, setDedupMessage] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+  const [shareState, setShareState] = useState<"idle" | "loading" | "shared">("idle");
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState(false);
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
@@ -184,9 +188,49 @@ export default function Home() {
         }),
       });
       if (res.ok) {
+        const json = await res.json();
+        if (json.analysis_id) setCurrentAnalysisId(json.analysis_id);
         fetchHistory();
       }
     } catch {}
+  }
+
+  async function handleShare() {
+    if (!currentAnalysisId) return;
+    if (shareState === "shared" && shareToken) {
+      const url = `${window.location.origin}/r/${shareToken}`;
+      navigator.clipboard.writeText(url).then(() => { setShareToast(true); setTimeout(() => setShareToast(false), 3000); });
+      return;
+    }
+    setShareState("loading");
+    try {
+      const res = await fetch("/api/share-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis_id: currentAnalysisId }),
+      });
+      if (res.ok) {
+        const { token, url } = await res.json();
+        setShareToken(token);
+        setShareState("shared");
+        navigator.clipboard.writeText(url).then(() => { setShareToast(true); setTimeout(() => setShareToast(false), 3000); });
+      } else {
+        setShareState("idle");
+      }
+    } catch {
+      setShareState("idle");
+    }
+  }
+
+  async function handleRevoke() {
+    if (!currentAnalysisId) return;
+    await fetch("/api/share-report", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ analysis_id: currentAnalysisId }),
+    });
+    setShareState("idle");
+    setShareToken(null);
   }
 
   function downloadHistoryPDF(item: HistoryItem) {
@@ -453,6 +497,10 @@ export default function Home() {
     setDeepDivePdfBytes(null);
     setCopied(false);
     setSelectedProfileId("");
+    setCurrentAnalysisId(null);
+    setShareState("idle");
+    setShareToken(null);
+    setShareToast(false);
   }
 
   async function runDeepDive() {
@@ -1074,11 +1122,26 @@ export default function Home() {
           )}
 
           {/* Action buttons */}
-          <div style={{ display: "flex", gap: 10 }}>
+          {shareToast && (
+            <div style={{ background: "#0a1a0e", border: "1px solid #16a34a", borderRadius: 8, padding: "10px 16px", marginBottom: 10, fontSize: 13, color: "#4ade80", display: "flex", alignItems: "center", gap: 8 }}>
+              ✓ Link copied to clipboard! Anyone with this link can view your report.
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {state === "done" && outputMode === "report" ? (
-              <button onClick={downloadPDF} style={{ flex: 1, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
-                Download PDF Report
-              </button>
+              <>
+                <button onClick={downloadPDF} style={{ flex: 1, minWidth: 160, background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700 }}>
+                  ↓ Download PDF
+                </button>
+                {currentAnalysisId && (
+                  <button
+                    onClick={handleShare}
+                    disabled={shareState === "loading"}
+                    style={{ flex: 1, minWidth: 140, background: shareState === "shared" ? "#0a1a0e" : "#2d2d2d", color: shareState === "shared" ? "#4ade80" : "#f0f0f0", border: `1px solid ${shareState === "shared" ? "#16a34a" : "#484848"}`, borderRadius: 9, padding: "14px 0", fontSize: 15, fontWeight: 700, opacity: shareState === "loading" ? 0.6 : 1 }}>
+                    {shareState === "loading" ? "Sharing…" : shareState === "shared" ? "⇗ Shared ✓" : "⇗ Share Report"}
+                  </button>
+                )}
+              </>
             ) : state !== "done" ? (
               <button
                 onClick={() => outputMode === "deepdive" ? runDeepDive() : runAnalysis()}
@@ -1092,6 +1155,13 @@ export default function Home() {
               </button>
             ) : null}
           </div>
+          {state === "done" && shareState === "shared" && (
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <button onClick={handleRevoke} style={{ background: "none", border: "none", color: "#555", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+                Revoke access
+              </button>
+            </div>
+          )}
         </div>
       </main>
 

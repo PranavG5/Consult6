@@ -81,13 +81,13 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { error: insertError } = await supabase.from("analysis_history").insert({
+  const { data: inserted, error: insertError } = await supabase.from("analysis_history").insert({
     user_id: user.id,
     org_name: orgName ?? "",
     file_name: fileName ?? "",
     mode,
     analysis_data: analysisResult,
-  });
+  }).select("id").single();
 
   if (insertError) {
     return new Response(JSON.stringify({ error: insertError.message }), {
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     await supabase.from("analysis_history").delete().in("id", toDelete);
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
+  return new Response(JSON.stringify({ ok: true, analysis_id: inserted?.id ?? null }), {
     headers: { "Content-Type": "application/json" },
   });
 }
