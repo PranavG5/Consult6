@@ -113,6 +113,8 @@ export default function ProfilesPage() {
           <div className="dash-nav-mobile" style={{ position: "absolute", top: 56, right: 16, background: "#1e1e1e", border: "1px solid #3a3a3a", borderRadius: 10, padding: "8px 0", minWidth: 160, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
             <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Dashboard</Link>
             <Link href="/settings" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Settings</Link>
+            <div style={{ height: 1, background: "#2d2d2d", margin: "6px 0" }} />
+            <button onClick={async () => { setMobileMenuOpen(false); await supabase.auth.signOut(); window.location.href = "/"; }} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 20px", fontSize: 14, color: "#f87171", background: "none", border: "none" }}>Sign out</button>
           </div>
         )}
       </nav>

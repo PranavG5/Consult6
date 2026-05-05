@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase-browser";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import {
@@ -31,6 +32,7 @@ const COLORS = ["#CC5500", "#2980b9", "#27ae60", "#d4a017", "#9b59b6", "#e74c3c"
 export default function ProfileDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const supabase = createClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [profile, setProfile] = useState<{ id: string; name: string; sector: string; created_at: string } | null>(null);
@@ -292,6 +294,8 @@ export default function ProfileDetailPage() {
             <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Dashboard</Link>
             <Link href="/profiles" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Profiles</Link>
             <Link href="/settings" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Settings</Link>
+            <div style={{ height: 1, background: "#2d2d2d", margin: "6px 0" }} />
+            <button onClick={async () => { setMobileMenuOpen(false); await supabase.auth.signOut(); window.location.href = "/"; }} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 20px", fontSize: 14, color: "#f87171", background: "none", border: "none" }}>Sign out</button>
           </div>
         )}
       </nav>
