@@ -1185,11 +1185,6 @@ export default function Home() {
           )}
 
           {/* Action buttons */}
-          {shareToast && (
-            <div style={{ background: "#0a1a0e", border: "1px solid #16a34a", borderRadius: 8, padding: "10px 16px", marginBottom: 10, fontSize: 13, color: "#4ade80", display: "flex", alignItems: "center", gap: 8 }}>
-              ✓ Link copied to clipboard! Anyone with this link can view your report.
-            </div>
-          )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {state === "done" && outputMode === "report" ? (
               <>
@@ -1223,6 +1218,11 @@ export default function Home() {
 
       {/* History Sidebar */}
       <aside className="dashboard-sidebar" style={{ position: "sticky", top: 76 }}>
+        {shareToast && (
+          <div style={{ background: "#0a1a0e", border: "1px solid #16a34a", borderRadius: 8, padding: "8px 12px", marginBottom: 8, fontSize: 12, color: "#4ade80", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ flexShrink: 0 }}>✓</span> Link copied to clipboard!
+          </div>
+        )}
         <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 14px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 12px" }}>REPORT HISTORY</p>
           {profileContext?.disable_pdf_history ? (
