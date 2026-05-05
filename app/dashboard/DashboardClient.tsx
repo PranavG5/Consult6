@@ -229,17 +229,6 @@ export default function Home() {
     }
   }
 
-  async function handleRevoke() {
-    if (!currentAnalysisId) return;
-    await fetch("/api/share-report", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ analysis_id: currentAnalysisId }),
-    });
-    setShareState("idle");
-    setShareToken(null);
-  }
-
   async function handleHistoryShare(item: HistoryItem) {
     const existing = historyShareTokens[item.id];
     if (existing) {
@@ -267,30 +256,15 @@ export default function Home() {
     }
   }
 
-  async function handleHistoryToggleLock(item: HistoryItem) {
-    const existing = historyShareTokens[item.id];
+  async function handleHistoryDestroy(item: HistoryItem) {
     setHistoryShareLoading(prev => ({ ...prev, [item.id]: true }));
     try {
-      if (existing) {
-        // Revoke
-        await fetch("/api/share-report", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ analysis_id: item.id }),
-        });
-        setHistoryShareTokens(prev => ({ ...prev, [item.id]: null }));
-      } else {
-        // Create share
-        const res = await fetch("/api/share-report", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ analysis_id: item.id }),
-        });
-        if (res.ok) {
-          const { token } = await res.json();
-          setHistoryShareTokens(prev => ({ ...prev, [item.id]: token }));
-        }
-      }
+      await fetch("/api/share-report", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis_id: item.id }),
+      });
+      setHistoryShareTokens(prev => ({ ...prev, [item.id]: null }));
     } finally {
       setHistoryShareLoading(prev => ({ ...prev, [item.id]: false }));
     }
@@ -1269,13 +1243,15 @@ export default function Home() {
                         style={{ width: 30, background: "#3a3a3a", border: "1px solid #494949", color: historyShareTokens[item.id] ? "#4ade80" : "#aaa", borderRadius: 5, padding: "5px 0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                         ⇗
                       </button>
-                      <button
-                        onClick={() => handleHistoryToggleLock(item)}
-                        disabled={historyShareLoading[item.id]}
-                        title={historyShareTokens[item.id] ? "Revoke share link" : "Link not active"}
-                        style={{ width: 30, background: "#3a3a3a", border: `1px solid ${historyShareTokens[item.id] ? "#CC5500" : "#494949"}`, color: historyShareTokens[item.id] ? "#CC5500" : "#555", borderRadius: 5, padding: "5px 0", fontSize: 13, cursor: "pointer" }}>
-                        {historyShareTokens[item.id] ? "🔒" : "🔓"}
-                      </button>
+                      {historyShareTokens[item.id] && (
+                        <button
+                          onClick={() => handleHistoryDestroy(item)}
+                          disabled={historyShareLoading[item.id]}
+                          title="Remove public webpage"
+                          style={{ width: 30, background: "#3a3a3a", border: "1px solid #5c1a1a", color: "#e74c3c", borderRadius: 5, padding: "5px 0", fontSize: 13, cursor: "pointer" }}>
+                          🗑
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

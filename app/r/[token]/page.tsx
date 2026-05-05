@@ -40,8 +40,8 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
     return (
       <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center" }}>
         <div style={{ width: 64, height: 64, borderRadius: 16, background: "#2d2d2d", border: "1px solid #484848", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 24 }}>🔒</div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 12px" }}>This report is no longer available</h1>
-        <p style={{ fontSize: 15, color: "#666", margin: "0 0 32px", lineHeight: 1.6, maxWidth: 400 }}>The owner may have revoked access to this link, or it never existed.</p>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 12px" }}>The owner has removed this report</h1>
+        <p style={{ fontSize: 15, color: "#666", margin: "0 0 32px", lineHeight: 1.6, maxWidth: 400 }}>The owner of this report has removed its public webpage. The link is no longer active.</p>
         <Link href="/" style={{ background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 28px", borderRadius: 9 }}>
           Analyze your own financials →
         </Link>
