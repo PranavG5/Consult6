@@ -106,7 +106,7 @@ export default function LandingPage() {
           <div style={{ width: 30, height: 30, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 15, color: "#f0f0f0" }}>Consult6</span>
         </div>
-        <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="landing-nav-links">
           <a href="#features" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>Features</a>
           <a href="#how-it-works" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>How it Works</a>
           <a href="#pricing" style={{ fontSize: 14, color: "#aaa", textDecoration: "none", padding: "6px 14px" }}>Pricing</a>
