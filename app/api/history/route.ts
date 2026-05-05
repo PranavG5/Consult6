@@ -38,6 +38,19 @@ export async function GET() {
     });
   }
 
+  // Fetch active share tokens for all returned history items
+  const ids = (rows ?? []).map(r => r.id);
+  const { data: shares } = ids.length
+    ? await supabase
+        .from("shared_reports")
+        .select("analysis_id, share_token")
+        .in("analysis_id", ids)
+        .is("revoked_at", null)
+    : { data: [] };
+
+  const shareMap: Record<string, string> = {};
+  for (const s of (shares ?? [])) shareMap[s.analysis_id] = s.share_token;
+
   // Map analysis_data → analysis_result for the client
   const history = (rows ?? []).map(r => ({
     id: r.id,
@@ -47,6 +60,7 @@ export async function GET() {
     file_name: r.file_name,
     mode: r.mode,
     analysis_result: r.analysis_data,
+    share_token: shareMap[r.id] ?? null,
   }));
 
   return new Response(JSON.stringify({ history, accountType, limit }), {

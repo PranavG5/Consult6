@@ -29,6 +29,7 @@ interface HistoryItem {
   org_name: string;
   file_name: string;
   analysis_result: AnalysisResult;
+  share_token: string | null;
 }
 
 function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
@@ -106,6 +107,8 @@ export default function Home() {
   const [shareState, setShareState] = useState<"idle" | "loading" | "shared">("idle");
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState(false);
+  const [historyShareTokens, setHistoryShareTokens] = useState<Record<string, string | null>>({});
+  const [historyShareLoading, setHistoryShareLoading] = useState<Record<string, boolean>>({});
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
@@ -170,8 +173,12 @@ export default function Home() {
       const res = await fetch("/api/history");
       if (!res.ok) return;
       const json = await res.json();
-      setHistory(json.history ?? []);
+      const items: HistoryItem[] = json.history ?? [];
+      setHistory(items);
       setHistoryAccountType(json.accountType ?? "free");
+      const tokens: Record<string, string | null> = {};
+      for (const item of items) tokens[item.id] = item.share_token;
+      setHistoryShareTokens(tokens);
     } catch {}
   }
 
@@ -231,6 +238,62 @@ export default function Home() {
     });
     setShareState("idle");
     setShareToken(null);
+  }
+
+  async function handleHistoryShare(item: HistoryItem) {
+    const existing = historyShareTokens[item.id];
+    if (existing) {
+      navigator.clipboard.writeText(`${window.location.origin}/r/${existing}`);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 3000);
+      return;
+    }
+    setHistoryShareLoading(prev => ({ ...prev, [item.id]: true }));
+    try {
+      const res = await fetch("/api/share-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis_id: item.id }),
+      });
+      if (res.ok) {
+        const { token, url } = await res.json();
+        setHistoryShareTokens(prev => ({ ...prev, [item.id]: token }));
+        navigator.clipboard.writeText(url);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 3000);
+      }
+    } finally {
+      setHistoryShareLoading(prev => ({ ...prev, [item.id]: false }));
+    }
+  }
+
+  async function handleHistoryToggleLock(item: HistoryItem) {
+    const existing = historyShareTokens[item.id];
+    setHistoryShareLoading(prev => ({ ...prev, [item.id]: true }));
+    try {
+      if (existing) {
+        // Revoke
+        await fetch("/api/share-report", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analysis_id: item.id }),
+        });
+        setHistoryShareTokens(prev => ({ ...prev, [item.id]: null }));
+      } else {
+        // Create share
+        const res = await fetch("/api/share-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analysis_id: item.id }),
+        });
+        if (res.ok) {
+          const { token } = await res.json();
+          setHistoryShareTokens(prev => ({ ...prev, [item.id]: token }));
+        }
+      }
+    } finally {
+      setHistoryShareLoading(prev => ({ ...prev, [item.id]: false }));
+    }
   }
 
   function downloadHistoryPDF(item: HistoryItem) {
@@ -1155,13 +1218,6 @@ export default function Home() {
               </button>
             ) : null}
           </div>
-          {state === "done" && shareState === "shared" && (
-            <div style={{ textAlign: "center", marginTop: 8 }}>
-              <button onClick={handleRevoke} style={{ background: "none", border: "none", color: "#555", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
-                Revoke access
-              </button>
-            </div>
-          )}
         </div>
       </main>
 
@@ -1200,11 +1256,27 @@ export default function Home() {
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#e0e0e0", margin: "0 0 8px", lineHeight: 1.3, wordBreak: "break-word" }}>
                       {item.label}
                     </p>
-                    <button
-                      onClick={() => downloadHistoryPDF(item)}
-                      style={{ width: "100%", background: "#3a3a3a", border: "1px solid #494949", color: "#CC5500", borderRadius: 5, padding: "5px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                      ↓ Download PDF
-                    </button>
+                    <div style={{ display: "flex", gap: 5 }}>
+                      <button
+                        onClick={() => downloadHistoryPDF(item)}
+                        style={{ flex: 1, background: "#3a3a3a", border: "1px solid #494949", color: "#CC5500", borderRadius: 5, padding: "5px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                        ↓ PDF
+                      </button>
+                      <button
+                        onClick={() => handleHistoryShare(item)}
+                        disabled={historyShareLoading[item.id]}
+                        title={historyShareTokens[item.id] ? "Copy share link" : "Share report"}
+                        style={{ width: 30, background: "#3a3a3a", border: "1px solid #494949", color: historyShareTokens[item.id] ? "#4ade80" : "#aaa", borderRadius: 5, padding: "5px 0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                        ⇗
+                      </button>
+                      <button
+                        onClick={() => handleHistoryToggleLock(item)}
+                        disabled={historyShareLoading[item.id]}
+                        title={historyShareTokens[item.id] ? "Revoke share link" : "Link not active"}
+                        style={{ width: 30, background: "#3a3a3a", border: `1px solid ${historyShareTokens[item.id] ? "#CC5500" : "#494949"}`, color: historyShareTokens[item.id] ? "#CC5500" : "#555", borderRadius: 5, padding: "5px 0", fontSize: 13, cursor: "pointer" }}>
+                        {historyShareTokens[item.id] ? "🔒" : "🔓"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
