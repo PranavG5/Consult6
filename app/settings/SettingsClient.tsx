@@ -95,6 +95,7 @@ export default function SettingsPage() {
   const [upgradePlan, setUpgradePlan] = useState("free");
   const [upgradeNote, setUpgradeNote] = useState("");
   const [upgrading, setUpgrading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -236,15 +237,34 @@ export default function SettingsPage() {
     <div style={{ minHeight: "100vh", background: "#272727" }}>
       <style>{`input::placeholder, textarea::placeholder { color: #4a4a4a !important; }`}</style>
       {/* Navbar */}
-      <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, overflow: "visible" }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "#888" }}>{user?.email}</span>
-          <Link href="/dashboard" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>← Dashboard</Link>
+          {/* Desktop */}
+          <span className="dash-nav-desktop" style={{ fontSize: 13, color: "#888" }}>{user?.email}</span>
+          <Link href="/dashboard" className="dash-nav-desktop" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>← Dashboard</Link>
+          {/* Mobile hamburger */}
+          <button
+            className="dash-nav-mobile"
+            onClick={() => setMobileMenuOpen(o => !o)}
+            style={{ background: "none", border: "none", color: "#aaa", padding: "4px 6px", display: "flex", flexDirection: "column", gap: 5, justifyContent: "center", alignItems: "center" }}
+            aria-label="Menu"
+          >
+            <span style={{ display: "block", width: 22, height: 2, background: "#aaa", borderRadius: 1 }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "#aaa", borderRadius: 1 }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "#aaa", borderRadius: 1 }} />
+          </button>
         </div>
+        {/* Mobile dropdown */}
+        {mobileMenuOpen && (
+          <div className="dash-nav-mobile" style={{ position: "absolute", top: 56, right: 16, background: "#1e1e1e", border: "1px solid #3a3a3a", borderRadius: 10, padding: "8px 0", minWidth: 160, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+            <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Dashboard</Link>
+            <Link href="/profiles" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Profiles</Link>
+          </div>
+        )}
       </nav>
 
       <main style={{ maxWidth: 820, margin: "40px auto", padding: "0 20px" }}>
