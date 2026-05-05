@@ -2,6 +2,16 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // If Supabase sends the OAuth/magic-link code to any page other than
+  // /auth/callback, redirect it there so the session can be exchanged.
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && !request.nextUrl.pathname.startsWith("/auth/callback")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    url.searchParams.set("code", code);
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
