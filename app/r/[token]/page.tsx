@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createAnonClient } from "@/lib/supabase-anon";
 import type { AnalysisResult, Flag, Recommendation, IndustryComparison, RiskMatrixItem } from "@/lib/generateReport";
 
 interface SharedReport {
@@ -9,14 +10,38 @@ interface SharedReport {
 }
 
 async function fetchReport(token: string): Promise<SharedReport | null> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://consult6.vercel.app";
-  try {
-    const res = await fetch(`${base}/api/shared/${token}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
+  const supabase = createAnonClient();
+
+  const { data: share } = await supabase
+    .from("shared_reports")
+    .select("id, analysis_id, view_count")
+    .eq("share_token", token)
+    .is("revoked_at", null)
+    .single();
+
+  if (!share) return null;
+
+  const { data: analysis } = await supabase
+    .from("analysis_history")
+    .select("org_name, mode, created_at, analysis_data")
+    .eq("id", share.analysis_id)
+    .single();
+
+  if (!analysis) return null;
+
+  // Increment view_count fire-and-forget
+  supabase
+    .from("shared_reports")
+    .update({ view_count: (share.view_count ?? 0) + 1 })
+    .eq("id", share.id)
+    .then(() => {});
+
+  return {
+    org_name: analysis.org_name,
+    mode: analysis.mode,
+    created_at: analysis.created_at,
+    analysis_data: analysis.analysis_data,
+  };
 }
 
 const sevStyle: Record<string, { bg: string; border: string; labelBg: string; label: string }> = {
@@ -56,13 +81,13 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
     <div style={{ minHeight: "100vh", background: "#1e1e1e", color: "#f0f0f0", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Top banner */}
       <div style={{ background: "#161616", borderBottom: "1px solid #2d2d2d", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <div style={{ width: 28, height: 28, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff", flexShrink: 0 }}>6</div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#f0f0f0" }}>Consult6</span>
-          <span style={{ color: "#484848", margin: "0 6px" }}>|</span>
-          <span style={{ fontSize: 13, color: "#888" }}>Shared report · {org_name || "Financial Report"}</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: "#f0f0f0", flexShrink: 0 }}>Consult6</span>
+          <span style={{ color: "#484848", margin: "0 6px", flexShrink: 0 }}>|</span>
+          <span style={{ fontSize: 13, color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Shared report · {org_name || "Financial Report"}</span>
         </div>
-        <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "7px 16px", borderRadius: 7, whiteSpace: "nowrap" }}>
+        <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "7px 16px", borderRadius: 7, whiteSpace: "nowrap", marginLeft: 12 }}>
           Analyze your own →
         </Link>
       </div>
@@ -170,11 +195,11 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
             <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>12-MONTH SCENARIOS</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
               {[
-                { label: "Optimistic", text: a.scenarios.optimistic, color: "#27ae60", border: "#1a5e32" },
-                { label: "Base Case",  text: a.scenarios.base,       color: "#f0f0f0", border: "#484848" },
-                { label: "Pessimistic",text: a.scenarios.pessimistic, color: "#e74c3c", border: "#5c1a1a" },
+                { label: "Optimistic",  text: a.scenarios.optimistic,  color: "#27ae60", border: "#1a5e32" },
+                { label: "Base Case",   text: a.scenarios.base,        color: "#f0f0f0", border: "#484848" },
+                { label: "Pessimistic", text: a.scenarios.pessimistic, color: "#e74c3c", border: "#5c1a1a" },
               ].map(s => (
-                <div key={s.label} style={{ background: "#232323", border: `1px solid ${s.border}`, borderRadius: 8, padding: "14px 14px" }}>
+                <div key={s.label} style={{ background: "#232323", border: `1px solid ${s.border}`, borderRadius: 8, padding: "14px" }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: s.color, letterSpacing: 0.5, margin: "0 0 8px" }}>{s.label.toUpperCase()}</p>
                   <p style={{ fontSize: 13, color: "#ccc", margin: 0, lineHeight: 1.5 }}>{s.text}</p>
                 </div>
@@ -192,7 +217,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
               const lo = r.likelihood === "low" && r.impact === "low";
               const col = hi ? "#e74c3c" : lo ? "#27ae60" : "#CC5500";
               return (
-                <div key={i} style={{ background: "#232323", border: `1px solid #333`, borderRadius: 8, padding: "12px 14px", marginBottom: 8 }}>
+                <div key={i} style={{ background: "#232323", border: "1px solid #333", borderRadius: 8, padding: "12px 14px", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 700, fontSize: 13, color: "#f0f0f0" }}>{r.risk}</span>
                     <span style={{ fontSize: 10, fontWeight: 700, color: col, background: "#1e1e1e", border: `1px solid ${col}`, padding: "2px 7px", borderRadius: 10 }}>
@@ -211,9 +236,9 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ACTION PLAN</p>
             {[
-              { label: "Immediate", items: a.actionPlan.immediate, color: "#e74c3c" },
-              { label: "Short-term", items: a.actionPlan.shortTerm, color: "#CC5500" },
-              { label: "Long-term", items: a.actionPlan.longTerm, color: "#27ae60" },
+              { label: "Immediate",  items: a.actionPlan.immediate,  color: "#e74c3c" },
+              { label: "Short-term", items: a.actionPlan.shortTerm,  color: "#CC5500" },
+              { label: "Long-term",  items: a.actionPlan.longTerm,   color: "#27ae60" },
             ].map(section => section.items?.length > 0 && (
               <div key={section.label} style={{ background: "#232323", border: "1px solid #333", borderRadius: 8, padding: "12px 14px", marginBottom: 8 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: section.color, letterSpacing: 0.5, margin: "0 0 8px" }}>{section.label.toUpperCase()}</p>
