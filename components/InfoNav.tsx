@@ -32,7 +32,7 @@ export default function InfoNav() {
       </Link>
       {email ? (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "#666" }}>{email}</span>
+          <span className="info-nav-email" style={{ fontSize: 13, color: "#666" }}>{email}</span>
           <Link href="/dashboard" style={{ background: "#CC5500", color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Dashboard</Link>
         </div>
       ) : (
