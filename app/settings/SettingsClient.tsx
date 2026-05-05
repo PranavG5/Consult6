@@ -277,9 +277,9 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+        <div className="settings-layout" style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
           {/* Sidebar tabs */}
-          <div style={{ width: 180, flexShrink: 0 }}>
+          <div className="settings-tabs" style={{ width: 180, flexShrink: 0 }}>
             {tabLabels.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{ width: "100%", textAlign: "left", background: tab === t.id ? "#2a1800" : "transparent", border: tab === t.id ? "1px solid #CC5500" : "1px solid transparent", borderRadius: 8, padding: "10px 14px", fontSize: 14, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? "#CC5500" : "#888", cursor: "pointer", marginBottom: 4 }}>
@@ -289,7 +289,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 28 }}>
+          <div className="settings-content" style={{ flex: 1, background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: 28 }}>
 
             {/* ── PROFILE ── */}
             {tab === "profile" && (
