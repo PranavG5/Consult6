@@ -1004,15 +1004,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Error */}
-          {state === "error" && errorMsg && (
-            <ErrorBanner
-              title="Analysis failed"
-              message={errorMsg}
-              onDismiss={() => { setErrorMsg(""); setState("idle"); }}
-            />
-          )}
-
           {/* Dedup info banner */}
           {state === "done" && dedupMessage && (
             <InfoBanner message={dedupMessage} onDismiss={() => setDedupMessage("")} />
@@ -1305,6 +1296,24 @@ export default function Home() {
               </button>
             ) : null}
           </div>
+
+          {/* Error — shown below the run button */}
+          {state === "error" && errorMsg && (
+            <div style={{ marginTop: 12 }}>
+              <ErrorBanner
+                title="Analysis failed"
+                message={errorMsg}
+                onDismiss={() => { setErrorMsg(""); setState("idle"); }}
+              />
+            </div>
+          )}
+
+          {/* Share toast — shown below action buttons */}
+          {shareToast && (
+            <div style={{ marginTop: 12, background: "#0a1a0e", border: "1px solid #16a34a", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#4ade80", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ flexShrink: 0 }}>✓</span> Link copied to clipboard!
+            </div>
+          )}
         </div>
       </main>
 
