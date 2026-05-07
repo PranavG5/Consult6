@@ -172,8 +172,12 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  type SectionsConfig = { executiveSummary: boolean; recommendations: boolean; benchmarks: boolean; trajectory: boolean; riskMatrix: boolean };
+  const DEFAULT_SECTIONS: SectionsConfig = { executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true };
+
   let rawText: string, fileName: string, orgName: string, mode: string;
   let companySize: string, industry: string, constraints: string, extraContext: string, profileId: string;
+  let sections: SectionsConfig = { ...DEFAULT_SECTIONS };
   const ct = req.headers.get("content-type") ?? "";
 
   if (ct.includes("multipart/form-data")) {
@@ -187,6 +191,8 @@ export async function POST(req: NextRequest) {
     constraints = (fd.get("constraints") as string) ?? "";
     extraContext = (fd.get("extraContext") as string) ?? "";
     profileId = (fd.get("profileId") as string) ?? "";
+    const sectionsStr = fd.get("sections") as string;
+    if (sectionsStr) { try { sections = { ...DEFAULT_SECTIONS, ...JSON.parse(sectionsStr) }; } catch {} }
   } else {
     const body = await req.json();
     rawText = body.rawText ?? body.data ?? "";
@@ -198,6 +204,7 @@ export async function POST(req: NextRequest) {
     constraints = body.constraints ?? "";
     extraContext = body.extraContext ?? "";
     profileId = body.profileId ?? "";
+    if (body.sections) { try { sections = { ...DEFAULT_SECTIONS, ...body.sections }; } catch {} }
   }
 
   if (!rawText) {
@@ -355,11 +362,60 @@ Instructions:
         let resultJson: object;
 
         if (mode === "advanced") {
+          const sectionInstructions: string[] = [];
+          const jsonFields: string[] = [
+            `"flags": [{"title":"string","severity":"critical|warning|info","description":"string","metric":"string"}]`,
+          ];
+
+          if (sections.executiveSummary) {
+            sectionInstructions.push(`EXECUTIVE SUMMARY (field: "summary"):
+Identify the 3-5 most important trends and discrepancies in the data.
+Be purely observational. Do NOT include recommendations, suggestions, or action items. Describe only what the data shows — the most significant trends and discrepancies.`);
+            jsonFields.unshift(`"summary": "string"`);
+          }
+          if (sections.recommendations) {
+            sectionInstructions.push(`RECOMMENDATIONS (field: "recommendations"):
+Provide 3-4 prioritized, specific action items tailored to this organization's actual situation. Under 40 words each.`);
+            sectionInstructions.push(`ACTION PLAN (field: "actionPlan"):
+2 items per phase (immediate/shortTerm/longTerm), each under 25 words. Specific to this org.`);
+            sectionInstructions.push(`CASE STUDIES (field: "caseStudies"):
+1-2 entries. Do NOT fabricate specific named organizations. Use a real documented case with a verifiable citation, OR set organization to "Illustrative example" and omit source. Keep challenge/solution/outcome under 20 words each.`);
+            jsonFields.push(`"recommendations": [{"title":"string","detail":"string","priority":"high|medium|low"}]`);
+            jsonFields.push(`"caseStudies": [{"organization":"string","challenge":"string","solution":"string","outcome":"string","source":"string"}]`);
+            jsonFields.push(`"actionPlan": {"immediate":["string"],"shortTerm":["string"],"longTerm":["string"]}`);
+          }
+          if (sections.benchmarks) {
+            sectionInstructions.push(`INDUSTRY BENCHMARKS (field: "industryComparisons"):
+3 entries benchmarked to this org's specific sector. Use realistic industry averages. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named program_expenses, program_costs, or direct_service_costs — never substitute general overhead columns.
+Also include trend chart data (field: "trendData"): Exactly 6 labels and 6 values per series. Use real date/period labels. 2 series max. Values must reflect actual data.`);
+            jsonFields.push(`"trendData": {"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]}`);
+            jsonFields.push(`"industryComparisons": [{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}]`);
+          }
+          if (sections.trajectory) {
+            sectionInstructions.push(`WHERE THIS IS HEADING (fields: "trajectoryNote" and "scenarios"):
+trajectoryNote: 1-2 sentences grounded in actual trends from the data.
+scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.`);
+            jsonFields.push(`"trajectoryNote": "string"`);
+            jsonFields.push(`"scenarios": {"optimistic":"string","base":"string","pessimistic":"string"}`);
+          }
+          if (sections.riskMatrix) {
+            sectionInstructions.push(`RISK MATRIX (field: "riskMatrix"):
+3 risks, each under 30 words. Based on actual flags found in the data. Ranked by likelihood and impact, with mitigation strategies.`);
+            jsonFields.push(`"riskMatrix": [{"risk":"string","likelihood":"high|medium|low","impact":"high|medium|low","mitigation":"string"}]`);
+          }
+
+          const dynamicSchema = `{\n  ${jsonFields.join(",\n  ")}\n}`;
+          const sectionsPrompt = sectionInstructions.length
+            ? `\nGenerate ONLY the following sections — do not include any sections not listed here:\n${sectionInstructions.join("\n\n")}`
+            : "";
+
+          const dynamicSystem = `${SYSTEM_ADVANCED.replace(/Return ONLY valid JSON with this exact structure[\s\S]*?Write the entire report in first-person plural[\s\S]*?together\./, `Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.\n\n${dynamicSchema}\n\nRules:\n- flags: 3-5 items. Only flag real data points. Each description under 40 words. Metric must be a specific value from the data.\n- summary (if included): Be purely observational. Do NOT include recommendations, suggestions, or action items. Describe only what the data shows.\n- recommendations (if included): 3-4 items, specific to this org's actual situation. Under 40 words each.\n- industryComparisons (if included): 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector.\n- scenarios (if included): 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.\n- riskMatrix (if included): 3 risks, each under 30 words. Based on actual flags found in the data.\n- caseStudies (if included): Do NOT fabricate specific named organizations or invent outcomes.\n- actionPlan (if included): 2 items per phase (immediate/shortTerm/longTerm), each under 25 words.\n- Never use raw data field names in the report. Translate all field references into plain English.\n- Write the entire report in first-person plural. Use 'we reviewed,' 'we identified,' 'our assessment,' 'we recommend,' and 'in our view' throughout. The report should read as if a team of senior consultants prepared and signed off on it together.`)}${sectionsPrompt}`;
+
           const advancedMsg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
             max_tokens: 6000,
             temperature: 0,
-            system: SYSTEM_ADVANCED,
+            system: dynamicSystem,
             messages: [{ role: "user", content: userMessage }],
           });
           const advancedText = advancedMsg.content[0].type === "text" ? advancedMsg.content[0].text : "{}";
@@ -378,7 +434,8 @@ Instructions:
           resultJson = basicJson;
         }
 
-        controller.enqueue(enc.encode(JSON.stringify({ ...resultJson, dedupStats })));
+        const sectionsConfig = mode === "advanced" ? sections : undefined;
+        controller.enqueue(enc.encode(JSON.stringify({ ...resultJson, dedupStats, ...(sectionsConfig ? { sections_config: sectionsConfig } : {}) })));
 
         // Update usage count
         try {

@@ -113,6 +113,14 @@ export default function Home() {
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [sectionsConfig, setSectionsConfig] = useState({
+    executiveSummary: true,
+    recommendations: true,
+    benchmarks: true,
+    trajectory: true,
+    riskMatrix: true,
+  });
+  const [lastSectionsConfig, setLastSectionsConfig] = useState<typeof sectionsConfig | null>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -390,6 +398,7 @@ export default function Home() {
           : "";
         const combinedExtra = [extraContext, profileExtra].filter(Boolean).join("\n");
         if (combinedExtra) fd.append("extraContext", combinedExtra);
+        fd.append("sections", JSON.stringify(sectionsConfig));
       }
 
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
@@ -436,6 +445,7 @@ export default function Home() {
       const result: AnalysisResult = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
       if (!result.summary && !result.flags?.length) throw new Error("__EMPTY_RESPONSE__");
       setAnalysis(result);
+      if (mode === "advanced") setLastSectionsConfig({ ...sectionsConfig });
 
       // Show dedup banner if any rows were cleaned
       const ds = ((result as unknown) as Record<string, unknown>).dedupStats as { removedExact?: number; removedNearDupe?: number; removedSummary?: number } | undefined;
@@ -539,6 +549,8 @@ export default function Home() {
     setShareState("idle");
     setShareToken(null);
     setShareToast(false);
+    setSectionsConfig({ executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true });
+    setLastSectionsConfig(null);
   }
 
   async function runDeepDive() {
@@ -842,6 +854,72 @@ export default function Home() {
             </div>
           )}
 
+          {/* Report Sections (advanced only) */}
+          {mode === "advanced" && state !== "done" && !isRunning && (() => {
+            const SECTIONS = [
+              { key: "executiveSummary" as const, label: "Executive Summary", desc: "Key trends and discrepancies. No recommendations — just what the data shows." },
+              { key: "recommendations" as const, label: "Recommendations", desc: "Prioritized action items tailored to your organization." },
+              { key: "benchmarks" as const, label: "Industry Benchmarks", desc: "How your metrics compare to sector peers and top performers." },
+              { key: "trajectory" as const, label: "Where This Is Heading", desc: "12-month optimistic, base, and pessimistic scenarios." },
+              { key: "riskMatrix" as const, label: "Risk Matrix", desc: "Key risks ranked by likelihood and impact." },
+            ];
+            const activeCount = Object.values(sectionsConfig).filter(Boolean).length;
+            return (
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 8 }}>REPORT SECTIONS</p>
+                <p style={{ fontSize: 12, color: "#555", marginBottom: 10, margin: "0 0 10px" }}>Choose which sections to include in your analysis</p>
+                <div style={{ background: "#1e1e1e", border: "1px solid #2f2f2f", borderRadius: 10, overflow: "hidden" }}>
+                  {SECTIONS.map((section, idx) => {
+                    const isOn = sectionsConfig[section.key];
+                    const isLastActive = activeCount === 1 && isOn;
+                    return (
+                      <div key={section.key} style={{ borderBottom: idx < SECTIONS.length - 1 ? "1px solid #2a2a2a" : "none", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#f0f0f0" }}>{section.label}</p>
+                          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666", lineHeight: 1.4 }}>{section.desc}</p>
+                        </div>
+                        <button
+                          title={isLastActive ? "At least one section must be selected." : undefined}
+                          disabled={isLastActive}
+                          onClick={() => {
+                            if (isLastActive) return;
+                            setSectionsConfig(prev => ({ ...prev, [section.key]: !prev[section.key] }));
+                          }}
+                          style={{
+                            flexShrink: 0,
+                            width: 52,
+                            height: 28,
+                            borderRadius: 14,
+                            border: "none",
+                            background: isOn ? "#CC5500" : "#3a3a3a",
+                            cursor: isLastActive ? "not-allowed" : "pointer",
+                            position: "relative",
+                            transition: "background 0.15s ease",
+                            opacity: isLastActive ? 0.5 : 1,
+                          }}>
+                          <span style={{
+                            position: "absolute",
+                            top: 4,
+                            left: isOn ? 26 : 4,
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            background: "#fff",
+                            transition: "left 0.15s ease",
+                            display: "block",
+                          }} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p style={{ fontSize: 12, color: activeCount < 3 ? "#CC5500" : "#555", margin: "8px 0 0" }}>
+                  {activeCount} of 5 sections selected
+                </p>
+              </div>
+            );
+          })()}
+
           {/* File upload */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>
@@ -975,14 +1053,36 @@ export default function Home() {
           {/* Results */}
           {state === "done" && outputMode === "report" && analysis && (
             <div style={{ marginBottom: 20 }}>
+              {/* Sections indicator */}
+              {lastSectionsConfig && mode === "advanced" && (() => {
+                const shownCount = Object.values(lastSectionsConfig).filter(Boolean).length;
+                if (shownCount >= 5) return null;
+                return (
+                  <div style={{ fontSize: 12, color: "#555", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span>Showing {shownCount} of 5 sections</span>
+                    <span style={{ color: "#3a3a3a" }}>·</span>
+                    <button
+                      onClick={() => {
+                        setSectionsConfig({ executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true });
+                        reset();
+                      }}
+                      style={{ background: "none", border: "none", color: "#CC5500", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+                      Re-run with all sections →
+                    </button>
+                  </div>
+                );
+              })()}
+
               {/* Summary */}
+              {(!lastSectionsConfig || lastSectionsConfig.executiveSummary) && (
               <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, marginBottom: 8 }}>EXECUTIVE SUMMARY</p>
                 <p style={{ fontSize: 14, color: "#e0e0e0", lineHeight: 1.6, margin: 0 }}>{analysis.summary}</p>
               </div>
+              )}
 
-              {/* Flags */}
-              {analysis.flags.length > 0 && (
+              {/* Flags — part of Executive Summary section */}
+              {(!lastSectionsConfig || lastSectionsConfig.executiveSummary) && analysis.flags.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE FOUND</p>
                   {analysis.flags.map((flag, i) => {
@@ -1002,7 +1102,7 @@ export default function Home() {
               )}
 
               {/* Recommendations */}
-              {analysis.recommendations.length > 0 && (
+              {(!lastSectionsConfig || lastSectionsConfig.recommendations) && analysis.recommendations.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE'D DO</p>
                   {analysis.recommendations.map((rec, i) => (
@@ -1018,13 +1118,15 @@ export default function Home() {
               )}
 
               {/* Trajectory */}
+              {(!lastSectionsConfig || lastSectionsConfig.trajectory) && analysis.trajectoryNote && (
               <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 6 }}>WHERE THIS IS HEADING</p>
                 <p style={{ fontSize: 13, color: "#ccc", margin: 0, fontStyle: "italic", lineHeight: 1.5 }}>{analysis.trajectoryNote}</p>
               </div>
+              )}
 
-              {/* Advanced sections */}
-              {analysis.industryComparisons?.length && (
+              {/* Industry Benchmarks */}
+              {(!lastSectionsConfig || lastSectionsConfig.benchmarks) && !!analysis.industryComparisons?.length && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>HOW YOU COMPARE</p>
                   <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, overflow: "hidden" }}>
@@ -1056,7 +1158,8 @@ export default function Home() {
                 </div>
               )}
 
-              {analysis.caseStudies?.length && (
+              {/* Case Studies — part of Recommendations section */}
+              {(!lastSectionsConfig || lastSectionsConfig.recommendations) && !!analysis.caseStudies?.length && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHO'S BEEN HERE BEFORE</p>
                   {analysis.caseStudies.map((cs, i) => (
@@ -1078,7 +1181,8 @@ export default function Home() {
                 </div>
               )}
 
-              {analysis.scenarios && (
+              {/* Scenarios — part of Where This Is Heading */}
+              {(!lastSectionsConfig || lastSectionsConfig.trajectory) && analysis.scenarios && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>HOW THIS COULD PLAY OUT</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
@@ -1096,7 +1200,8 @@ export default function Home() {
                 </div>
               )}
 
-              {analysis.riskMatrix?.length && (
+              {/* Risk Matrix */}
+              {(!lastSectionsConfig || lastSectionsConfig.riskMatrix) && !!analysis.riskMatrix?.length && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE'RE WATCHING</p>
                   <div style={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8, overflow: "hidden" }}>
@@ -1130,7 +1235,8 @@ export default function Home() {
                 </div>
               )}
 
-              {analysis.actionPlan && (
+              {/* Action Plan — part of Recommendations section */}
+              {(!lastSectionsConfig || lastSectionsConfig.recommendations) && analysis.actionPlan && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>YOUR NEXT STEPS</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
