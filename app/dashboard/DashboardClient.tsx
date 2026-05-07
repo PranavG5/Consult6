@@ -894,6 +894,9 @@ export default function Home() {
                 <div style={{ fontSize: 28, marginBottom: 8 }}>↑</div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>{files.length > 0 ? "Add another file" : "Upload financial data"}</p>
                 <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to {mode === "advanced" ? "10 MB" : "5 MB"}</p>
+                {files.length === 0 && (
+                  <p style={{ fontSize: 12, color: "#e05555", margin: "8px 0 0", fontWeight: 500 }}>A file is required to generate an analysis</p>
+                )}
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple style={{ display: "none" }}
                   onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
               </div>
