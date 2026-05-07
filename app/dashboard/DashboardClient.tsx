@@ -120,7 +120,9 @@ export default function Home() {
     trajectory: true,
     riskMatrix: true,
   });
+  const [allSectionsOn, setAllSectionsOn] = useState(true);
   const [lastSectionsConfig, setLastSectionsConfig] = useState<typeof sectionsConfig | null>(null);
+  const contextSectionRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -398,7 +400,10 @@ export default function Home() {
           : "";
         const combinedExtra = [extraContext, profileExtra].filter(Boolean).join("\n");
         if (combinedExtra) fd.append("extraContext", combinedExtra);
-        fd.append("sections", JSON.stringify(sectionsConfig));
+        const effectiveSections = allSectionsOn
+          ? { executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true }
+          : sectionsConfig;
+        fd.append("sections", JSON.stringify(effectiveSections));
       }
 
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
@@ -445,7 +450,11 @@ export default function Home() {
       const result: AnalysisResult = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
       if (!result.summary && !result.flags?.length) throw new Error("__EMPTY_RESPONSE__");
       setAnalysis(result);
-      if (mode === "advanced") setLastSectionsConfig({ ...sectionsConfig });
+      if (mode === "advanced") {
+        setLastSectionsConfig(allSectionsOn
+          ? { executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true }
+          : { ...sectionsConfig });
+      }
 
       // Show dedup banner if any rows were cleaned
       const ds = ((result as unknown) as Record<string, unknown>).dedupStats as { removedExact?: number; removedNearDupe?: number; removedSummary?: number } | undefined;
@@ -550,6 +559,7 @@ export default function Home() {
     setShareToken(null);
     setShareToast(false);
     setSectionsConfig({ executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true });
+    setAllSectionsOn(true);
     setLastSectionsConfig(null);
   }
 
@@ -810,7 +820,7 @@ export default function Home() {
 
           {/* Additional context (advanced only) */}
           {mode === "advanced" && (
-            <div style={{ marginBottom: 20 }}>
+            <div ref={contextSectionRef} style={{ marginBottom: 20 }}>
               <button
                 onClick={() => setContextOpen(o => !o)}
                 disabled={isRunning}
@@ -853,72 +863,6 @@ export default function Home() {
               )}
             </div>
           )}
-
-          {/* Report Sections (advanced only) */}
-          {mode === "advanced" && state !== "done" && !isRunning && (() => {
-            const SECTIONS = [
-              { key: "executiveSummary" as const, label: "Executive Summary", desc: "Key trends and discrepancies. No recommendations — just what the data shows." },
-              { key: "recommendations" as const, label: "Recommendations", desc: "Prioritized action items tailored to your organization." },
-              { key: "benchmarks" as const, label: "Industry Benchmarks", desc: "How your metrics compare to sector peers and top performers." },
-              { key: "trajectory" as const, label: "Where This Is Heading", desc: "12-month optimistic, base, and pessimistic scenarios." },
-              { key: "riskMatrix" as const, label: "Risk Matrix", desc: "Key risks ranked by likelihood and impact." },
-            ];
-            const activeCount = Object.values(sectionsConfig).filter(Boolean).length;
-            return (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 8 }}>REPORT SECTIONS</p>
-                <p style={{ fontSize: 12, color: "#555", marginBottom: 10, margin: "0 0 10px" }}>Choose which sections to include in your analysis</p>
-                <div style={{ background: "#1e1e1e", border: "1px solid #2f2f2f", borderRadius: 10, overflow: "hidden" }}>
-                  {SECTIONS.map((section, idx) => {
-                    const isOn = sectionsConfig[section.key];
-                    const isLastActive = activeCount === 1 && isOn;
-                    return (
-                      <div key={section.key} style={{ borderBottom: idx < SECTIONS.length - 1 ? "1px solid #2a2a2a" : "none", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#f0f0f0" }}>{section.label}</p>
-                          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666", lineHeight: 1.4 }}>{section.desc}</p>
-                        </div>
-                        <button
-                          title={isLastActive ? "At least one section must be selected." : undefined}
-                          disabled={isLastActive}
-                          onClick={() => {
-                            if (isLastActive) return;
-                            setSectionsConfig(prev => ({ ...prev, [section.key]: !prev[section.key] }));
-                          }}
-                          style={{
-                            flexShrink: 0,
-                            width: 52,
-                            height: 28,
-                            borderRadius: 14,
-                            border: "none",
-                            background: isOn ? "#CC5500" : "#3a3a3a",
-                            cursor: isLastActive ? "not-allowed" : "pointer",
-                            position: "relative",
-                            transition: "background 0.15s ease",
-                            opacity: isLastActive ? 0.5 : 1,
-                          }}>
-                          <span style={{
-                            position: "absolute",
-                            top: 4,
-                            left: isOn ? 26 : 4,
-                            width: 20,
-                            height: 20,
-                            borderRadius: "50%",
-                            background: "#fff",
-                            transition: "left 0.15s ease",
-                            display: "block",
-                          }} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p style={{ fontSize: 12, color: activeCount < 3 ? "#CC5500" : "#555", margin: "8px 0 0" }}>
-                  {activeCount} of 5 sections selected
-                </p>
-              </div>
-            );
-          })()}
 
           {/* File upload */}
           <div style={{ marginBottom: 20 }}>
@@ -973,6 +917,67 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* Report Sections (advanced + full report mode only) */}
+          {mode === "advanced" && outputMode === "report" && state !== "done" && !isRunning && (() => {
+            const SECTIONS = [
+              { key: "executiveSummary" as const, label: "Executive Summary", desc: "Key trends and discrepancies. No recommendations — just what the data shows." },
+              { key: "recommendations" as const, label: "Recommendations", desc: "Prioritized action items tailored to your organization." },
+              { key: "benchmarks" as const, label: "Industry Benchmarks", desc: "How your metrics compare to sector peers and top performers." },
+              { key: "trajectory" as const, label: "Where This Is Heading", desc: "12-month optimistic, base, and pessimistic scenarios." },
+              { key: "riskMatrix" as const, label: "Risk Matrix", desc: "Key risks ranked by likelihood and impact." },
+            ];
+            const activeCount = Object.values(sectionsConfig).filter(Boolean).length;
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>REPORT SECTIONS</p>
+                <div style={{ background: "#1e1e1e", border: "1px solid #2f2f2f", borderRadius: 10, overflow: "hidden" }}>
+                  {/* Master "All sections" toggle row */}
+                  <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottom: allSectionsOn ? "none" : "1px solid #2a2a2a" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#f0f0f0" }}>All sections</p>
+                      <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666", lineHeight: 1.4 }}>Generate the full report with every section included.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const next = !allSectionsOn;
+                        setAllSectionsOn(next);
+                        if (next) setSectionsConfig({ executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true });
+                      }}
+                      style={{ flexShrink: 0, width: 52, height: 28, borderRadius: 14, border: "none", background: allSectionsOn ? "#CC5500" : "#3a3a3a", cursor: "pointer", position: "relative", transition: "background 0.15s ease" }}>
+                      <span style={{ position: "absolute", top: 4, left: allSectionsOn ? 26 : 4, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.15s ease", display: "block" }} />
+                    </button>
+                  </div>
+
+                  {/* Individual section toggles — only visible when "All sections" is OFF */}
+                  {!allSectionsOn && SECTIONS.map((section, idx) => {
+                    const isOn = sectionsConfig[section.key];
+                    const isLastActive = activeCount === 1 && isOn;
+                    return (
+                      <div key={section.key} style={{ borderBottom: idx < SECTIONS.length - 1 ? "1px solid #2a2a2a" : "none", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#f0f0f0" }}>{section.label}</p>
+                          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666", lineHeight: 1.4 }}>{section.desc}</p>
+                        </div>
+                        <button
+                          title={isLastActive ? "At least one section must be selected." : undefined}
+                          disabled={isLastActive}
+                          onClick={() => { if (!isLastActive) setSectionsConfig(prev => ({ ...prev, [section.key]: !prev[section.key] })); }}
+                          style={{ flexShrink: 0, width: 52, height: 28, borderRadius: 14, border: "none", background: isOn ? "#CC5500" : "#3a3a3a", cursor: isLastActive ? "not-allowed" : "pointer", position: "relative", transition: "background 0.15s ease", opacity: isLastActive ? 0.5 : 1 }}>
+                          <span style={{ position: "absolute", top: 4, left: isOn ? 26 : 4, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.15s ease", display: "block" }} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {!allSectionsOn && (
+                  <p style={{ fontSize: 12, color: activeCount < 3 ? "#CC5500" : "#555", margin: "8px 0 0" }}>
+                    {activeCount} of 5 sections selected
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Metric input (deep-dive only) */}
           {outputMode === "deepdive" && state !== "done" && !isRunning && (
@@ -1267,7 +1272,7 @@ export default function Home() {
             <div style={{ background: "#2a1400", border: "1px solid #CC5500", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#ffaa66", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ flexShrink: 0 }}>⚠</span>
               <span>No context provided. Advanced analysis may produce generic results.</span>
-              <button onClick={() => { setContextOpen(true); }} style={{ background: "none", border: "none", color: "#CC5500", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0, marginLeft: "auto", whiteSpace: "nowrap" }}>Add context →</button>
+              <button onClick={() => { setContextOpen(true); setTimeout(() => contextSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} style={{ background: "none", border: "none", color: "#CC5500", fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0, marginLeft: "auto", whiteSpace: "nowrap" }}>Add context →</button>
             </div>
           )}
 
