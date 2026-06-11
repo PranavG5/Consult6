@@ -6,6 +6,8 @@ import Papa from "papaparse";
 
 export const maxDuration = 60;
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 const anthropic = new Anthropic();
 
 const SYSTEM_BASIC = `You are a senior financial consultant conducting a focused single-variable deep-dive for a client. Write in first-person plural ("We found...", "We see...", "We recommend..."). Be specific and direct - cite exact numbers from the data. Do not fabricate benchmarks, named organizations, or invent data. Do not use em-dashes.
@@ -137,6 +139,15 @@ export async function POST(req: NextRequest) {
       status: 400, headers: { "Content-Type": "application/json" },
     });
   }
+  if (rawText.length > MAX_UPLOAD_BYTES) {
+    return new Response(JSON.stringify({ error: "File too large (10MB max)." }), {
+      status: 413, headers: { "Content-Type": "application/json" },
+    });
+  }
+  orgName = orgName.slice(0, 200);
+  metric = metric.slice(0, 200);
+  industry = industry.slice(0, 300);
+  constraints = constraints.slice(0, 2000);
 
   const today = new Date().toISOString().split("T")[0];
   const [{ data: profile }, { data: usage }] = await Promise.all([

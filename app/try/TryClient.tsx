@@ -5,9 +5,6 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import Link from "next/link";
 import ErrorBanner from "@/app/components/ErrorBanner";
-import AdUnit from "@/components/AdUnit";
-
-export const metadata = { title: "Try Consult6 | Consult6" };
 
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
 
@@ -311,11 +308,6 @@ export default function TryPage() {
       </nav>
 
       <main style={{ maxWidth: 760, margin: "40px auto", padding: "0 20px" }}>
-        {/* Ad banner */}
-        <div style={{ marginBottom: 24 }}>
-          <AdUnit slot="7364910285" format="horizontal" style={{ minHeight: 90 }} />
-        </div>
-
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>

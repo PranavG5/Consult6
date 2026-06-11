@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import InfoNav from '@/components/InfoNav';
+import { SUPPORT_EMAIL } from '@/lib/constants';
 
 const inputStyle = {
   background: '#2a2a2a',
@@ -128,7 +129,7 @@ export default function ContactClient() {
             {status === 'error' && (
               <p style={{ color: '#f87171', fontSize: 13, margin: '12px 0 0', textAlign: 'center' }}>
                 Something went wrong. Please try emailing us directly at{' '}
-                <a href="mailto:consult6testing@gmail.com" style={{ color: '#f87171' }}>consult6testing@gmail.com</a>
+                <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: '#f87171' }}>{SUPPORT_EMAIL}</a>
               </p>
             )}
           </form>
@@ -138,7 +139,7 @@ export default function ContactClient() {
         <div style={{ background: '#232323', border: '1px solid #2f2f2f', borderRadius: 12, padding: '28px 32px', marginBottom: 20 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f0', margin: '0 0 6px' }}>General enquiries &amp; support</p>
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 14px' }}>For account issues, billing questions, or anything else, email us directly:</p>
-          <p style={{ fontSize: 15, color: '#CC5500', fontWeight: 600, margin: 0 }}>consult6testing@gmail.com</p>
+          <p style={{ fontSize: 15, color: '#CC5500', fontWeight: 600, margin: 0 }}>{SUPPORT_EMAIL}</p>
         </div>
 
         {/* Enterprise */}
@@ -147,7 +148,7 @@ export default function ContactClient() {
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 14px' }}>
             Looking for a team plan, custom usage limits, or a tailored pricing package? Email us and tell us about your organisation:
           </p>
-          <p style={{ fontSize: 15, color: '#CC5500', fontWeight: 600, margin: 0 }}>consult6testing@gmail.com</p>
+          <p style={{ fontSize: 15, color: '#CC5500', fontWeight: 600, margin: 0 }}>{SUPPORT_EMAIL}</p>
         </div>
 
         {/* Response time */}

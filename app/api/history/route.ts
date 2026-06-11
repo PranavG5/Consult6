@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 const HISTORY_LIMITS = {
   free: 20,
   paid: 10000,
+  enterprise: 10000,
   admin: 10000,
 };
 

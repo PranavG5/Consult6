@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import InfoNav from "@/components/InfoNav";
+import { SUPPORT_EMAIL } from "@/lib/constants";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | Consult6",
+  description: "What information Consult6 collects, how it is stored, and the controls you have over your data.",
+};
 
 export default function PrivacyPage() {
   return (
@@ -65,7 +72,7 @@ export default function PrivacyPage() {
 
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Questions about your data?</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Reach us at <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>our contact page</a> or email <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will respond as promptly as possible.</p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Reach us at <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>our contact page</a> or email <span style={{ color: "#CC5500" }}>{SUPPORT_EMAIL}</span> and we will respond as promptly as possible.</p>
         </div>
       </main>
 

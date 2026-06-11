@@ -7,9 +7,6 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import ErrorBanner from "@/app/components/ErrorBanner";
 import InfoBanner from "@/app/components/InfoBanner";
-import AdUnit from "@/components/AdUnit";
-
-export const metadata = { title: "Dashboard | Consult6" };
 
 type Mode = "basic" | "advanced";
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
@@ -112,6 +109,7 @@ export default function Home() {
   const [historyShareLoading, setHistoryShareLoading] = useState<Record<string, boolean>>({});
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [sectionsConfig, setSectionsConfig] = useState({
     executiveSummary: true,
@@ -159,6 +157,8 @@ export default function Home() {
     fetchProfiles();
   }, []);
 
+  const LOAD_ERROR_MSG = "Some of your dashboard data didn't load. Check your connection and refresh the page to retry.";
+
   async function fetchProfiles() {
     setProfilesLoading(true);
     try {
@@ -166,8 +166,12 @@ export default function Home() {
       if (res.ok) {
         const json = await res.json();
         setProfiles(json.profiles ?? []);
+      } else {
+        setLoadError(LOAD_ERROR_MSG);
       }
-    } catch {} finally {
+    } catch {
+      setLoadError(LOAD_ERROR_MSG);
+    } finally {
       setProfilesLoading(false);
     }
   }
@@ -176,13 +180,19 @@ export default function Home() {
     try {
       const res = await fetch("/api/usage");
       if (res.ok) setUsage(await res.json());
-    } catch {}
+      else setLoadError(LOAD_ERROR_MSG);
+    } catch {
+      setLoadError(LOAD_ERROR_MSG);
+    }
   }
 
   async function fetchHistory() {
     try {
       const res = await fetch("/api/history");
-      if (!res.ok) return;
+      if (!res.ok) {
+        setLoadError(LOAD_ERROR_MSG);
+        return;
+      }
       const json = await res.json();
       const items: HistoryItem[] = json.history ?? [];
       setHistory(items);
@@ -190,7 +200,9 @@ export default function Home() {
       const tokens: Record<string, string | null> = {};
       for (const item of items) tokens[item.id] = item.share_token;
       setHistoryShareTokens(tokens);
-    } catch {}
+    } catch {
+      setLoadError(LOAD_ERROR_MSG);
+    }
   }
 
   async function saveToHistory(result: AnalysisResult, _label: string, currentMode: Mode, currentOrgName: string, currentFileNames: string) {
@@ -737,13 +749,14 @@ export default function Home() {
 
       {/* Main */}
       <div className="dashboard-layout" style={{ justifyContent: "center", padding: "40px 20px", overflowX: "hidden" }}>
-      {/* Left ad column — free users only */}
-      {usage?.accountType === "free" && (
-        <div className="dashboard-ad-left">
-          <AdUnit slot="9012847365" format="vertical" style={{ minHeight: 600, width: 160 }} />
-        </div>
-      )}
       <main style={{ width: "100%", maxWidth: 760, flexShrink: 1 }}>
+        {loadError && (
+          <ErrorBanner
+            title="Couldn't load your data"
+            message={loadError}
+            onDismiss={() => setLoadError("")}
+          />
+        )}
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>

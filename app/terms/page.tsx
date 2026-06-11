@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import InfoNav from "@/components/InfoNav";
+import { SUPPORT_EMAIL } from "@/lib/constants";
+
+export const metadata: Metadata = {
+  title: "Terms of Use | Consult6",
+  description: "The terms and conditions that govern your use of Consult6.",
+};
 
 export default function TermsPage() {
   return (
@@ -67,7 +74,7 @@ export default function TermsPage() {
 
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Questions about these terms?</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Visit our <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>contact page</a> or email <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span> and we will get back to you.</p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Visit our <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>contact page</a> or email <span style={{ color: "#CC5500" }}>{SUPPORT_EMAIL}</span> and we will get back to you.</p>
         </div>
       </main>
 

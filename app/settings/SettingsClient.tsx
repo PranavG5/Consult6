@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import Link from "next/link";
-
-export const metadata = { title: "Settings | Consult6" };
+import { SUPPORT_EMAIL } from "@/lib/constants";
 
 type Tab = "profile" | "privacy" | "billing" | "account" | "admin";
 
@@ -364,13 +363,13 @@ export default function SettingsPage() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ background: badge.bg, color: badge.color, fontSize: 12, fontWeight: 800, padding: "4px 12px", borderRadius: 20, letterSpacing: 0.5 }}>{accountType.toUpperCase()}</span>
-                      <span style={{ fontSize: 15, color: "#ccc" }}>{accountType === "free" ? "Free · $0/mo" : accountType === "paid" ? "Pro · $10/mo" : accountType === "enterprise" ? "Enterprise · $40/mo" : "Admin"}</span>
+                      <span style={{ fontSize: 15, color: "#ccc" }}>{accountType === "free" ? "Free · $0/mo" : accountType === "paid" ? "Pro · $10/mo" : accountType === "enterprise" ? "Enterprise · Custom" : "Admin"}</span>
                     </div>
                     {accountType === "free" ? (
                       <Link href="/#pricing" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", padding: "8px 18px", borderRadius: 7 }}>Upgrade</Link>
                     ) : (
                       <button style={{ background: "none", border: "1px solid #484848", color: "#888", fontSize: 13, borderRadius: 7, padding: "8px 16px" }}
-                        onClick={() => flash("Subscription management coming soon. Visit /contact or email consult6testing@gmail.com to cancel.")}>Cancel Plan</button>
+                        onClick={() => flash(`Subscription management coming soon. Visit /contact or email ${SUPPORT_EMAIL} to cancel.`)}>Cancel Plan</button>
                     )}
                   </div>
                 </div>

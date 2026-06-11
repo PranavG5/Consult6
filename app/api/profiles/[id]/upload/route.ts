@@ -56,6 +56,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!periodLabel || !periodType || !rawText) {
     return NextResponse.json({ error: "period_label, period_type, and data are required." }, { status: 400 });
   }
+  if (rawText.length > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (10MB max)." }, { status: 413 });
+  }
 
   const validTypes = ["monthly", "quarterly", "annual"];
   if (!validTypes.includes(periodType)) {

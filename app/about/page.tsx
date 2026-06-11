@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import InfoNav from "@/components/InfoNav";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 
-export const metadata: Metadata = { title: "About | Consult6" };
+export const metadata: Metadata = {
+  title: "About | Consult6",
+  description: "Consult6 gives treasurers and finance directors senior-level financial analysis in seconds, without consultant fees.",
+};
 
 export default function AboutPage() {
   return (
@@ -13,7 +17,7 @@ export default function AboutPage() {
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 12 }}>ABOUT</p>
         <h1 style={{ fontSize: 40, fontWeight: 800, color: "#f0f0f0", margin: "0 0 24px", letterSpacing: -1, lineHeight: 1.15 }}>Your organization&apos;s pocket consultant.</h1>
         <p style={{ fontSize: 16, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Financial consulting firms charge $5,000 to $50,000+ for the kind of analysis that smaller organizations need just as much as large enterprises. The problem: most of those organizations are run by volunteer treasurers, part-time finance directors, or elected officials who don&apos;t have that budget. Or that time. They&apos;re making significant financial decisions without proper analysis, not because they don&apos;t care, but because professional advice has always been priced out of reach.
+          Financial consulting firms charge $10,000 to $50,000+ for the kind of analysis that smaller organizations need just as much as large enterprises. The problem: most of those organizations are run by volunteer treasurers, part-time finance directors, or elected officials who don&apos;t have that budget. Or that time. They&apos;re making significant financial decisions without proper analysis, not because they don&apos;t care, but because professional advice has always been priced out of reach.
         </p>
         <p style={{ fontSize: 16, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
           Consult6 fixes that. Upload your spreadsheet, get a boardroom-ready executive report in seconds.
@@ -51,7 +55,7 @@ export default function AboutPage() {
 
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 28px" }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 6px" }}>Get in touch</p>
-          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Questions, feedback, or partnership enquiries: visit our <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>contact page</a> or reach us at <span style={{ color: "#CC5500" }}>consult6testing@gmail.com</span></p>
+          <p style={{ fontSize: 14, color: "#666", margin: 0 }}>Questions, feedback, or partnership enquiries: visit our <a href="/contact" style={{ color: "#CC5500", textDecoration: "none" }}>contact page</a> or reach us at <span style={{ color: "#CC5500" }}>{SUPPORT_EMAIL}</span></p>
         </div>
       </main>
 

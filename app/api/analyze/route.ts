@@ -6,6 +6,8 @@ import Papa from "papaparse";
 
 export const maxDuration = 120;
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 const anthropic = new Anthropic();
 
 const LIMITS = {
@@ -212,6 +214,16 @@ export async function POST(req: NextRequest) {
       status: 400, headers: { "Content-Type": "application/json" },
     });
   }
+  if (rawText.length > MAX_UPLOAD_BYTES) {
+    return new Response(JSON.stringify({ error: "File too large (10MB max)." }), {
+      status: 413, headers: { "Content-Type": "application/json" },
+    });
+  }
+  orgName = orgName.slice(0, 200);
+  companySize = companySize.slice(0, 200);
+  industry = industry.slice(0, 300);
+  constraints = constraints.slice(0, 2000);
+  extraContext = extraContext.slice(0, 4000);
 
   const today = new Date().toISOString().split("T")[0];
   const [{ data: profile }, { data: usage }] = await Promise.all([

@@ -45,7 +45,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (isAuthPage || isLandingPage)) {
+  // Password-recovery sessions count as logged in, so /auth/update-password
+  // must stay reachable for authenticated users.
+  const isUpdatePasswordPage = request.nextUrl.pathname.startsWith("/auth/update-password");
+  if (user && (isAuthPage || isLandingPage) && !isUpdatePasswordPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

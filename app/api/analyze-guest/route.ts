@@ -1,9 +1,12 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { deduplicateCSV } from "@/lib/deduplicateCSV";
+import { checkGuestRateLimit } from "@/lib/guestRateLimit";
 import Papa from "papaparse";
 
 export const maxDuration = 60;
+
+const MAX_GUEST_BYTES = 2 * 1024 * 1024;
 
 const anthropic = new Anthropic();
 
@@ -45,6 +48,19 @@ export async function POST(req: NextRequest) {
   if (!rawText) {
     return new Response(JSON.stringify({ error: "No financial data provided." }), {
       status: 400, headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (rawText.length > MAX_GUEST_BYTES) {
+    return new Response(JSON.stringify({ error: "File too large for the guest trial (2MB max). Create a free account for larger files." }), {
+      status: 413, headers: { "Content-Type": "application/json" },
+    });
+  }
+  orgName = orgName.slice(0, 200);
+
+  const rateLimit = await checkGuestRateLimit(req);
+  if (!rateLimit.allowed) {
+    return new Response(JSON.stringify({ error: rateLimit.message }), {
+      status: 429, headers: { "Content-Type": "application/json" },
     });
   }
 
