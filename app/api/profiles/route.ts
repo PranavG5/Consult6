@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
-
-const PROFILE_LIMITS: Record<string, number> = {
-  free: 1,
-  paid: 5,
-  enterprise: 20,
-  admin: 999999,
-};
+import { getEffectivePlan } from "@/lib/planLimits";
 
 export async function GET() {
   const supabase = await createClient();
@@ -38,14 +32,8 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("account_type")
-    .eq("id", user.id)
-    .single();
-
-  const accountType = (profile?.account_type ?? "free") as string;
-  const limit = PROFILE_LIMITS[accountType] ?? 1;
+  const plan = await getEffectivePlan(supabase, user.id);
+  const limit = plan.profileLimit;
 
   const { count } = await supabase
     .from("company_profiles")

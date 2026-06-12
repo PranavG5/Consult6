@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase-server";
 import { deduplicateCSV } from "@/lib/deduplicateCSV";
+import { getEffectivePlan } from "@/lib/planLimits";
 import Papa from "papaparse";
 
 export const maxDuration = 120;
@@ -9,13 +10,6 @@ export const maxDuration = 120;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 const anthropic = new Anthropic();
-
-const LIMITS = {
-  free: { basic: 3, advanced: 1 },
-  paid: { basic: 10, advanced: 3 },
-  enterprise: { basic: 50, advanced: 20 },
-  admin: { basic: 999999, advanced: 999999 },
-};
 
 function summarize(rawText: string, mode: string = "basic"): string {
   const lines = rawText.trim().split("\n").filter(Boolean);
@@ -226,13 +220,12 @@ export async function POST(req: NextRequest) {
   extraContext = extraContext.slice(0, 4000);
 
   const today = new Date().toISOString().split("T")[0];
-  const [{ data: profile }, { data: usage }] = await Promise.all([
-    supabase.from("profiles").select("account_type").eq("id", user.id).single(),
+  const [plan, { data: usage }] = await Promise.all([
+    getEffectivePlan(supabase, user.id),
     supabase.from("daily_usage").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
   ]);
 
-  const accountType = (profile?.account_type ?? "free") as keyof typeof LIMITS;
-  const limits = LIMITS[accountType] ?? LIMITS.free;
+  const limits = plan.daily;
   const basicUsed = usage?.basic_count ?? 0;
   const advancedUsed = usage?.advanced_count ?? 0;
 

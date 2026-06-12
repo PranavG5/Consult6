@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
-
-const LIMITS = {
-  free: { basic: 3, advanced: 1 },
-  paid: { basic: 10, advanced: 3 },
-  enterprise: { basic: 50, advanced: 20 },
-  admin: { basic: 999999, advanced: 999999 },
-};
+import { getEffectivePlan } from "@/lib/planLimits";
 
 export async function GET() {
   const supabase = await createClient();
@@ -14,19 +8,17 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const today = new Date().toISOString().split("T")[0];
-  const [{ data: profile }, { data: usage }] = await Promise.all([
-    supabase.from("profiles").select("account_type").eq("id", user.id).single(),
+  const [plan, { data: usage }] = await Promise.all([
+    getEffectivePlan(supabase, user.id),
     supabase.from("daily_usage").select("*").eq("user_id", user.id).eq("date", today).maybeSingle(),
   ]);
 
-  const accountType = (profile?.account_type ?? "free") as keyof typeof LIMITS;
-  const limits = LIMITS[accountType] ?? LIMITS.free;
-
   return NextResponse.json({
-    accountType,
+    accountType: plan.accountType,
     basicUsed: usage?.basic_count ?? 0,
     advancedUsed: usage?.advanced_count ?? 0,
-    basicLimit: limits.basic,
-    advancedLimit: limits.advanced,
+    basicLimit: plan.daily.basic,
+    advancedLimit: plan.daily.advanced,
+    orgName: plan.org?.name ?? null,
   });
 }

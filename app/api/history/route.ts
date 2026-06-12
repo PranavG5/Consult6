@@ -1,12 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase-server";
-
-const HISTORY_LIMITS = {
-  free: 20,
-  paid: 10000,
-  enterprise: 10000,
-  admin: 10000,
-};
+import { getEffectivePlan } from "@/lib/planLimits";
 
 export async function GET() {
   const supabase = await createClient();
@@ -17,14 +11,9 @@ export async function GET() {
     });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("account_type")
-    .eq("id", user.id)
-    .single();
-
-  const accountType = (profile?.account_type ?? "free") as keyof typeof HISTORY_LIMITS;
-  const limit = HISTORY_LIMITS[accountType] ?? HISTORY_LIMITS.free;
+  const plan = await getEffectivePlan(supabase, user.id);
+  const accountType = plan.accountType;
+  const limit = plan.historyLimit;
 
   const { data: rows, error } = await supabase
     .from("analysis_history")
@@ -78,14 +67,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("account_type")
-    .eq("id", user.id)
-    .single();
-
-  const accountType = (profile?.account_type ?? "free") as keyof typeof HISTORY_LIMITS;
-  const limit = HISTORY_LIMITS[accountType] ?? HISTORY_LIMITS.free;
+  const plan = await getEffectivePlan(supabase, user.id);
+  const limit = plan.historyLimit;
 
   const body = await req.json();
   const { mode, orgName, fileName, analysisResult } = body;

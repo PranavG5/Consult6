@@ -17,6 +17,7 @@ interface UsageData {
   advancedUsed: number;
   basicLimit: number;
   advancedLimit: number;
+  orgName: string | null;
 }
 
 interface HistoryItem {
@@ -711,6 +712,11 @@ export default function Home() {
                 )}
                 {usage.accountType === "paid" && (
                   <span style={{ background: "#CC5500", color: "#fff", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>PRO</span>
+                )}
+                {usage.accountType === "enterprise" && (
+                  <span style={{ background: "#16a34a", color: "#fff", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                    {usage.orgName ? usage.orgName.toUpperCase().slice(0, 24) : "ENTERPRISE"}
+                  </span>
                 )}
                 {usage.accountType === "free" && (
                   <span style={{ background: "#484848", color: "#aaa", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>FREE</span>

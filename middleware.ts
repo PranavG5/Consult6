@@ -37,9 +37,10 @@ export async function middleware(request: NextRequest) {
   const isApiPage = request.nextUrl.pathname.startsWith("/api");
   const isLandingPage = request.nextUrl.pathname === "/";
   const isGuestPage = request.nextUrl.pathname.startsWith("/try");
+  const isJoinPage = request.nextUrl.pathname.startsWith("/join");
   const isPublicInfoPage = ["/about", "/privacy", "/terms", "/contact"].includes(request.nextUrl.pathname);
 
-  if (!user && !isAuthPage && !isApiPage && !isLandingPage && !isGuestPage && !isPublicInfoPage) {
+  if (!user && !isAuthPage && !isApiPage && !isLandingPage && !isGuestPage && !isJoinPage && !isPublicInfoPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
@@ -50,7 +51,15 @@ export async function middleware(request: NextRequest) {
   const isUpdatePasswordPage = request.nextUrl.pathname.startsWith("/auth/update-password");
   if (user && (isAuthPage || isLandingPage) && !isUpdatePasswordPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    // An already signed-in user following an invite (?next=/join/CODE)
+    // should land on the join page, not the dashboard.
+    const next = request.nextUrl.searchParams.get("next");
+    url.search = "";
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      url.pathname = next;
+    } else {
+      url.pathname = "/dashboard";
+    }
     return NextResponse.redirect(url);
   }
 

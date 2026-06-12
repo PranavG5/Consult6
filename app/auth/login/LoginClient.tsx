@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Link from "next/link";
 
@@ -10,6 +11,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const supabase = createClient();
+  // Safe relative destination after auth (e.g. /join/CODE from an invite link)
+  const rawNext = useSearchParams().get("next");
+  const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
 
   async function handleLogin(e?: React.FormEvent) {
     e?.preventDefault();
@@ -21,7 +25,7 @@ export default function LoginPage() {
     setError("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) setError(error.message);
-    else window.location.href = "/dashboard";
+    else window.location.href = next ?? "/dashboard";
     setLoading(false);
   }
 
@@ -30,7 +34,7 @@ export default function LoginPage() {
     setError("");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}` },
     });
     if (error) {
       setError(error.message);
