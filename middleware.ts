@@ -31,7 +31,17 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Never let a slow/unreachable Supabase Auth call hang the request long
+  // enough to trip Vercel's MIDDLEWARE_INVOCATION_TIMEOUT (which would 504 the
+  // whole site, including public pages). Fail open by treating the visitor as
+  // logged-out if the auth lookup doesn't resolve quickly.
+  const user = await Promise.race([
+    supabase.auth
+      .getUser()
+      .then(({ data }) => data.user)
+      .catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+  ]);
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
   const isApiPage = request.nextUrl.pathname.startsWith("/api");
