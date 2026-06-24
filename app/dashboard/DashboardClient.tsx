@@ -7,6 +7,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import ErrorBanner from "@/app/components/ErrorBanner";
 import InfoBanner from "@/app/components/InfoBanner";
+import { createSampleFile, SAMPLE_ORG_NAME, SAMPLE_SECTOR } from "@/lib/sampleData";
 
 type Mode = "basic" | "advanced";
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
@@ -111,6 +112,7 @@ export default function Home() {
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [usingSample, setUsingSample] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [sectionsConfig, setSectionsConfig] = useState({
     executiveSummary: true,
@@ -358,6 +360,17 @@ export default function Home() {
     handleFiles(Array.from(e.dataTransfer.files));
   }
 
+  // One-click demo: loads a realistic student-org ledger and pre-fills the
+  // context so the marketer just hits Generate. No file of their own needed.
+  function loadSampleData() {
+    setErrorMsg("");
+    setFiles([createSampleFile()]);
+    setOrgName(SAMPLE_ORG_NAME);
+    setIndustry(SAMPLE_SECTOR);
+    setSelectedProfileId("");
+    setUsingSample(true);
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     window.location.href = "/auth/login";
@@ -574,6 +587,7 @@ export default function Home() {
     setSectionsConfig({ executiveSummary: true, recommendations: true, benchmarks: true, trajectory: true, riskMatrix: true });
     setAllSectionsOn(true);
     setLastSectionsConfig(null);
+    setUsingSample(false);
   }
 
   async function runDeepDive() {
@@ -897,7 +911,7 @@ export default function Home() {
                   <span style={{ fontSize: 12, color: "#666" }}>{(f.size / 1024).toFixed(1)} KB</span>
                 </div>
                 {!isRunning && state !== "done" && (
-                  <button onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
+                  <button onClick={() => { setFiles(prev => prev.filter((_, idx) => idx !== i)); setUsingSample(false); }}
                     style={{ background: "none", border: "none", color: "#666", fontSize: 18, padding: "0 4px" }}>×</button>
                 )}
               </div>
@@ -919,6 +933,26 @@ export default function Home() {
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple style={{ display: "none" }}
                   onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
               </div>
+            )}
+
+            {/* No data on hand? Load a realistic sample to see a full report. */}
+            {files.length === 0 && !isRunning && state !== "done" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <div style={{ flex: 1, height: 1, background: "#3a3a3a" }} />
+                <button
+                  type="button"
+                  onClick={loadSampleData}
+                  style={{ background: "none", border: "1px solid #484848", color: "#CC5500", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  ✨ Try with sample data
+                </button>
+                <div style={{ flex: 1, height: 1, background: "#3a3a3a" }} />
+              </div>
+            )}
+
+            {usingSample && files.length > 0 && !isRunning && state !== "done" && (
+              <p style={{ fontSize: 12, color: "#888", margin: "10px 0 0", lineHeight: 1.5 }}>
+                Loaded a sample 12-month ledger for a student organization. Just hit <span style={{ color: "#CC5500", fontWeight: 600 }}>Generate Report</span> below to see a full analysis — or remove it and upload your own file.
+              </p>
             )}
           </div>
 

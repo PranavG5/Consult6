@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import Link from "next/link";
 import ErrorBanner from "@/app/components/ErrorBanner";
+import { createSampleFile, SAMPLE_ORG_NAME } from "@/lib/sampleData";
 
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
 
@@ -372,6 +373,18 @@ export default function TryPage() {
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>Upload financial data</p>
                 <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to 5 MB</p>
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
+              </div>
+            )}
+            {files.length === 0 && !isRunning && state !== "done" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <div style={{ flex: 1, height: 1, background: "#3a3a3a" }} />
+                <button
+                  type="button"
+                  onClick={() => { setFiles([createSampleFile()]); setOrgName(SAMPLE_ORG_NAME); }}
+                  style={{ background: "none", border: "1px solid #484848", color: "#CC5500", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  ✨ Try with sample data
+                </button>
+                <div style={{ flex: 1, height: 1, background: "#3a3a3a" }} />
               </div>
             )}
           </div>
