@@ -83,7 +83,8 @@ export default function Home() {
   const [extraContext, setExtraContext] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
   const [state, setState] = useState<State>("idle");
-  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [checklistDismissed, setChecklistDismissed] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [profileContext, setProfileContext] = useState<{ about_me: string; other_context: string; disable_pdf_history: boolean; disable_analysis_memory: boolean } | null>(null);
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
@@ -132,6 +133,7 @@ export default function Home() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
       setUser({ email: data.user.email ?? "" });
+      setUserId(data.user.id);
 
       // Load profile settings
       const { data: prof } = await supabase.from("profiles").select("about_me,industry,company_size,other_context,disable_pdf_history,disable_analysis_memory,settings_popup_shown").eq("id", data.user.id).single();
@@ -147,11 +149,9 @@ export default function Home() {
           if (prof.industry) setIndustry(prof.industry);
           if (prof.company_size) setCompanySize(prof.company_size);
         }
-        // First-time settings popup
-        if (!prof.settings_popup_shown) {
-          setShowSettingsPopup(true);
-          supabase.from("profiles").update({ settings_popup_shown: true }).eq("id", data.user.id).then(() => {});
-        }
+        // Show the onboarding checklist until the user dismisses it.
+        // (Older accounts that saw the legacy popup keep it hidden.)
+        setChecklistDismissed(prof.settings_popup_shown ?? false);
       }
     });
     setNoContextWarnShown(localStorage.getItem("consult6_no_context_warn_shown") === "true");
@@ -370,6 +370,24 @@ export default function Home() {
     setSelectedProfileId("");
     setUsingSample(true);
   }
+
+  function dismissChecklist() {
+    setChecklistDismissed(true);
+    if (userId) supabase.from("profiles").update({ settings_popup_shown: true }).eq("id", userId).then(() => {});
+  }
+
+  // Onboarding checklist completion is derived from real account state.
+  const checklistAnalysisDone = history.length > 0;
+  const checklistProfileDone = profiles.length > 0;
+  const checklistContextDone = !!(
+    profileContext?.about_me?.trim() ||
+    profileContext?.other_context?.trim() ||
+    industry.trim() ||
+    companySize.trim()
+  );
+  const checklistSteps = [checklistAnalysisDone, checklistProfileDone, checklistContextDone];
+  const checklistCompleted = checklistSteps.filter(Boolean).length;
+  const showChecklist = !checklistDismissed && checklistCompleted < checklistSteps.length;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -777,6 +795,73 @@ export default function Home() {
             onDismiss={() => setLoadError("")}
           />
         )}
+
+        {/* Onboarding checklist — guides a brand-new user and tracks real progress */}
+        {showChecklist && (() => {
+          const items = [
+            {
+              done: checklistAnalysisDone,
+              label: "Run your first analysis",
+              desc: "No spreadsheet handy? Load a sample to see a full report in seconds.",
+              actionLabel: "Try sample data",
+              onAction: loadSampleData,
+            },
+            {
+              done: checklistProfileDone,
+              label: "Save a company profile",
+              desc: "Track one organization's numbers over time so each report builds on the last.",
+              actionLabel: "Create profile",
+              href: "/profiles",
+            },
+            {
+              done: checklistContextDone,
+              label: "Add your context",
+              desc: "Tell us your sector and goals once — we'll tailor every analysis to you.",
+              actionLabel: "Open settings",
+              href: "/settings",
+            },
+          ];
+          return (
+            <div style={{ background: "#2a1800", border: "1px solid #CC5500", borderRadius: 12, padding: "18px 20px", marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: "#f0f0f0", margin: "0 0 2px" }}>Get started with Consult6</p>
+                  <p style={{ fontSize: 12, color: "#c89", margin: 0 }}>{checklistCompleted} of {items.length} complete</p>
+                </div>
+                <button onClick={dismissChecklist} aria-label="Dismiss"
+                  style={{ background: "none", border: "none", color: "#a86", fontSize: 18, lineHeight: 1, cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>×</button>
+              </div>
+              <div style={{ height: 4, background: "#3a2200", borderRadius: 2, overflow: "hidden", marginBottom: 16 }}>
+                <div style={{ height: "100%", width: `${(checklistCompleted / items.length) * 100}%`, background: "#CC5500", transition: "width 0.3s" }} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {items.map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <span style={{
+                      flexShrink: 0, width: 20, height: 20, borderRadius: "50%", marginTop: 1,
+                      background: item.done ? "#16a34a" : "transparent",
+                      border: item.done ? "none" : "2px solid #6a5030",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "#fff", fontSize: 12, fontWeight: 700,
+                    }}>{item.done ? "✓" : ""}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: item.done ? "#888" : "#f0f0f0", margin: "0 0 2px", textDecoration: item.done ? "line-through" : "none" }}>{item.label}</p>
+                      {!item.done && <p style={{ fontSize: 12, color: "#a89", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>}
+                    </div>
+                    {!item.done && (
+                      item.href ? (
+                        <Link href={item.href} style={{ flexShrink: 0, background: "none", border: "1px solid #CC5500", color: "#CC5500", borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>{item.actionLabel}</Link>
+                      ) : (
+                        <button onClick={item.onAction} style={{ flexShrink: 0, background: "none", border: "1px solid #CC5500", color: "#CC5500", borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{item.actionLabel}</button>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, marginBottom: 10 }}>ANALYSIS TYPE</p>
@@ -928,7 +1013,12 @@ export default function Home() {
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#ccc", margin: 0 }}>{files.length > 0 ? "Add another file" : "Upload financial data"}</p>
                 <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>CSV or Excel · Up to {mode === "advanced" ? "10 MB" : "5 MB"}</p>
                 {files.length === 0 && (
-                  <p style={{ fontSize: 12, color: "#e05555", margin: "8px 0 0", fontWeight: 500 }}>A file is required to generate an analysis</p>
+                  <>
+                    <p style={{ fontSize: 12, color: "#777", margin: "8px 0 0", lineHeight: 1.5 }}>
+                      Works best with one row per period and columns like date/month, revenue, expenses, and cash balance. A plain export from your bank, accounting tool, or treasurer&apos;s spreadsheet is fine.
+                    </p>
+                    <p style={{ fontSize: 12, color: "#e05555", margin: "8px 0 0", fontWeight: 500 }}>A file is required to generate an analysis</p>
+                  </>
                 )}
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple style={{ display: "none" }}
                   onChange={e => handleFiles(Array.from(e.target.files ?? []))} />
@@ -1474,27 +1564,6 @@ export default function Home() {
                 Run anyway
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* First-time settings popup */}
-      {showSettingsPopup && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 16, padding: 36, maxWidth: 420, width: "100%", textAlign: "center" }}>
-            <div style={{ width: 48, height: 48, background: "#CC5500", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 22, color: "#fff", margin: "0 auto 20px" }}>6</div>
-            <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>Welcome to Consult6!</p>
-            <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px", lineHeight: 1.6 }}>
-              Set up your profile to save your industry, company context, and preferences so you never have to re-enter them for each analysis.
-            </p>
-            <Link href="/settings" onClick={() => setShowSettingsPopup(false)}
-              style={{ display: "block", background: "#CC5500", color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", padding: "13px 0", borderRadius: 9, marginBottom: 10 }}>
-              Set Up Profile →
-            </Link>
-            <button onClick={() => setShowSettingsPopup(false)}
-              style={{ background: "none", border: "none", color: "#555", fontSize: 13, cursor: "pointer" }}>
-              Maybe later
-            </button>
           </div>
         </div>
       )}
