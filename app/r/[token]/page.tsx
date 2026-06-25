@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BrandLink from "@/components/BrandLink";
 import { createAnonClient } from "@/lib/supabase-anon";
 import type { AnalysisResult, Flag, Recommendation, IndustryComparison, RiskMatrixItem } from "@/lib/generateReport";
 
@@ -82,8 +83,10 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
       {/* Top banner */}
       <div style={{ background: "#161616", borderBottom: "1px solid #2d2d2d", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <div style={{ width: 28, height: 28, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff", flexShrink: 0 }}>6</div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#f0f0f0", flexShrink: 0 }}>Consult6</span>
+          <BrandLink style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, background: "#CC5500", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff", flexShrink: 0 }}>6</div>
+            <span style={{ fontWeight: 700, fontSize: 14, color: "#f0f0f0", flexShrink: 0 }}>Consult6</span>
+          </BrandLink>
           <span style={{ color: "#484848", margin: "0 6px", flexShrink: 0 }}>|</span>
           <span style={{ fontSize: 13, color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Shared report · {org_name || "Financial Report"}</span>
         </div>

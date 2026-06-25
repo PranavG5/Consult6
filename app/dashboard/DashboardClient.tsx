@@ -741,10 +741,10 @@ export default function Home() {
       <style>{`input::placeholder, textarea::placeholder { color: #4a4a4a !important; }`}</style>
       {/* Navbar */}
       <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, overflow: "visible" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
-        </div>
+        </Link>
         {usage && (
           <>
             {/* Token counts - always visible */}

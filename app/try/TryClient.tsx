@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import Link from "next/link";
 import ErrorBanner from "@/app/components/ErrorBanner";
+import BrandLink from "@/components/BrandLink";
 import { createSampleFile, SAMPLE_ORG_NAME } from "@/lib/sampleData";
 
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
@@ -298,10 +299,10 @@ export default function TryPage() {
       <style>{`input::placeholder, textarea::placeholder { color: #4a4a4a !important; }`}</style>
       {/* Navbar */}
       <nav style={{ background: "#1e1e1e", borderBottom: "1px solid #3a3a3a", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+        <BrandLink style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, background: "#CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#fff" }}>6</div>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
-        </Link>
+        </BrandLink>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ background: "#2a1800", color: "#CC5500", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>GUEST TRIAL</span>
           <Link href="/auth/signup" style={{ background: "#CC5500", color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none", padding: "6px 14px", borderRadius: 7 }}>Create Account</Link>

@@ -6,6 +6,7 @@ import {
   Sparkles, Check, ArrowRight, Zap, AlertTriangle, Info,
 } from "lucide-react";
 import Reveal from "./components/Reveal";
+import BrandLink from "../components/BrandLink";
 
 export const metadata: Metadata = {
   title: "Consult6 | Senior Financial Insight, No Consultant Fees",
@@ -121,10 +122,10 @@ export default function LandingPage() {
     <div style={{ minHeight: "100vh", background: "var(--bg-0)", color: "var(--ink)" }}>
       {/* Navbar */}
       <nav className="landing-nav" style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(11,13,18,0.72)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid var(--line)", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <BrandLink style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <Logo />
           <span style={{ fontWeight: 700, fontSize: 15.5, color: "var(--ink)", letterSpacing: -0.2 }}>Consult6</span>
-        </div>
+        </BrandLink>
         <div className="landing-nav-links">
           {[["Features", "#features"], ["How it Works", "#how-it-works"], ["Pricing", "#pricing"]].map(([l, h]) => (
             <a key={h} href={h} style={{ fontSize: 14, color: "var(--ink-2)", textDecoration: "none", padding: "6px 14px" }}>{l}</a>
