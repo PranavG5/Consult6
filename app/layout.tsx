@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Consult6 | Senior Financial Insight, No Consultant Fees",
@@ -16,9 +23,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <head>
-        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.skeleton{animation:pulse 1.8s ease-in-out infinite;background:#2a2a2a;border-radius:6px;}`}</style>
+        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.skeleton{animation:pulse 1.8s ease-in-out infinite;background:#1b212c;border-radius:6px;}`}</style>
       </head>
       <body>
         {children}
