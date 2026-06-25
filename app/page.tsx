@@ -41,7 +41,7 @@ const proFeatures = [
 ];
 const enterpriseFeatures = [
   "50 basic analyses per day", "20 advanced analyses per day", "Everything in Pro",
-  "Priority support", "Team-ready usage limits", "Dedicated onboarding",
+  "Priority support", "Custom usage limits", "Dedicated onboarding",
 ];
 
 const steps = [

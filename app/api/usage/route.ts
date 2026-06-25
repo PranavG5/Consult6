@@ -19,6 +19,5 @@ export async function GET() {
     advancedUsed: usage?.advanced_count ?? 0,
     basicLimit: plan.daily.basic,
     advancedLimit: plan.daily.advanced,
-    orgName: plan.org?.name ?? null,
   });
 }

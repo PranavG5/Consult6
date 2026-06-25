@@ -42,47 +42,6 @@ interface ProfileData {
   other_context: string;
 }
 
-interface UserOrg {
-  id: string;
-  name: string;
-  university: string | null;
-  plan: string;
-}
-
-interface OrgInvite {
-  id: string;
-  code: string;
-  attribution: string | null;
-  max_uses: number | null;
-  use_count: number;
-  revoked_at: string | null;
-}
-
-interface OrgMemberInfo {
-  user_id: string;
-  email: string;
-  role: string;
-  joined_at: string;
-}
-
-interface AdminOrg {
-  id: string;
-  name: string;
-  university: string | null;
-  plan: string;
-  custom_limits: Record<string, number> | null;
-  notes: string | null;
-  created_at: string;
-  org_members: OrgMemberInfo[];
-  org_invites: OrgInvite[];
-}
-
-const EMPTY_ORG_FORM = {
-  name: "", university: "", plan: "enterprise",
-  basic: "", advanced: "", profiles: "", history: "",
-  attribution: "", max_uses: "",
-};
-
 interface PrivacyData {
   disable_pdf_history: boolean;
   disable_analysis_memory: boolean;
@@ -136,12 +95,6 @@ export default function SettingsPage() {
   const [upgradeNote, setUpgradeNote] = useState("");
   const [upgrading, setUpgrading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userOrg, setUserOrg] = useState<UserOrg | null>(null);
-  const [orgs, setOrgs] = useState<AdminOrg[]>([]);
-  const [orgsLoading, setOrgsLoading] = useState(false);
-  const [orgForm, setOrgForm] = useState({ ...EMPTY_ORG_FORM });
-  const [creatingOrg, setCreatingOrg] = useState(false);
-  const [inviteAttribution, setInviteAttribution] = useState<Record<string, string>>({});
   const supabase = createClient();
 
   useEffect(() => {
@@ -167,11 +120,8 @@ export default function SettingsPage() {
         });
         // fetch billing history for all users
         fetch("/api/billing/history").then(r => r.json()).then(d => setSubHistory(d.history ?? []));
-        // org membership (drives the billing tab display)
-        fetch("/api/org").then(r => r.json()).then(d => setUserOrg(d.org ?? null)).catch(() => {});
         // fetch admin user list if admin
         if (aType === "admin") {
-          fetchOrgs();
           setAdminLoading(true);
           fetch("/api/admin/users")
             .then(r => r.json())
@@ -268,78 +218,6 @@ export default function SettingsPage() {
     setUpgradeTarget(null);
     setUpgradeNote("");
     flash(`${upgradeTarget.email} upgraded to ${upgradePlan}.`);
-  }
-
-  async function fetchOrgs() {
-    setOrgsLoading(true);
-    try {
-      const res = await fetch("/api/admin/orgs");
-      const d = await res.json();
-      if (!res.ok) flash(d.error ?? "Failed to load organizations.", false);
-      setOrgs(d.orgs ?? []);
-    } catch {
-      flash("Failed to load organizations.", false);
-    } finally {
-      setOrgsLoading(false);
-    }
-  }
-
-  async function createOrg() {
-    if (!orgForm.name.trim()) { flash("Organization name is required.", false); return; }
-    setCreatingOrg(true);
-    try {
-      const res = await fetch("/api/admin/orgs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: orgForm.name,
-          university: orgForm.university,
-          plan: orgForm.plan,
-          custom_limits: { basic: orgForm.basic, advanced: orgForm.advanced, profiles: orgForm.profiles, history: orgForm.history },
-          attribution: orgForm.attribution,
-          max_uses: orgForm.max_uses,
-        }),
-      });
-      const d = await res.json();
-      if (!res.ok) { flash(d.error ?? "Failed to create organization.", false); return; }
-      setOrgForm({ ...EMPTY_ORG_FORM });
-      flash(`Created "${d.org.name}" with invite code ${d.invite.code}.`);
-      fetchOrgs();
-    } finally {
-      setCreatingOrg(false);
-    }
-  }
-
-  async function createInvite(orgId: string) {
-    const res = await fetch(`/api/admin/orgs/${orgId}/invites`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attribution: inviteAttribution[orgId] ?? "" }),
-    });
-    const d = await res.json();
-    if (!res.ok) { flash(d.error ?? "Failed to create invite.", false); return; }
-    setInviteAttribution(prev => ({ ...prev, [orgId]: "" }));
-    flash(`New invite code: ${d.invite.code}`);
-    fetchOrgs();
-  }
-
-  async function revokeInvite(inviteId: string) {
-    const res = await fetch(`/api/admin/invites/${inviteId}`, { method: "DELETE" });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      flash(d.error ?? "Failed to revoke invite.", false);
-      return;
-    }
-    flash("Invite revoked.");
-    fetchOrgs();
-  }
-
-  function copyInviteLink(code: string) {
-    const url = `${window.location.origin}/join/${code}`;
-    navigator.clipboard.writeText(url).then(
-      () => flash("Invite link copied to clipboard."),
-      () => flash(url, true)
-    );
   }
 
   const tabLabels: { id: Tab; label: string }[] = accountType === "admin"
@@ -495,14 +373,6 @@ export default function SettingsPage() {
                     )}
                   </div>
                 </div>
-                {userOrg && (
-                  <div style={{ background: "#111f14", border: "1px solid #16a34a55", borderRadius: 10, padding: "20px 22px", marginBottom: 20 }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#4ade80", letterSpacing: 1, margin: "0 0 10px" }}>ORGANIZATION</p>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: "#f0f0f0", margin: "0 0 2px" }}>{userOrg.name}</p>
-                    {userOrg.university && <p style={{ fontSize: 13, color: "#888", margin: "0 0 8px" }}>{userOrg.university}</p>}
-                    <p style={{ fontSize: 12, color: "#666", margin: 0 }}>Your plan and usage limits come from this organization&apos;s subscription.</p>
-                  </div>
-                )}
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 600, color: "#666", letterSpacing: 1, margin: "0 0 12px" }}>SUBSCRIPTION HISTORY</p>
                   {subHistory.length === 0 ? (
@@ -643,121 +513,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Organizations */}
-                <div style={{ marginTop: 32 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px" }}>Organizations</p>
-                  <p style={{ fontSize: 13, color: "#666", margin: "0 0 16px" }}>
-                    Create an org with its negotiated plan and custom limits, then share the invite link or QR. Whoever signs up through it lands on the org&apos;s plan automatically. Tag invites with the marketer&apos;s name for attribution.
-                  </p>
-
-                  {/* Create org */}
-                  <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: "18px 20px", marginBottom: 16 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "#f0f0f0", margin: "0 0 12px" }}>New organization</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                      <input value={orgForm.name} onChange={e => setOrgForm(f => ({ ...f, name: e.target.value }))} placeholder="Org name (e.g. Alpha Phi Omega)" style={{ boxSizing: "border-box" }} />
-                      <input value={orgForm.university} onChange={e => setOrgForm(f => ({ ...f, university: e.target.value }))} placeholder="University (e.g. UT Austin)" style={{ boxSizing: "border-box" }} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-                      <select value={orgForm.plan} onChange={e => setOrgForm(f => ({ ...f, plan: e.target.value }))}
-                        style={{ background: "#252525", border: "1px solid #484848", borderRadius: 8, color: "#f0f0f0", padding: "10px 12px", fontSize: 13, boxSizing: "border-box" }}>
-                        <option value="enterprise">Enterprise</option>
-                        <option value="paid">Pro</option>
-                        <option value="free">Free</option>
-                      </select>
-                      <input value={orgForm.basic} onChange={e => setOrgForm(f => ({ ...f, basic: e.target.value }))} placeholder="Basic/day" type="number" min={0} style={{ boxSizing: "border-box" }} />
-                      <input value={orgForm.advanced} onChange={e => setOrgForm(f => ({ ...f, advanced: e.target.value }))} placeholder="Adv/day" type="number" min={0} style={{ boxSizing: "border-box" }} />
-                      <input value={orgForm.profiles} onChange={e => setOrgForm(f => ({ ...f, profiles: e.target.value }))} placeholder="Profiles" type="number" min={0} style={{ boxSizing: "border-box" }} />
-                      <input value={orgForm.history} onChange={e => setOrgForm(f => ({ ...f, history: e.target.value }))} placeholder="History" type="number" min={0} style={{ boxSizing: "border-box" }} />
-                    </div>
-                    <p style={{ fontSize: 11, color: "#5a5a5a", margin: "0 0 10px" }}>Limit fields are optional. Leave blank to use the plan defaults (Enterprise: 50 basic / 20 advanced per day, 20 profiles).</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10 }}>
-                      <input value={orgForm.attribution} onChange={e => setOrgForm(f => ({ ...f, attribution: e.target.value }))} placeholder="Marketer / attribution tag" style={{ boxSizing: "border-box" }} />
-                      <input value={orgForm.max_uses} onChange={e => setOrgForm(f => ({ ...f, max_uses: e.target.value }))} placeholder="Max uses (blank = unlimited)" type="number" min={1} style={{ boxSizing: "border-box" }} />
-                      <button onClick={createOrg} disabled={creatingOrg}
-                        style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, opacity: creatingOrg ? 0.6 : 1, cursor: "pointer", whiteSpace: "nowrap" }}>
-                        {creatingOrg ? "Creating…" : "Create org + invite"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Org list */}
-                  {orgsLoading ? (
-                    <p style={{ fontSize: 13, color: "#555", textAlign: "center", padding: 20 }}>Loading organizations…</p>
-                  ) : orgs.length === 0 ? (
-                    <p style={{ fontSize: 13, color: "#555", textAlign: "center", padding: 20 }}>No organizations yet.</p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {orgs.map(org => {
-                        const planColors: Record<string, { bg: string; color: string }> = {
-                          free: { bg: "#484848", color: "#aaa" },
-                          paid: { bg: "#CC5500", color: "#fff" },
-                          enterprise: { bg: "#16a34a", color: "#fff" },
-                        };
-                        const pc = planColors[org.plan] ?? planColors.enterprise;
-                        const cl = org.custom_limits;
-                        return (
-                          <div key={org.id} style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: "16px 18px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0" }}>{org.name}</span>
-                              {org.university && <span style={{ fontSize: 12, color: "#777" }}>{org.university}</span>}
-                              <span style={{ fontSize: 10, fontWeight: 700, background: pc.bg, color: pc.color, padding: "2px 8px", borderRadius: 10 }}>{org.plan.toUpperCase()}</span>
-                              {cl && (
-                                <span style={{ fontSize: 11, color: "#888" }}>
-                                  Custom: {Object.entries(cl).map(([k, v]) => `${k} ${v}`).join(" · ")}
-                                </span>
-                              )}
-                              <span style={{ fontSize: 11, color: "#555", marginLeft: "auto" }}>{org.org_members.length} member{org.org_members.length === 1 ? "" : "s"}</span>
-                            </div>
-
-                            {org.org_members.length > 0 && (
-                              <div style={{ marginBottom: 10 }}>
-                                {org.org_members.map(m => (
-                                  <span key={m.user_id} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#aaa", background: "#252525", border: "1px solid #3a3a3a", borderRadius: 14, padding: "3px 10px", marginRight: 6, marginBottom: 4 }}>
-                                    {m.email}
-                                    {m.role === "owner" && <span style={{ fontSize: 9, fontWeight: 700, color: "#CC5500" }}>OWNER</span>}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              {org.org_invites.map(inv => (
-                                <div key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12, background: "#252525", border: "1px solid #3a3a3a", borderRadius: 8, padding: "8px 12px", opacity: inv.revoked_at ? 0.45 : 1 }}>
-                                  <code style={{ color: "#CC5500", fontWeight: 700 }}>/join/{inv.code}</code>
-                                  {inv.attribution && <span style={{ color: "#888" }}>by {inv.attribution}</span>}
-                                  <span style={{ color: "#666" }}>{inv.use_count}{inv.max_uses != null ? `/${inv.max_uses}` : ""} used</span>
-                                  {inv.revoked_at ? (
-                                    <span style={{ color: "#e74c3c", fontWeight: 600 }}>REVOKED</span>
-                                  ) : (
-                                    <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-                                      <button onClick={() => copyInviteLink(inv.code)}
-                                        style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "3px 10px", fontSize: 11, cursor: "pointer" }}>Copy link</button>
-                                      <button onClick={() => revokeInvite(inv.id)}
-                                        style={{ background: "none", border: "1px solid #5c1a1a", color: "#e74c3c", borderRadius: 6, padding: "3px 10px", fontSize: 11, cursor: "pointer" }}>Revoke</button>
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                              <div style={{ display: "flex", gap: 8 }}>
-                                <input
-                                  value={inviteAttribution[org.id] ?? ""}
-                                  onChange={e => setInviteAttribution(prev => ({ ...prev, [org.id]: e.target.value }))}
-                                  placeholder="Marketer name for new invite"
-                                  style={{ flex: 1, boxSizing: "border-box", fontSize: 12, padding: "6px 10px" }}
-                                />
-                                <button onClick={() => createInvite(org.id)}
-                                  style={{ background: "#2a1800", border: "1px solid #CC5500", color: "#CC5500", fontSize: 12, fontWeight: 600, borderRadius: 7, padding: "6px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>
-                                  + New invite
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
 
                 {/* Report Usage */}
                 <div style={{ marginTop: 32 }}>

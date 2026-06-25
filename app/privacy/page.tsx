@@ -59,11 +59,6 @@ export default function PrivacyPage() {
           You can optionally create a shareable link to a report. When you do, that report becomes accessible to <strong style={{ color: "#ccc" }}>anyone who has the link</strong>, without needing to sign in, until you revoke it. Share links are only created when you explicitly choose to share, and you can revoke a link at any time from your report history, which immediately disables it.
         </p>
 
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Organisations and teams</h2>
-        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          If you join Consult6 through an organisation invite, your account is linked to that organisation and inherits its plan and usage limits. Administrators of that organisation can see that your account is a member (including your email address and role) for the purpose of managing the account. They cannot see your uploaded files, analysis results, or report history.
-        </p>
-
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Usage data</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
           We track the number of analyses you have run in order to enforce plan limits. This usage count is stored in our database and resets daily. We do not use third-party analytics platforms or advertising trackers.

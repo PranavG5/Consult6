@@ -12,7 +12,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const supabase = createClient();
-  // Safe relative destination after auth (e.g. /join/CODE from an invite link)
+  // Safe relative destination after auth (e.g. password-recovery flows)
   const rawNext = useSearchParams().get("next");
   const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
 

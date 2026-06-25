@@ -51,11 +51,8 @@ export default function TermsPage() {
         </ul>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Accounts and plans</h2>
-        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
-          You are responsible for maintaining the security of your account credentials. Plan limits (number of analyses per day, saved profiles, and history length) are enforced at the account level. We reserve the right to modify plan limits or pricing with reasonable notice. Paid subscriptions are subject to the billing terms presented at the time of purchase. Report history (analysis results and metadata) and any data you save to Company Profiles are stored server-side and associated with your account; deleting your account permanently removes this data along with your profile and usage records.
-        </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          If you join an organisation through an invite link, your account is linked to that organisation and inherits its plan and usage limits. An organisation&apos;s administrators may view its membership for the purpose of managing the account, but cannot access your uploaded files, analysis results, or report history.
+          You are responsible for maintaining the security of your account credentials. Plan limits (number of analyses per day, saved profiles, and history length) are enforced at the account level. We reserve the right to modify plan limits or pricing with reasonable notice. Paid subscriptions are subject to the billing terms presented at the time of purchase. Report history (analysis results and metadata) and any data you save to Company Profiles are stored server-side and associated with your account; deleting your account permanently removes this data along with your profile and usage records.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Sharing reports</h2>
