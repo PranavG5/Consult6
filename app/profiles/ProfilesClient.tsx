@@ -126,7 +126,7 @@ export default function ProfilesPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, gap: 16, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#f0f0f0", margin: "0 0 6px" }}>Companies</h1>
-            <p style={{ fontSize: 14, color: "#777", margin: 0 }}>Each company is a live financial dashboard — KPIs, trends, and the analyses you run for it.</p>
+            <p style={{ fontSize: 14, color: "#777", margin: 0 }}>Each company is a live financial dashboard: KPIs, trends, and the analyses you run for it.</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
@@ -181,7 +181,7 @@ export default function ProfilesPage() {
                       {p.latest_period && <span style={{ marginLeft: "auto", color: "#888" }}>{p.latest_period}</span>}
                     </div>
                   ) : (
-                    <div style={{ fontSize: 11, color: "#666" }}>No data yet — open to upload</div>
+                    <div style={{ fontSize: 11, color: "#666" }}>No data yet. Open to upload.</div>
                   )}
                 </div>
               </Link>

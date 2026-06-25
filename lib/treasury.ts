@@ -1,4 +1,4 @@
-// Treasurer trajectory helpers — pure functions shared by the dashboard UI and
+// Treasurer trajectory helpers - pure functions shared by the dashboard UI and
 // the insight route. Given a profile's tracked metrics, they identify which
 // series represent the cash balance, income, and expenses, then derive the
 // numbers a club treasurer actually reports on: current balance, runway, net

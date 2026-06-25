@@ -38,7 +38,7 @@ export default function PrivacyPage() {
           The structured output of each analysis (the findings, flags, and recommendations) is stored <strong style={{ color: "#ccc" }}>server-side in your account</strong> so that your report history is accessible across all your devices. This enables your history sidebar to stay in sync whether you are on your laptop, phone, or another computer. You can disable this in <strong style={{ color: "#ccc" }}>Settings → Privacy</strong> by turning on &ldquo;Disable PDF history&rdquo;, which will stop new results from being saved and clear your existing history.
         </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Raw file data (your spreadsheets) is never stored — only the structured analysis result and metadata (organisation name, file name, date, and analysis mode) are saved to your account record.
+          Raw file data (your spreadsheets) is never stored. Only the structured analysis result and metadata (organisation name, file name, date, and analysis mode) are saved to your account record.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Usage data</h2>

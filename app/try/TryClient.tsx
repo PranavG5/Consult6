@@ -180,7 +180,7 @@ export default function TryPage() {
       if (raw === "__ANTHROPIC_ERROR__" || raw.toLowerCase().includes("anthropic")) {
         setErrorMsg("Something went wrong with the analysis. Please try again in a moment.");
       } else if (raw === "__EMPTY_RESPONSE__" || raw.toLowerCase().includes("invalid response")) {
-        setErrorMsg("The analysis came back incomplete. Please try again — if the issue persists, try a smaller file.");
+        setErrorMsg("The analysis came back incomplete. Please try again. If the issue persists, try a smaller file.");
       } else if (raw.toLowerCase().includes("failed to fetch") || raw.toLowerCase().includes("networkerror")) {
         setErrorMsg("Something went wrong. Check your connection and try again.");
       } else {

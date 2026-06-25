@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Plain anon client — no cookie/session handling.
+// Plain anon client - no cookie/session handling.
 // Use for public server-side reads where no user auth is needed.
 export function createAnonClient() {
   return createClient(

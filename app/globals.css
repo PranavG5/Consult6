@@ -169,11 +169,11 @@ button { cursor: pointer; font-family: inherit; }
   /* Mode selector */
   .mode-selector { grid-template-columns: 1fr; }
 
-  /* Auth inputs — prevent iOS zoom */
+  /* Auth inputs - prevent iOS zoom */
   .auth-card input,
   .auth-card textarea { font-size: 16px !important; }
 
-  /* Contact inputs — prevent iOS zoom */
+  /* Contact inputs - prevent iOS zoom */
   .contact-form input,
   .contact-form textarea { font-size: 16px !important; }
 

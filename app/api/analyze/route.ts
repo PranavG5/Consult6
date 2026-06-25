@@ -115,6 +115,7 @@ Rules:
 - trajectoryNote: 1 sentence on where this org is headed based on actual trends.
 - NEVER mention a field as "unavailable", "not provided", or "data not found". Simply omit it.
 - Never use raw data field names in the report. Do not write field names like churn_trend, cash_runway_months, avg_deal_size_trend, or any other underscore-separated name. Translate into plain English.
+- Never use em-dashes. Write with commas, colons, parentheses, or separate sentences instead.
 - Write the entire report in first-person plural. Use 'we reviewed,' 'we identified,' 'we recommend,' and 'in our view' throughout.`;
 
 const SYSTEM_ADVANCED = `You are a senior business consultant with 20 years of experience advising companies ranging from startups to Fortune 500s. You have just reviewed your client's data and are delivering your assessment in person. You speak directly, confidently, and without jargon. You give real recommendations, not observations. You never say 'it appears' or 'data suggests'. You say what you see and what you'd do about it. Your client is not a financial expert. They are a business owner or organization leader who needs to understand what is happening and what to do next, in plain language. Analyze only what the data actually shows. Never reference metrics that are null, unavailable, or absent from the data. Omit them entirely. Do not use placeholder language like "data unavailable" or "not provided".
@@ -375,7 +376,7 @@ Instructions:
           if (sections.executiveSummary) {
             sectionInstructions.push(`EXECUTIVE SUMMARY (field: "summary"):
 Identify the 3-5 most important trends and discrepancies in the data.
-Be purely observational. Do NOT include recommendations, suggestions, or action items. Describe only what the data shows — the most significant trends and discrepancies.`);
+Be purely observational. Do NOT include recommendations, suggestions, or action items. Describe only what the data shows: the most significant trends and discrepancies.`);
             jsonFields.unshift(`"summary": "string"`);
           }
           if (sections.recommendations) {
@@ -391,7 +392,7 @@ Provide 3-4 prioritized, specific action items tailored to this organization's a
           }
           if (sections.benchmarks) {
             sectionInstructions.push(`INDUSTRY BENCHMARKS (field: "industryComparisons"):
-3 entries benchmarked to this org's specific sector. Use realistic industry averages. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named program_expenses, program_costs, or direct_service_costs — never substitute general overhead columns.
+3 entries benchmarked to this org's specific sector. Use realistic industry averages. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named program_expenses, program_costs, or direct_service_costs. Never substitute general overhead columns.
 Also include trend chart data (field: "trendData"): Exactly 6 labels and 6 values per series. Use real date/period labels. 2 series max. Values must reflect actual data.`);
             jsonFields.push(`"trendData": {"label":"string","series":[{"name":"string","values":[0,0,0,0,0,0]}],"labels":["","","","","",""]}`);
             jsonFields.push(`"industryComparisons": [{"metric":"string","yourValue":"string","industryAverage":"string","topQuartile":"string","status":"above_average|average|below_average"}]`);
@@ -411,10 +412,10 @@ scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified 
 
           const dynamicSchema = `{\n  ${jsonFields.join(",\n  ")}\n}`;
           const sectionsPrompt = sectionInstructions.length
-            ? `\nGenerate ONLY the following sections — do not include any sections not listed here:\n${sectionInstructions.join("\n\n")}`
+            ? `\nGenerate ONLY the following sections. Do not include any sections not listed here:\n${sectionInstructions.join("\n\n")}`
             : "";
 
-          const dynamicSystem = `${SYSTEM_ADVANCED.replace(/Return ONLY valid JSON with this exact structure[\s\S]*?Write the entire report in first-person plural[\s\S]*?together\./, `Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.\n\n${dynamicSchema}\n\nRules:\n- flags: 3-5 items. Only flag real data points. Each description under 40 words. Metric must be a specific value from the data.\n- summary (if included): Be purely observational. Do NOT include recommendations, suggestions, or action items. Describe only what the data shows.\n- recommendations (if included): 3-4 items, specific to this org's actual situation. Under 40 words each.\n- industryComparisons (if included): 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector.\n- scenarios (if included): 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.\n- riskMatrix (if included): 3 risks, each under 30 words. Based on actual flags found in the data.\n- caseStudies (if included): Do NOT fabricate specific named organizations or invent outcomes.\n- actionPlan (if included): 2 items per phase (immediate/shortTerm/longTerm), each under 25 words.\n- Never use raw data field names in the report. Translate all field references into plain English.\n- Write the entire report in first-person plural. Use 'we reviewed,' 'we identified,' 'our assessment,' 'we recommend,' and 'in our view' throughout. The report should read as if a team of senior consultants prepared and signed off on it together.`)}${sectionsPrompt}`;
+          const dynamicSystem = `${SYSTEM_ADVANCED.replace(/Return ONLY valid JSON with this exact structure[\s\S]*?Write the entire report in first-person plural[\s\S]*?together\./, `Return ONLY valid JSON with this exact structure. No explanation, no markdown, no code fences.\n\n${dynamicSchema}\n\nRules:\n- flags: 3-5 items. Only flag real data points. Each description under 40 words. Metric must be a specific value from the data.\n- summary (if included): Be purely observational. Do NOT include recommendations, suggestions, or action items. Describe only what the data shows.\n- recommendations (if included): 3-4 items, specific to this org's actual situation. Under 40 words each.\n- industryComparisons (if included): 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector.\n- scenarios (if included): 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.\n- riskMatrix (if included): 3 risks, each under 30 words. Based on actual flags found in the data.\n- caseStudies (if included): Do NOT fabricate specific named organizations or invent outcomes.\n- actionPlan (if included): 2 items per phase (immediate/shortTerm/longTerm), each under 25 words.\n- Never use raw data field names in the report. Translate all field references into plain English.\n- Never use em-dashes. Use commas, colons, parentheses, or separate sentences instead.\n- Write the entire report in first-person plural. Use 'we reviewed,' 'we identified,' 'our assessment,' 'we recommend,' and 'in our view' throughout. The report should read as if a team of senior consultants prepared and signed off on it together.`)}${sectionsPrompt}`;
 
           const advancedMsg = await anthropic.messages.create({
             model: "claude-sonnet-4-6",

@@ -6,7 +6,7 @@ const PAGE_W = 210;
 const PAGE_H = 297; // eslint-disable-line @typescript-eslint/no-unused-vars
 const MARGIN = 16;
 const CONTENT_W = PAGE_W - MARGIN * 2; // 178mm
-const CONTENT_BOTTOM = 268; // hard ceiling — nothing ever renders below this
+const CONTENT_BOTTOM = 268; // hard ceiling - nothing ever renders below this
 const FOOTER_Y = 274;
 const START_Y = 22; // where content begins after a page break
 
@@ -77,7 +77,7 @@ function measureH(doc: jsPDF, text: string, maxWidth: number): number {
  *
  * NOTE: when the callback updates the outer `y` variable beyond START_Y
  * (e.g. by also drawing a section header), call cursor() without capturing
- * the return value — the closure update takes precedence over the returned
+ * the return value - the closure update takes precedence over the returned
  * START_Y.
  */
 function cursor(
@@ -96,7 +96,7 @@ function cursor(
 
 /**
  * Draws the page footer: white background, rule line, left/centre/right labels.
- * Intentionally uses raw doc.text() — footer lives below CONTENT_BOTTOM and
+ * Intentionally uses raw doc.text() - footer lives below CONTENT_BOTTOM and
  * must bypass safeText's content-ceiling guard.
  */
 function drawFooter(
@@ -232,7 +232,7 @@ function drawFlags(
       : 0;
     const totalH = titleH + descH + metricH + 14;
 
-    // cursor() called without y= — callback advances y past the header;
+    // cursor() called without y= - callback advances y past the header;
     // cursor's START_Y return would overwrite that if assigned.
     cursor(y, totalH, doc, () => {
       pageCounter.current++;
@@ -302,7 +302,7 @@ function drawRecommendations(
     // 11mm title advance + 8mm after detail + 8mm after rule
     const totalH = detailH + 27;
 
-    // Callback sets y = START_Y; cursor also returns START_Y — assignment safe.
+    // Callback sets y = START_Y; cursor also returns START_Y - assignment safe.
     cursor(y, totalH, doc, () => {
       pageCounter.current++;
       drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
@@ -369,7 +369,7 @@ function drawTrajectoryAndChart(
   const chartH = 65;
 
   // Ensure the full chart block fits; callback sets y = START_Y, cursor also
-  // returns START_Y — assignment safe here.
+  // returns START_Y - assignment safe here.
   y = cursor(y, chartH + 25, doc, () => {
     pageCounter.current++;
     drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
@@ -405,7 +405,7 @@ function drawTrajectoryAndChart(
     safeText(doc, label, MARGIN + 13, gridY + 1, 13, "right");
   }
 
-  // Bars — always 6 groups, each with up to two bars
+  // Bars - always 6 groups, each with up to two bars
   const groupW = chartW / 6;
   const barW = groupW * 0.3;
   const n = Math.min(trendData.labels.length, 6);
@@ -414,13 +414,13 @@ function drawTrajectoryAndChart(
     const bar1X = chartX + i * groupW + groupW * 0.05;
     const bar2X = bar1X + barW + 1.5;
 
-    // Series 0 — Revenue (orange)
+    // Series 0 - Revenue (orange)
     const val1 = s0vals[i] ?? 0;
     const barH1 = Math.max((val1 / maxVal) * chartH, 0);
     doc.setFillColor(C.orange);
     doc.rect(bar1X, chartBottom - barH1, barW, barH1, "F");
 
-    // Series 1 — Expenses (gray)
+    // Series 1 - Expenses (gray)
     if (trendData.series[1]) {
       const val2 = s1vals[i] ?? 0;
       const barH2 = Math.max((val2 / maxVal) * chartH, 0);
@@ -517,7 +517,7 @@ function drawBenchmarks(
     const maxLines = Math.max(col0Lines, col1Lines, col2Lines, col3Lines, col4Lines);
     const rowH = Math.max(maxLines * LINE_H + 6, 12);
 
-    // cursor() without y= — callback redraws section + table headers,
+    // cursor() without y= - callback redraws section + table headers,
     // advancing y past START_Y; cursor's START_Y return would overwrite that.
     cursor(y, rowH, doc, () => {
       pageCounter.current++;
@@ -531,7 +531,7 @@ function drawBenchmarks(
     doc.setFillColor(i % 2 === 0 ? C.white : C.orangeLight);
     doc.rect(MARGIN, y, CONTENT_W, rowH, "F");
 
-    // Cell borders — all use the same dynamic rowH
+    // Cell borders - all use the same dynamic rowH
     doc.setDrawColor(C.rule);
     doc.setLineWidth(0.2);
     for (const col of cols) {
@@ -595,7 +595,7 @@ function drawScenarios(
     blockH = maxTextH + 18;
   }
 
-  // Callback sets y = START_Y; cursor also returns START_Y — assignment safe.
+  // Callback sets y = START_Y; cursor also returns START_Y - assignment safe.
   y = cursor(y, blockH, doc, () => {
     pageCounter.current++;
     drawFooter(doc, orgName, pageCounter.current, pageCounter.total);
@@ -675,7 +675,7 @@ function drawRiskMatrix(
     const mitLines  = (doc.splitTextToSize(risk.mitigation, cols[3].w - 4) as string[]).length;
     const rowH = Math.max(Math.max(riskLines, mitLines) * LINE_H + 4, 13);
 
-    // cursor() without y= — callback redraws section header + table header,
+    // cursor() without y= - callback redraws section header + table header,
     // advancing y past START_Y; cursor's START_Y return would overwrite that.
     cursor(y, rowH, doc, () => {
       pageCounter.current++;
@@ -703,7 +703,7 @@ function drawRiskMatrix(
     doc.setTextColor(C.textDark);
     safeText(doc, risk.risk, cols[0].x + 2, y + LINE_H, cols[0].w - 4);
 
-    // Likelihood cell — coloured background, bold centred label
+    // Likelihood cell - coloured background, bold centred label
     doc.setFillColor(likeBg);
     doc.rect(cols[1].x, y, cols[1].w, rowH, "F");
     doc.setDrawColor(C.rule);
@@ -714,7 +714,7 @@ function drawRiskMatrix(
     doc.setTextColor(likeText);
     safeText(doc, risk.likelihood.toUpperCase(), cols[1].x + cols[1].w / 2, y + rowH / 2 + 1.5, cols[1].w, "center");
 
-    // Impact cell — coloured background, bold centred label
+    // Impact cell - coloured background, bold centred label
     doc.setFillColor(impBg);
     doc.rect(cols[2].x, y, cols[2].w, rowH, "F");
     doc.setDrawColor(C.rule);
@@ -815,22 +815,22 @@ function runGeneratePDF(
   const pageCounter = { current: 1, total: 0 };
   const inc = () => { pageCounter.current++; };
 
-  // Page 1 — cover (no footer; drawCover ends with doc.addPage())
+  // Page 1 - cover (no footer; drawCover ends with doc.addPage())
   drawCover(doc, orgName, dateStr);
 
-  // Page 2 — executive summary
+  // Page 2 - executive summary
   inc();
   drawSummary(doc, analysis.summary ?? "", orgName, pageCounter);
 
-  // Page 3 — flags
+  // Page 3 - flags
   doc.addPage(); inc();
   drawFlags(doc, analysis.flags ?? [], orgName, pageCounter);
 
-  // Page 4 — recommendations
+  // Page 4 - recommendations
   doc.addPage(); inc();
   drawRecommendations(doc, analysis.recommendations ?? [], orgName, pageCounter);
 
-  // Page 5+ — optional sections
+  // Page 5+ - optional sections
   if (analysis.trendData) {
     doc.addPage(); inc();
     drawTrajectoryAndChart(doc, analysis.trajectoryNote ?? "", analysis.trendData, orgName, pageCounter);
@@ -901,11 +901,11 @@ function validatePDF(doc: jsPDF): string[] {
 /**
  * Generates the full PDF report and returns raw bytes.
  * Retries up to MAX_ATTEMPTS times if the internal validator finds issues.
- * Always returns bytes — on final failure it returns the best-effort render.
+ * Always returns bytes - on final failure it returns the best-effort render.
  */
 // jsPDF 2.5.x types only declare string-returning overloads; "arraybuffer" is
 // supported at runtime but missing from the stubs. Cast through any.
-// "uint8array" is NOT a valid jsPDF output type — always use arraybuffer + wrap.
+// "uint8array" is NOT a valid jsPDF output type - always use arraybuffer + wrap.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const docOutput = (doc: jsPDF): Uint8Array =>
   new Uint8Array((doc as any).output("arraybuffer") as ArrayBuffer);
@@ -998,7 +998,7 @@ function drawDeepDiveCover(
 
 /**
  * Generates a deep-dive PDF from parsed text sections and returns raw bytes.
- * Sections are the parsed output of parseDeepDive() — { title, content } pairs.
+ * Sections are the parsed output of parseDeepDive() - { title, content } pairs.
  */
 export function generateDeepDivePDF(
   sections: { title: string; content: string }[],

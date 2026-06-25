@@ -62,7 +62,7 @@ export default function ContactClient() {
           <div style={{ background: '#232323', border: '1px solid #2f2f2f', borderRadius: 12, padding: '48px 32px', textAlign: 'center', marginBottom: 32 }}>
             <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#0d2a18', border: '2px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 22, color: '#4ade80' }}>✓</div>
             <p style={{ fontSize: 22, fontWeight: 800, color: '#f0f0f0', margin: '0 0 10px' }}>Message sent</p>
-            <p style={{ fontSize: 15, color: '#777', margin: 0, lineHeight: 1.6 }}>Thanks for reaching out — we&apos;ll get back to you within one business day.</p>
+            <p style={{ fontSize: 15, color: '#777', margin: 0, lineHeight: 1.6 }}>Thanks for reaching out. We&apos;ll get back to you within one business day.</p>
           </div>
         ) : (
           <form className="contact-form" onSubmit={handleSubmit} style={{ background: '#232323', border: '1px solid #2f2f2f', borderRadius: 12, padding: '32px', marginBottom: 32 }}>

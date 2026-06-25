@@ -42,7 +42,7 @@ const features = [
   {
     icon: "⊕",
     title: "Deep Dive Analyses",
-    desc: "Go beyond the summary. Deep dive mode runs a richer, multi-layered analysis across benchmarks, scenarios, and risk — all in a single comprehensive report.",
+    desc: "Go beyond the summary. Deep dive mode runs a richer, multi-layered analysis across benchmarks, scenarios, and risk, all in a single comprehensive report.",
     badge: "Advanced",
   },
   {
@@ -53,7 +53,7 @@ const features = [
   {
     icon: "◐",
     title: "Metric Tracking",
-    desc: "Monitor key financial metrics over time across your saved profiles. Spot trends, regressions, and improvements at a glance — period over period.",
+    desc: "Monitor key financial metrics over time across your saved profiles. Spot trends, regressions, and improvements at a glance, period over period.",
   },
 ];
 

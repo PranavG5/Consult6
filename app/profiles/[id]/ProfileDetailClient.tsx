@@ -49,7 +49,7 @@ const COLORS = ["#CC5500", "#2980b9", "#27ae60", "#d4a017", "#9b59b6", "#e74c3c"
 
 // Compact number formatting for KPI cards (1.2K, 3.4M, etc.)
 function fmtCompact(v: number | null): string {
-  if (v === null || v === undefined || isNaN(v)) return "—";
+  if (v === null || v === undefined || isNaN(v)) return "N/A";
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
   if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1)}B`;
@@ -63,10 +63,10 @@ function fmtPct(v: number | null): string {
   return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
 }
 
-// Lightweight inline-SVG sparkline — avoids spinning up a recharts container per card.
+// Lightweight inline-SVG sparkline - avoids spinning up a recharts container per card.
 function Sparkline({ values, color = "#CC5500", width = 132, height = 36 }: { values: (number | null)[]; color?: string; width?: number; height?: number }) {
   const pts = values.map((v, i) => ({ v, i })).filter((p): p is { v: number; i: number } => p.v !== null);
-  if (pts.length < 2) return <div style={{ height, display: "flex", alignItems: "center", color: "#555", fontSize: 11 }}>—</div>;
+  if (pts.length < 2) return <div style={{ height, display: "flex", alignItems: "center", color: "#555", fontSize: 11 }}>N/A</div>;
   const xs = pts.map(p => p.i);
   const ys = pts.map(p => p.v);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -543,7 +543,7 @@ export default function ProfileDetailPage() {
               <div style={{ width: 52, height: 52, background: "#2a1800", border: "2px solid #CC5500", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, margin: "0 auto 18px" }}>📊</div>
               <p style={{ fontSize: 17, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>No financial data yet</p>
               <p style={{ fontSize: 14, color: "#777", margin: "0 0 24px", lineHeight: 1.6, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
-                Upload a period of data to populate this company&apos;s financial dashboard — KPIs, trends and comparisons.
+                Upload a period of data to populate this company&apos;s financial dashboard: KPIs, trends and comparisons.
               </p>
               <button onClick={() => setTab("data")} style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Upload data</button>
             </div>
@@ -573,7 +573,7 @@ export default function ProfileDetailPage() {
                               setRole(role, v.startsWith("__sugg__") ? v.slice(8) : v);
                             }}
                             style={{ width: "100%", background: "#3a3a3a", border: "1px solid #494949", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", boxSizing: "border-box", textTransform: "capitalize" }}>
-                            <option value="">— none —</option>
+                            <option value="">None</option>
                             {suggestedRoles[role] && !roles[role] && series.some(s => s.name === suggestedRoles[role]) && (
                               <option value={`__sugg__${suggestedRoles[role]}`}>{suggestedRoles[role]} (suggested)</option>
                             )}
@@ -895,7 +895,7 @@ export default function ProfileDetailPage() {
               <div style={{ width: 52, height: 52, background: "#2a1800", border: "2px solid #CC5500", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, margin: "0 auto 18px" }}>📄</div>
               <p style={{ fontSize: 17, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>No analyses for this company yet</p>
               <p style={{ fontSize: 14, color: "#777", margin: "0 0 24px", lineHeight: 1.6, maxWidth: 400, marginLeft: "auto", marginRight: "auto" }}>
-                Run an analysis scoped to {profile.name} — it&apos;ll use this company&apos;s history as context and show up here.
+                Run an analysis scoped to {profile.name}, and it&apos;ll use this company&apos;s history as context and show up here.
               </p>
               <Link href={`/dashboard?profile=${id}`} style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "12px 28px", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>Run analysis →</Link>
             </div>

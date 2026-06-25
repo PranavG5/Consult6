@@ -670,7 +670,7 @@ export default function SettingsPage() {
                       <input value={orgForm.profiles} onChange={e => setOrgForm(f => ({ ...f, profiles: e.target.value }))} placeholder="Profiles" type="number" min={0} style={{ boxSizing: "border-box" }} />
                       <input value={orgForm.history} onChange={e => setOrgForm(f => ({ ...f, history: e.target.value }))} placeholder="History" type="number" min={0} style={{ boxSizing: "border-box" }} />
                     </div>
-                    <p style={{ fontSize: 11, color: "#5a5a5a", margin: "0 0 10px" }}>Limit fields are optional — leave blank to use the plan defaults (Enterprise: 50 basic / 20 advanced per day, 20 profiles).</p>
+                    <p style={{ fontSize: 11, color: "#5a5a5a", margin: "0 0 10px" }}>Limit fields are optional. Leave blank to use the plan defaults (Enterprise: 50 basic / 20 advanced per day, 20 profiles).</p>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10 }}>
                       <input value={orgForm.attribution} onChange={e => setOrgForm(f => ({ ...f, attribution: e.target.value }))} placeholder="Marketer / attribution tag" style={{ boxSizing: "border-box" }} />
                       <input value={orgForm.max_uses} onChange={e => setOrgForm(f => ({ ...f, max_uses: e.target.value }))} placeholder="Max uses (blank = unlimited)" type="number" min={1} style={{ boxSizing: "border-box" }} />

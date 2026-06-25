@@ -45,7 +45,7 @@ export default function AboutPage() {
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Infrastructure</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 is a web application built on modern cloud infrastructure. User authentication and account credentials are managed securely through Supabase, a PostgreSQL-based backend platform. File data you upload is processed in memory during analysis and is not permanently stored on our servers. Report history — your previous analysis results and metadata — is saved to your account server-side, so it is accessible across all your devices wherever you sign in.
+          Consult6 is a web application built on modern cloud infrastructure. User authentication and account credentials are managed securely through Supabase, a PostgreSQL-based backend platform. File data you upload is processed in memory during analysis and is not permanently stored on our servers. Report history (your previous analysis results and metadata) is saved to your account server-side, so it is accessible across all your devices wherever you sign in.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Where we are headed</h2>

@@ -474,7 +474,7 @@ export default function Home() {
         throw new Error(err.error ?? "Analysis failed");
       }
 
-      // Read stream — drive progress from chunk arrival
+      // Read stream - drive progress from chunk arrival
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
@@ -555,7 +555,7 @@ export default function Home() {
       } else if (raw === "__ANTHROPIC_ERROR__" || raw.toLowerCase().includes("anthropic") || raw.toLowerCase().includes("overloaded")) {
         setErrorMsg("Something went wrong with the analysis. Please try again in a moment.");
       } else if (raw === "__EMPTY_RESPONSE__" || raw.toLowerCase().includes("invalid response")) {
-        setErrorMsg("The analysis came back incomplete. Please try again — if the issue persists, try a smaller file or Basic mode.");
+        setErrorMsg("The analysis came back incomplete. Please try again. If the issue persists, try a smaller file or Basic mode.");
       } else if (raw.toLowerCase().includes("daily") && raw.toLowerCase().includes("limit")) {
         setErrorMsg(raw);
       } else if (raw.toLowerCase().includes("failed to fetch") || raw.toLowerCase().includes("networkerror")) {
@@ -747,7 +747,7 @@ export default function Home() {
         </div>
         {usage && (
           <>
-            {/* Token counts — always visible */}
+            {/* Token counts - always visible */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
               <span style={{ color: "#aaa" }}>Basic <span style={{ color: "#f0f0f0", fontWeight: 600 }}>{usage.basicUsed}/{usage.basicLimit}</span></span>
               <span style={{ color: "#aaa" }}>Advanced <span style={{ color: "#f0f0f0", fontWeight: 600 }}>{usage.advancedUsed}/{usage.advancedLimit}</span></span>
@@ -811,7 +811,7 @@ export default function Home() {
           />
         )}
 
-        {/* Onboarding checklist — guides a brand-new user and tracks real progress */}
+        {/* Onboarding checklist - guides a brand-new user and tracks real progress */}
         {showChecklist && (() => {
           const items = [
             {
@@ -831,7 +831,7 @@ export default function Home() {
             {
               done: checklistContextDone,
               label: "Add your context",
-              desc: "Tell us your sector and goals once — we'll tailor every analysis to you.",
+              desc: "Tell us your sector and goals once, and we'll tailor every analysis to you.",
               actionLabel: "Open settings",
               href: "/settings",
             },
@@ -877,7 +877,7 @@ export default function Home() {
           );
         })()}
 
-        {/* Your companies — prominent quick access to each company's dashboard.
+        {/* Your companies - prominent quick access to each company's dashboard.
             Keeps the consult engine central while making the client files easy
             to reach without hunting for the nav link. */}
         {!profilesLoading && profiles.length > 0 && (
@@ -963,7 +963,7 @@ export default function Home() {
             ) : profiles.length > 0 ? (
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#ccc", marginBottom: 8 }}>
-                  Company profile <span style={{ fontWeight: 400, color: "#666" }}>(optional — adds historical context)</span>
+                  Company profile <span style={{ fontWeight: 400, color: "#666" }}>(optional: adds historical context)</span>
                 </label>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <select
@@ -1093,7 +1093,7 @@ export default function Home() {
 
             {usingSample && files.length > 0 && !isRunning && state !== "done" && (
               <p style={{ fontSize: 12, color: "#888", margin: "10px 0 0", lineHeight: 1.5 }}>
-                Loaded a sample 12-month ledger for a student organization. Just hit <span style={{ color: "#CC5500", fontWeight: 600 }}>Generate Report</span> below to see a full analysis — or remove it and upload your own file.
+                Loaded a sample 12-month ledger for a student organization. Just hit <span style={{ color: "#CC5500", fontWeight: 600 }}>Generate Report</span> below to see a full analysis, or remove it and upload your own file.
               </p>
             )}
           </div>
@@ -1119,7 +1119,7 @@ export default function Home() {
           {/* Report Sections (advanced + full report mode only) */}
           {mode === "advanced" && outputMode === "report" && state !== "done" && !isRunning && (() => {
             const SECTIONS = [
-              { key: "executiveSummary" as const, label: "Executive Summary", desc: "Key trends and discrepancies. No recommendations — just what the data shows." },
+              { key: "executiveSummary" as const, label: "Executive Summary", desc: "Key trends and discrepancies. No recommendations, just what the data shows." },
               { key: "recommendations" as const, label: "Recommendations", desc: "Prioritized action items tailored to your organization." },
               { key: "benchmarks" as const, label: "Industry Benchmarks", desc: "How your metrics compare to sector peers and top performers." },
               { key: "trajectory" as const, label: "Where This Is Heading", desc: "12-month optimistic, base, and pessimistic scenarios." },
@@ -1147,7 +1147,7 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {/* Individual section toggles — only visible when "All sections" is OFF */}
+                  {/* Individual section toggles - only visible when "All sections" is OFF */}
                   {!allSectionsOn && SECTIONS.map((section, idx) => {
                     const isOn = sectionsConfig[section.key];
                     const isLastActive = activeCount === 1 && isOn;
@@ -1275,7 +1275,7 @@ export default function Home() {
               </div>
               )}
 
-              {/* Flags — part of Executive Summary section */}
+              {/* Flags - part of Executive Summary section */}
               {(!lastSectionsConfig || lastSectionsConfig.executiveSummary) && analysis.flags.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHAT WE FOUND</p>
@@ -1352,7 +1352,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Case Studies — part of Recommendations section */}
+              {/* Case Studies - part of Recommendations section */}
               {(!lastSectionsConfig || lastSectionsConfig.recommendations) && !!analysis.caseStudies?.length && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>WHO'S BEEN HERE BEFORE</p>
@@ -1375,7 +1375,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Scenarios — part of Where This Is Heading */}
+              {/* Scenarios - part of Where This Is Heading */}
               {(!lastSectionsConfig || lastSectionsConfig.trajectory) && analysis.scenarios && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>HOW THIS COULD PLAY OUT</p>
@@ -1429,7 +1429,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Action Plan — part of Recommendations section */}
+              {/* Action Plan - part of Recommendations section */}
               {(!lastSectionsConfig || lastSectionsConfig.recommendations) && analysis.actionPlan && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#888", letterSpacing: 1, marginBottom: 10 }}>YOUR NEXT STEPS</p>
@@ -1495,7 +1495,7 @@ export default function Home() {
             ) : null}
           </div>
 
-          {/* Error — shown below the run button */}
+          {/* Error - shown below the run button */}
           {state === "error" && errorMsg && (
             <div style={{ marginTop: 12 }}>
               <ErrorBanner
@@ -1506,7 +1506,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Share toast — shown below action buttons */}
+          {/* Share toast - shown below action buttons */}
           {shareToast && (
             <div style={{ marginTop: 12, background: "#0a1a0e", border: "1px solid #16a34a", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#4ade80", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ flexShrink: 0 }}>✓</span> Link copied to clipboard!

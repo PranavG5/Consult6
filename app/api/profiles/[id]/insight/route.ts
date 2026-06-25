@@ -108,7 +108,7 @@ Write a short, forward-looking treasury readout for the club's exec board. Requi
 - Lead with the trajectory: where the club's money is heading (growing, stable, or being drawn down) and, if a runway figure is given, how long the funds last at the current rate.
 - Then name the single biggest driver (which income or expense moved most, and by roughly how much).
 - End with ONE concrete, reasonable suggestion a student treasurer could act on this term.
-- Only use the numbers given. Do not invent metrics. Translate any underscore field names into plain English. No preamble, no markdown, no headings.`;
+- Only use the numbers given. Do not invent metrics. Translate any underscore field names into plain English. No preamble, no markdown, no headings. Never use em-dashes; use commas, colons, or separate sentences instead.`;
 
   let insight = "";
   try {
