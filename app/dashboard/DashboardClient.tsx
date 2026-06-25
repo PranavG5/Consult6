@@ -110,6 +110,8 @@ export default function Home() {
   const [shareToast, setShareToast] = useState(false);
   const [historyShareTokens, setHistoryShareTokens] = useState<Record<string, string | null>>({});
   const [historyShareLoading, setHistoryShareLoading] = useState<Record<string, boolean>>({});
+  const [hoveredHistoryId, setHoveredHistoryId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const [profiles, setProfiles] = useState<{ id: string; name: string; sector: string }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -159,6 +161,19 @@ export default function Home() {
     fetchHistory();
     fetchProfiles();
   }, []);
+
+  // Remember whether the history rail is collapsed across visits.
+  useEffect(() => {
+    const v = typeof window !== "undefined" ? localStorage.getItem("c6_history_open") : null;
+    if (v !== null) setHistoryOpen(v === "1");
+  }, []);
+  function toggleHistory() {
+    setHistoryOpen(prev => {
+      const next = !prev;
+      try { localStorage.setItem("c6_history_open", next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  }
 
   const LOAD_ERROR_MSG = "Some of your dashboard data didn't load. Check your connection and refresh the page to retry.";
 
@@ -1523,70 +1538,94 @@ export default function Home() {
           </div>
         )}
         <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 14px" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: "0 0 12px" }}>REPORT HISTORY</p>
-          {profileContext?.disable_pdf_history ? (
-            <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.6 }}>
-              PDF history is turned off in{" "}
-              <span
-                onClick={() => window.location.href = "/settings"}
-                style={{ color: "#CC5500", cursor: "pointer", textDecoration: "underline" }}
-              >Settings</span>.
-            </p>
-          ) : history.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5 }}>No analyses yet. Run your first report to see history here.</p>
-          ) : (
-            <div style={{ overflowY: "auto", maxHeight: 480, display: "flex", flexDirection: "column", gap: 8 }}>
-              {history.map(item => {
-                const date = new Date(item.created_at);
-                const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-                return (
-                  <div key={item.id} style={{ background: "#2d2d2d", border: "1px solid #3e3e3e", borderRadius: 8, padding: "10px 11px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <span style={{
-                        fontSize: 9, fontWeight: 800, letterSpacing: 0.5, padding: "1px 5px", borderRadius: 3,
-                        background: item.mode === "advanced" ? "#CC5500" : "#484848",
-                        color: item.mode === "advanced" ? "#fff" : "#aaa",
-                      }}>
-                        {item.mode === "advanced" ? "ADV" : "BASIC"}
-                      </span>
-                      <span style={{ fontSize: 10, color: "#555" }}>{dateStr} · {timeStr}</span>
-                    </div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#e0e0e0", margin: "0 0 8px", lineHeight: 1.3, wordBreak: "break-word" }}>
-                      {item.label}
-                    </p>
-                    <div style={{ display: "flex", gap: 5 }}>
-                      <button
-                        onClick={() => downloadHistoryPDF(item)}
-                        style={{ flex: 1, background: "#3a3a3a", border: "1px solid #494949", color: "#CC5500", borderRadius: 5, padding: "5px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                        ↓ PDF
-                      </button>
-                      <button
-                        onClick={() => handleHistoryShare(item)}
-                        disabled={historyShareLoading[item.id]}
-                        title={historyShareTokens[item.id] ? "Copy share link" : "Share report"}
-                        style={{ width: 30, background: "#3a3a3a", border: "1px solid #494949", color: historyShareTokens[item.id] ? "#4ade80" : "#aaa", borderRadius: 5, padding: "5px 0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                        ⇗
-                      </button>
-                      {historyShareTokens[item.id] && (
-                        <button
-                          onClick={() => handleHistoryDestroy(item)}
-                          disabled={historyShareLoading[item.id]}
-                          title="Remove public webpage"
-                          style={{ width: 30, background: "#3a3a3a", border: "1px solid #5c1a1a", color: "#e74c3c", borderRadius: 5, padding: "5px 0", fontSize: 13, cursor: "pointer" }}>
-                          🗑
-                        </button>
+          {/* Collapsible header — keeps the rail calm and reclaims space when closed */}
+          <button
+            onClick={toggleHistory}
+            aria-expanded={historyOpen}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: historyOpen ? 12 : 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1 }}>
+              REPORT HISTORY{!historyOpen && history.length > 0 ? ` (${history.length})` : ""}
+            </span>
+            <span style={{ fontSize: 11, color: "#888", transform: historyOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+          </button>
+
+          {historyOpen && (
+            profileContext?.disable_pdf_history ? (
+              <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.6 }}>
+                PDF history is turned off in{" "}
+                <span
+                  onClick={() => window.location.href = "/settings"}
+                  style={{ color: "#CC5500", cursor: "pointer", textDecoration: "underline" }}
+                >Settings</span>.
+              </p>
+            ) : history.length === 0 ? (
+              <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5 }}>No analyses yet. Run your first report to see history here.</p>
+            ) : (
+              <>
+              <div style={{ overflowY: "auto", maxHeight: 480, display: "flex", flexDirection: "column", gap: 8 }}>
+                {history.map(item => {
+                  const date = new Date(item.created_at);
+                  const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                  const hovered = hoveredHistoryId === item.id;
+                  const shared = !!historyShareTokens[item.id];
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => downloadHistoryPDF(item)}
+                      onMouseEnter={() => setHoveredHistoryId(item.id)}
+                      onMouseLeave={() => setHoveredHistoryId(prev => (prev === item.id ? null : prev))}
+                      title="Open PDF report"
+                      style={{ background: hovered ? "#333333" : "#2d2d2d", border: `1px solid ${hovered ? "#5a5a5a" : "#3e3e3e"}`, borderRadius: 8, padding: "10px 11px", cursor: "pointer", transition: "background 0.12s, border-color 0.12s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, letterSpacing: 0.5, padding: "1px 5px", borderRadius: 3,
+                          background: item.mode === "advanced" ? "#CC5500" : "#484848",
+                          color: item.mode === "advanced" ? "#fff" : "#aaa",
+                        }}>
+                          {item.mode === "advanced" ? "ADV" : "BASIC"}
+                        </span>
+                        <span style={{ fontSize: 10, color: "#555" }}>{dateStr} · {timeStr}</span>
+                        {shared && <span title="Has a public link" style={{ fontSize: 9, color: "#4ade80", marginLeft: "auto" }}>● shared</span>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <p style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: "#e0e0e0", margin: 0, lineHeight: 1.3, wordBreak: "break-word" }}>
+                          {item.label}
+                        </p>
+                        <span style={{ fontSize: 13, color: hovered ? "#CC5500" : "#666", flexShrink: 0 }}>↓</span>
+                      </div>
+
+                      {/* Secondary actions appear only on hover */}
+                      {hovered && (
+                        <div style={{ display: "flex", gap: 5, marginTop: 8 }} onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleHistoryShare(item)}
+                            disabled={historyShareLoading[item.id]}
+                            style={{ flex: 1, background: "#3a3a3a", border: "1px solid #494949", color: shared ? "#4ade80" : "#aaa", borderRadius: 5, padding: "4px 0", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                            ⇗ {shared ? "Copy link" : "Share"}
+                          </button>
+                          {shared && (
+                            <button
+                              onClick={() => handleHistoryDestroy(item)}
+                              disabled={historyShareLoading[item.id]}
+                              title="Remove public webpage"
+                              style={{ width: 30, background: "#3a3a3a", border: "1px solid #5c1a1a", color: "#e74c3c", borderRadius: 5, padding: "4px 0", fontSize: 12, cursor: "pointer" }}>
+                              🗑
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {!profileContext?.disable_pdf_history && (
-            <p style={{ fontSize: 10, color: "#5a5a5a", margin: "10px 0 0", textAlign: "center" }}>
-              {historyAccountType === "free" ? "Free accounts: capped at 20 reports" : ""}
-            </p>
+                  );
+                })}
+              </div>
+              {!profileContext?.disable_pdf_history && historyAccountType === "free" && (
+                <p style={{ fontSize: 10, color: "#5a5a5a", margin: "10px 0 0", textAlign: "center" }}>
+                  Free accounts: capped at 20 reports
+                </p>
+              )}
+              </>
+            )
           )}
         </div>
       </aside>
