@@ -43,9 +43,19 @@ export default function AboutPage() {
           Consult6 includes a Company Profiles feature that lets you save organisations as persistent profiles. You can upload multiple periods of financial data to each profile, and track key metrics over time with visual charts. This gives your analyses historical context and helps you spot trends that would be invisible in a one-off report.
         </p>
 
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>How the analysis works</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          The analysis itself is powered by Anthropic&apos;s Claude models. When you run a report, the contents of your file and the context you provide are sent to Claude, which produces the flags, recommendations, benchmarks, and projections you see. We have engineered the prompts and structure around your organisation type and constraints so the output reads like a consulting engagement rather than a generic spreadsheet summary.
+        </p>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Built for teams too</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          Beyond individual treasurers, Consult6 supports organisations. An organisation can be set up with its own plan and usage limits, and members join through a simple invite link. Everyone who joins inherits the organisation&apos;s plan automatically, which makes it easy to roll Consult6 out across a chapter, club, or finance team.
+        </p>
+
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Infrastructure</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 is a web application built on modern cloud infrastructure. User authentication and account credentials are managed securely through Supabase, a PostgreSQL-based backend platform. File data you upload is processed in memory during analysis and is not permanently stored on our servers. Report history (your previous analysis results and metadata) is saved to your account server-side, so it is accessible across all your devices wherever you sign in.
+          Consult6 is a web application built on modern cloud infrastructure. User authentication and account credentials are managed securely through Supabase, a PostgreSQL-based backend platform, and the app is hosted on Vercel. For one-off analyses, the file data you upload is processed in memory during analysis and is not permanently stored. Report history (your previous analysis results and metadata) is saved to your account server-side, so it is accessible across all your devices wherever you sign in. With Company Profiles, the periods you choose to save are stored to your account so your metrics and charts persist over time. Full details are in our <a href="/privacy" style={{ color: "#CC5500", textDecoration: "none" }}>Privacy Policy</a>.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Where we are headed</h2>

@@ -16,7 +16,7 @@ export default function PrivacyPage() {
       <main className="legal-main">
         <p style={{ fontSize: 12, fontWeight: 700, color: "#CC5500", letterSpacing: 3, marginBottom: 12 }}>PRIVACY POLICY</p>
         <h1 style={{ fontSize: 40, fontWeight: 800, color: "#f0f0f0", margin: "0 0 8px", letterSpacing: -1, lineHeight: 1.15 }}>Your privacy, clearly explained</h1>
-        <p style={{ fontSize: 13, color: "#555", margin: "0 0 32px" }}>Last updated: April 2026</p>
+        <p style={{ fontSize: 13, color: "#555", margin: "0 0 32px" }}>Last updated: June 2026</p>
 
         <p style={{ fontSize: 16, color: "#888", lineHeight: 1.8, margin: "0 0 40px" }}>
           Consult6 is built for organisations that care about the integrity of their financial data. This policy explains what information we collect, how it is stored, and what controls you have over it. We have kept this document as plain as possible.
@@ -32,13 +32,36 @@ export default function PrivacyPage() {
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Files you upload</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
-          CSV and Excel files you upload are processed in memory on our servers during the analysis and are <strong style={{ color: "#ccc" }}>not permanently stored</strong>. Once the analysis is complete, the raw file data is discarded. We do not retain copies of your spreadsheets.
+          When you run a one-off analysis, the CSV or Excel files you upload are processed in memory on our servers during the analysis and are <strong style={{ color: "#ccc" }}>not permanently stored</strong>. Once the analysis is complete, the raw file data is discarded. We do not retain copies of the spreadsheets you submit for a standalone report.
         </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
           The structured output of each analysis (the findings, flags, and recommendations) is stored <strong style={{ color: "#ccc" }}>server-side in your account</strong> so that your report history is accessible across all your devices. This enables your history sidebar to stay in sync whether you are on your laptop, phone, or another computer. You can disable this in <strong style={{ color: "#ccc" }}>Settings → Privacy</strong> by turning on &ldquo;Disable PDF history&rdquo;, which will stop new results from being saved and clear your existing history.
         </p>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Raw file data (your spreadsheets) is never stored. Only the structured analysis result and metadata (organisation name, file name, date, and analysis mode) are saved to your account record.
+          For one-off analyses, only the structured analysis result and metadata (organisation name, file name, date, and analysis mode) are saved to your account record. The exception is <strong style={{ color: "#ccc" }}>Company Profiles</strong> (see below), where you deliberately save data to track metrics over time.
+        </p>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>AI analysis provider</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          Consult6 generates its analysis using <strong style={{ color: "#ccc" }}>Anthropic&apos;s Claude</strong> models. To produce your report, the contents of the file you upload and the context you provide (organisation type, sector, and any notes) are sent to Anthropic&apos;s API for processing. Anthropic processes this data to return the analysis and, under its API terms, does not use data submitted through its API to train its models. We do not send your data to any other AI provider.
+        </p>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Company Profiles</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
+          The Company Profiles feature lets you save an organisation as a persistent profile and upload multiple periods of financial data to track metrics over time. Because this feature is designed to retain history, the data you add to a profile <strong style={{ color: "#ccc" }}>is stored server-side in your account</strong>. For each upload we keep a short summary excerpt of the data, the column headers, period labels, row counts, and the numeric metrics we extract for charting.
+        </p>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          This profile data is private to your account. You can delete an individual upload, an entire profile, or your whole account at any time, which permanently removes the associated stored data.
+        </p>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Sharing reports</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          You can optionally create a shareable link to a report. When you do, that report becomes accessible to <strong style={{ color: "#ccc" }}>anyone who has the link</strong>, without needing to sign in, until you revoke it. Share links are only created when you explicitly choose to share, and you can revoke a link at any time from your report history, which immediately disables it.
+        </p>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Organisations and teams</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
+          If you join Consult6 through an organisation invite, your account is linked to that organisation and inherits its plan and usage limits. Administrators of that organisation can see that your account is a member (including your email address and role) for the purpose of managing the account. They cannot see your uploaded files, analysis results, or report history.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Usage data</h2>
@@ -48,16 +71,16 @@ export default function PrivacyPage() {
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Cookies and local storage</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 32px" }}>
-          Consult6 uses browser cookies strictly for authentication session management. No advertising or tracking cookies are set. We use localStorage to store your analysis history locally on your device. You can clear this data through your browser settings or through the Privacy tab in your Consult6 account settings.
+          Consult6 uses browser cookies strictly for authentication session management. No advertising or tracking cookies are set. We also use your browser&apos;s local storage to cache parts of your analysis history on your device for faster access. You can clear this data through your browser settings or through the Privacy tab in your Consult6 account settings.
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Your controls</h2>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 8px" }}>From your account settings, you can:</p>
         <ul style={{ fontSize: 15, color: "#888", lineHeight: 2, margin: "0 0 32px", paddingLeft: 20 }}>
-          <li>Disable PDF history so no analysis output is saved locally</li>
-          <li>Disable analysis memory so your profile context is not used to personalise outputs</li>
-          <li>Restrict history to local-only storage</li>
-          <li>Update or delete your account, which permanently removes your profile and usage data</li>
+          <li>Disable PDF history so no analysis output is saved to your report history (this also clears your existing history)</li>
+          <li>Disable analysis memory so your profile context is not pre-filled into new analyses</li>
+          <li>Keep history local to this device so it is stored only in your browser and not synced to your account</li>
+          <li>Update or delete your account, which permanently removes your profile, profile data, and usage records</li>
         </ul>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Data retention</h2>
@@ -66,8 +89,17 @@ export default function PrivacyPage() {
         </p>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#f0f0f0", margin: "0 0 14px" }}>Third-party services</h2>
+        <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 12px" }}>
+          Consult6 relies on a small number of infrastructure providers to operate:
+        </p>
+        <ul style={{ fontSize: 15, color: "#888", lineHeight: 2, margin: "0 0 12px", paddingLeft: 20 }}>
+          <li><strong style={{ color: "#ccc" }}>Supabase</strong> — authentication and database storage for your account, profiles, and report history</li>
+          <li><strong style={{ color: "#ccc" }}>Anthropic</strong> — the Claude AI models that generate your analysis from the data and context you submit</li>
+          <li><strong style={{ color: "#ccc" }}>Resend</strong> — delivery of transactional and contact-form emails</li>
+          <li><strong style={{ color: "#ccc" }}>Vercel</strong> — application hosting</li>
+        </ul>
         <p style={{ fontSize: 15, color: "#888", lineHeight: 1.8, margin: "0 0 40px" }}>
-          Consult6 uses Supabase for authentication and database storage. Supabase&apos;s own privacy practices govern how they handle infrastructure-level data. We do not share your personal information with any other third parties.
+          Each provider&apos;s own privacy practices govern how they handle data at the infrastructure level. We do not sell your personal information or share it with any other third parties for advertising.
         </p>
 
         <div style={{ background: "#232323", border: "1px solid #2f2f2f", borderRadius: 12, padding: "24px 28px" }}>
