@@ -3,7 +3,31 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 
-export const metadata = { title: "Company Profiles | Consult6" };
+export const metadata = { title: "Companies | Consult6" };
+
+const SPARK_COLORS = ["#CC5500", "#2980b9", "#27ae60", "#d4a017"];
+
+function fmtCompact(v: number | null): string {
+  if (v === null || v === undefined || isNaN(v)) return "—";
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1)}B`;
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}K`;
+  return `${sign}${abs % 1 === 0 ? abs.toLocaleString() : abs.toFixed(2)}`;
+}
+
+function CardSparkline({ values, color = "#CC5500", width = 92, height = 30 }: { values: (number | null)[]; color?: string; width?: number; height?: number }) {
+  const pts = values.map((v, i) => ({ v, i })).filter((p): p is { v: number; i: number } => p.v !== null);
+  if (pts.length < 2) return <div style={{ width, height }} />;
+  const xs = pts.map(p => p.i), ys = pts.map(p => p.v);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 2;
+  const sx = (x: number) => maxX === minX ? width / 2 : pad + ((x - minX) / (maxX - minX)) * (width - pad * 2);
+  const sy = (y: number) => maxY === minY ? height / 2 : height - pad - ((y - minY) / (maxY - minY)) * (height - pad * 2);
+  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.i).toFixed(1)},${sy(p.v).toFixed(1)}`).join(" ");
+  return <svg width={width} height={height} style={{ display: "block" }}><path d={d} fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" /></svg>;
+}
 
 function SkeletonCard() {
   return (
@@ -25,6 +49,11 @@ interface Profile {
   sector: string;
   created_at: string;
   upload_count: number;
+  metric_count: number;
+  latest_period: string | null;
+  primary_metric: string | null;
+  primary_latest: number | null;
+  spark: (number | null)[];
 }
 
 export default function ProfilesPage() {
@@ -90,7 +119,7 @@ export default function ProfilesPage() {
             <span style={{ fontWeight: 700, fontSize: 16, color: "#f0f0f0" }}>Consult6</span>
           </Link>
           <span className="dash-nav-desktop" style={{ color: "#484848" }}>/</span>
-          <span className="dash-nav-desktop" style={{ fontSize: 14, color: "#CC5500", fontWeight: 600 }}>Company Profiles</span>
+          <span className="dash-nav-desktop" style={{ fontSize: 14, color: "#CC5500", fontWeight: 600 }}>Companies</span>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           {/* Desktop buttons */}
@@ -119,17 +148,17 @@ export default function ProfilesPage() {
         )}
       </nav>
 
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 20px" }}>
+      <div style={{ maxWidth: 980, margin: "0 auto", padding: "40px 20px" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, gap: 16, flexWrap: "wrap" }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#f0f0f0", margin: "0 0 6px" }}>Company Profiles</h1>
-            <p style={{ fontSize: 14, color: "#777", margin: 0 }}>Track financial history across periods to enrich your analyses with context.</p>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#f0f0f0", margin: "0 0 6px" }}>Companies</h1>
+            <p style={{ fontSize: 14, color: "#777", margin: 0 }}>Each company is a live financial dashboard — KPIs, trends, and the analyses you run for it.</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
             style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "11px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-            + Create Profile
+            + New Company
           </button>
         </div>
 
@@ -145,36 +174,52 @@ export default function ProfilesPage() {
             <div style={{ width: 56, height: 56, background: "#2a1800", border: "2px solid #CC5500", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, margin: "0 auto 20px" }}>
               📁
             </div>
-            <p style={{ fontSize: 18, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>No profiles yet</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: "#f0f0f0", margin: "0 0 10px" }}>No companies yet</p>
             <p style={{ fontSize: 14, color: "#777", margin: "0 0 28px", lineHeight: 1.6, maxWidth: 400, marginLeft: "auto", marginRight: "auto" }}>
-              Create a company profile to start tracking your organization&apos;s finances over time.
+              Add a company to start tracking its finances over time and build a live dashboard.
             </p>
             <button
               onClick={() => setShowModal(true)}
               style={{ background: "#CC5500", color: "#fff", border: "none", borderRadius: 9, padding: "13px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-              Create your first profile
+              Add your first company
             </button>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-            {profiles.map(p => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
+            {profiles.map((p, idx) => (
               <Link key={p.id} href={`/profiles/${p.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "20px 20px 16px", cursor: "pointer", transition: "border-color 0.15s" }}
+                <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "18px 20px 16px", cursor: "pointer", transition: "border-color 0.15s" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = "#CC5500")}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "#484848")}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-                    <div style={{ width: 38, height: 38, background: "#2a1800", border: "1px solid #CC5500", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                      🏢
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                      <div style={{ width: 38, height: 38, flexShrink: 0, background: "#2a1800", border: "1px solid #CC5500", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏢</div>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: "#f0f0f0", margin: "0 0 2px", lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
+                        <p style={{ fontSize: 12, color: "#888", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.sector}</p>
+                      </div>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#CC5500", background: "#2a1800", border: "1px solid #CC5500", padding: "2px 8px", borderRadius: 20, letterSpacing: 0.5 }}>
-                      {p.upload_count} {p.upload_count === 1 ? "upload" : "uploads"}
-                    </span>
                   </div>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px", lineHeight: 1.3 }}>{p.name}</p>
-                  <p style={{ fontSize: 12, color: "#888", margin: "0 0 14px" }}>{p.sector}</p>
-                  <p style={{ fontSize: 11, color: "#555", margin: 0 }}>
-                    Created {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </p>
+
+                  {p.primary_metric ? (
+                    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 9, padding: "12px 14px", marginBottom: 12 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 10, color: "#888", margin: "0 0 3px", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.primary_metric}</p>
+                        <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: 0 }}>{fmtCompact(p.primary_latest)}</p>
+                      </div>
+                      <CardSparkline values={p.spark} color={SPARK_COLORS[idx % SPARK_COLORS.length]} />
+                    </div>
+                  ) : (
+                    <div style={{ background: "#2d2d2d", border: "1px dashed #3a3a3a", borderRadius: 9, padding: "14px", marginBottom: 12, textAlign: "center" }}>
+                      <p style={{ fontSize: 12, color: "#666", margin: 0 }}>No data yet — open to upload</p>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#666" }}>
+                    <span>{p.metric_count} metric{p.metric_count === 1 ? "" : "s"}</span>
+                    <span>{p.upload_count} period{p.upload_count === 1 ? "" : "s"}</span>
+                    {p.latest_period && <span style={{ marginLeft: "auto", color: "#888" }}>{p.latest_period}</span>}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -186,7 +231,7 @@ export default function ProfilesPage() {
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 16, padding: 32, maxWidth: 440, width: "100%" }}>
-            <p style={{ fontSize: 18, fontWeight: 800, color: "#f0f0f0", margin: "0 0 20px" }}>Create Company Profile</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: "#f0f0f0", margin: "0 0 20px" }}>Add Company</p>
 
             {error && (
               <div style={{ background: "#2d1010", border: "1px solid #c0392b", borderRadius: 8, padding: "10px 14px", color: "#e74c3c", fontSize: 13, marginBottom: 16 }}>

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getEffectivePlan } from "@/lib/planLimits";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -15,10 +15,16 @@ export async function GET() {
   const accountType = plan.accountType;
   const limit = plan.historyLimit;
 
-  const { data: rows, error } = await supabase
+  // Optional ?profileId= scopes history to a single company's dashboard.
+  const profileId = req.nextUrl.searchParams.get("profileId");
+
+  let query = supabase
     .from("analysis_history")
-    .select("id, created_at, org_name, file_name, mode, analysis_data")
-    .eq("user_id", user.id)
+    .select("id, created_at, org_name, file_name, mode, analysis_data, profile_id")
+    .eq("user_id", user.id);
+  if (profileId) query = query.eq("profile_id", profileId);
+
+  const { data: rows, error } = await query
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -50,6 +56,7 @@ export async function GET() {
     file_name: r.file_name,
     mode: r.mode,
     analysis_result: r.analysis_data,
+    profile_id: r.profile_id ?? null,
     share_token: shareMap[r.id] ?? null,
   }));
 
@@ -71,12 +78,24 @@ export async function POST(req: NextRequest) {
   const limit = plan.historyLimit;
 
   const body = await req.json();
-  const { mode, orgName, fileName, analysisResult } = body;
+  const { mode, orgName, fileName, analysisResult, profileId } = body;
 
   if (!mode || !analysisResult) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
       status: 400, headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Only link to a company profile the caller actually owns.
+  let linkedProfileId: string | null = null;
+  if (profileId && typeof profileId === "string") {
+    const { data: owned } = await supabase
+      .from("company_profiles")
+      .select("id")
+      .eq("id", profileId)
+      .eq("user_id", user.id)
+      .single();
+    if (owned) linkedProfileId = owned.id;
   }
 
   const { data: inserted, error: insertError } = await supabase.from("analysis_history").insert({
@@ -85,6 +104,7 @@ export async function POST(req: NextRequest) {
     file_name: fileName ?? "",
     mode,
     analysis_data: analysisResult,
+    profile_id: linkedProfileId,
   }).select("id").single();
 
   if (insertError) {

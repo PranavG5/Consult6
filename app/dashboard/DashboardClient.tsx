@@ -168,7 +168,19 @@ export default function Home() {
       const res = await fetch("/api/profiles");
       if (res.ok) {
         const json = await res.json();
-        setProfiles(json.profiles ?? []);
+        const loaded: { id: string; name: string; sector: string }[] = json.profiles ?? [];
+        setProfiles(loaded);
+        // Preselect a company when arriving via /dashboard?profile=ID (e.g. the
+        // "Run analysis" button on a company's dashboard).
+        const params = new URLSearchParams(window.location.search);
+        const wanted = params.get("profile");
+        if (wanted) {
+          const match = loaded.find(p => p.id === wanted);
+          if (match) {
+            setSelectedProfileId(match.id);
+            setOrgName(prev => prev || match.name);
+          }
+        }
       } else {
         setLoadError(LOAD_ERROR_MSG);
       }
@@ -218,6 +230,9 @@ export default function Home() {
           orgName: currentOrgName,
           fileName: currentFileNames,
           analysisResult: result,
+          // Link the saved report to the selected company so it surfaces on
+          // that company's dashboard.
+          profileId: selectedProfileId || undefined,
         }),
       });
       if (res.ok) {

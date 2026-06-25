@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data: profile } = await supabase
     .from("company_profiles")
-    .select("id, name")
+    .select("id, name, key_metrics")
     .eq("id", profileId)
     .eq("user_id", user.id)
     .single();
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Fetch uploads in user-defined sort order to determine period ordering
   const { data: uploads } = await supabase
     .from("profile_uploads")
-    .select("id, period_label, sort_order")
+    .select("id, period_label, period_type, sort_order")
     .eq("profile_id", profileId)
     .order("sort_order", { ascending: true })
     .order("uploaded_at", { ascending: true });
@@ -27,10 +27,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Build an ordered list of unique period labels (deduped, preserving sort_order)
   const seenPeriods = new Set<string>();
   const periods: string[] = [];
+  const periodTypes: Record<string, string> = {};
   for (const u of uploads ?? []) {
     if (!seenPeriods.has(u.period_label)) {
       seenPeriods.add(u.period_label);
       periods.push(u.period_label);
+      periodTypes[u.period_label] = u.period_type;
     }
   }
 
@@ -47,10 +49,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     seriesMap[row.metric_name][row.period_label] = Number(row.metric_value);
   }
 
-  const series = Object.entries(seriesMap).map(([name, values]) => ({
-    name,
-    values: periods.map(p => values[p] ?? null),
-  }));
+  // Compute period-over-period deltas off the most recent two populated periods
+  // so the dashboard can render KPI cards without re-deriving on the client.
+  const series = Object.entries(seriesMap).map(([name, values]) => {
+    const ordered = periods.map(p => values[p] ?? null);
+    const populated = ordered
+      .map((v, i) => ({ v, i }))
+      .filter(x => x.v !== null && x.v !== undefined) as { v: number; i: number }[];
+    const latest = populated.length ? populated[populated.length - 1] : null;
+    const prev = populated.length > 1 ? populated[populated.length - 2] : null;
+    const change = latest && prev ? latest.v - prev.v : null;
+    const changePct = latest && prev && prev.v !== 0 ? (change! / Math.abs(prev.v)) * 100 : null;
+    return {
+      name,
+      values: ordered,
+      latest: latest?.v ?? null,
+      latestPeriod: latest ? periods[latest.i] : null,
+      previous: prev?.v ?? null,
+      change,
+      changePct,
+    };
+  });
+
+  // Default the featured KPIs to the first few tracked metrics when the user
+  // hasn't pinned any yet, so a brand-new profile still shows a real dashboard.
+  const pinned: string[] = Array.isArray(profile.key_metrics) ? profile.key_metrics : [];
+  const keyMetrics = pinned.filter(m => seriesMap[m]);
 
   const contextLines: string[] = [`Historical data for ${profile.name}:`];
   for (const [metricName, periodValues] of Object.entries(seriesMap)) {
@@ -59,5 +83,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
   const historicalContext = contextLines.join("\n");
 
-  return NextResponse.json({ periods, series, historicalContext });
+  return NextResponse.json({ periods, periodTypes, series, keyMetrics, historicalContext });
 }
