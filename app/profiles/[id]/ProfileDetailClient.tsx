@@ -5,11 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import * as XLSX from "xlsx";
 import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar,
+  LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import ErrorBanner from "@/app/components/ErrorBanner";
 import { generatePDF, type AnalysisResult } from "@/lib/generateReport";
+import { computeTreasury, type MetricRole, type MetricRoles } from "@/lib/treasury";
 
 export const metadata = { title: "Profile | Consult6" };
 
@@ -113,6 +114,9 @@ export default function ProfileDetailPage() {
   const [periodTypes, setPeriodTypes] = useState<Record<string, string>>({});
   const [series, setSeries] = useState<MetricSeries[]>([]);
   const [keyMetrics, setKeyMetrics] = useState<string[]>([]);
+  const [roles, setRoles] = useState<MetricRoles>({});
+  const [suggestedRoles, setSuggestedRoles] = useState<MetricRoles>({});
+  const [mapOpen, setMapOpen] = useState(false);
   const [historicalContext, setHistoricalContext] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -178,6 +182,8 @@ export default function ProfileDetailPage() {
       setPeriodTypes(json.periodTypes ?? {});
       setSeries(json.series ?? []);
       setHistoricalContext(json.historicalContext ?? "");
+      setRoles(json.roles ?? {});
+      setSuggestedRoles(json.suggestedRoles ?? {});
       if (Array.isArray(json.keyMetrics) && json.keyMetrics.length) setKeyMetrics(json.keyMetrics);
       // Default the chart selection on first load.
       setSelectedMetrics(prev => {
@@ -206,6 +212,46 @@ export default function ProfileDetailPage() {
     } finally {
       setAnalysesLoading(false);
     }
+  }
+
+  // Effective roles = explicit user mapping, falling back to auto-detected.
+  const effectiveRoles: MetricRoles = useMemo(() => ({
+    balance: roles.balance ?? suggestedRoles.balance,
+    income: roles.income ?? suggestedRoles.income,
+    expense: roles.expense ?? suggestedRoles.expense,
+  }), [roles, suggestedRoles]);
+
+  const seriesMap = useMemo(() => {
+    const m: Record<string, Record<string, number>> = {};
+    for (const s of series) {
+      m[s.name] = {};
+      periods.forEach((p, i) => { const v = s.values[i]; if (v !== null && v !== undefined) m[s.name][p] = v; });
+    }
+    return m;
+  }, [series, periods]);
+
+  const treasury = useMemo(
+    () => computeTreasury(periods, seriesMap, effectiveRoles, periodTypes),
+    [periods, seriesMap, effectiveRoles, periodTypes]
+  );
+
+  // Net cash flow chart data (income vs expense bars when both are known).
+  const flowData = useMemo(() => periods.map((period, i) => ({
+    period,
+    Income: treasury.incomeSeries?.[i] ?? null,
+    Expenses: treasury.expenseSeries?.[i] ?? null,
+    Net: treasury.netFlowSeries[i] ?? null,
+  })), [periods, treasury]);
+
+  async function setRole(role: MetricRole, name: string) {
+    const next: MetricRoles = { ...roles };
+    if (name) next[role] = name; else delete next[role];
+    setRoles(next); // optimistic
+    await fetch(`/api/profiles/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ metric_roles: next }),
+    });
   }
 
   async function togglePin(name: string) {
@@ -503,6 +549,134 @@ export default function ProfileDetailPage() {
             </div>
           ) : (
             <>
+              {/* Treasury trajectory hero */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: 0 }}>TRAJECTORY</p>
+                  <button onClick={() => setMapOpen(o => !o)} style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}>
+                    {mapOpen ? "Done" : "Map metrics"}
+                  </button>
+                </div>
+
+                {mapOpen && (
+                  <div style={{ background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+                    <p style={{ fontSize: 12, color: "#888", margin: "0 0 12px" }}>Tell us which metrics represent your cash position and money in/out, so we can compute balance, runway, and net flow. We&apos;ve guessed where we could.</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+                      {([["balance", "Cash balance"], ["income", "Income"], ["expense", "Expenses"]] as [MetricRole, string][]).map(([role, label]) => (
+                        <div key={role}>
+                          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#ccc", marginBottom: 6 }}>
+                            {label}{!roles[role] && suggestedRoles[role] ? <span style={{ color: "#666", fontWeight: 400 }}> · auto</span> : ""}
+                          </label>
+                          <select value={roles[role] ?? (suggestedRoles[role] && series.some(s => s.name === suggestedRoles[role]) ? `__sugg__${suggestedRoles[role]}` : "")}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setRole(role, v.startsWith("__sugg__") ? v.slice(8) : v);
+                            }}
+                            style={{ width: "100%", background: "#3a3a3a", border: "1px solid #494949", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#f0f0f0", boxSizing: "border-box", textTransform: "capitalize" }}>
+                            <option value="">— none —</option>
+                            {suggestedRoles[role] && !roles[role] && series.some(s => s.name === suggestedRoles[role]) && (
+                              <option value={`__sugg__${suggestedRoles[role]}`}>{suggestedRoles[role]} (suggested)</option>
+                            )}
+                            {series.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {treasury.hasData ? (
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: flowData.some(d => d.Income !== null || d.Expenses !== null || d.Net !== null) ? 16 : 0 }}>
+                      {/* Balance */}
+                      <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 18px" }}>
+                        <p style={{ fontSize: 11, color: "#999", fontWeight: 600, margin: "0 0 8px" }}>Cash balance</p>
+                        {treasury.balance !== null ? (
+                          <>
+                            <p style={{ fontSize: 26, fontWeight: 800, color: "#f0f0f0", margin: "0 0 4px" }}>{fmtCompact(treasury.balance)}</p>
+                            {treasury.balanceChange !== null && (
+                              <span style={{ fontSize: 12, fontWeight: 700, color: treasury.balanceChange > 0 ? "#4caf50" : treasury.balanceChange < 0 ? "#e74c3c" : "#888" }}>
+                                {treasury.balanceChange > 0 ? "▲" : treasury.balanceChange < 0 ? "▼" : ""} {fmtPct(treasury.balanceChangePct)} vs prior
+                              </span>
+                            )}
+                            {treasury.balancePeriod && <p style={{ fontSize: 10, color: "#555", margin: "8px 0 0" }}>as of {treasury.balancePeriod}</p>}
+                          </>
+                        ) : (
+                          <p style={{ fontSize: 13, color: "#777", margin: "6px 0 0", lineHeight: 1.5 }}>Map a cash balance metric to see this.</p>
+                        )}
+                      </div>
+
+                      {/* Runway */}
+                      <div style={{ background: treasury.runway !== null && treasury.runway <= 3 ? "#2d1010" : "#333333", border: `1px solid ${treasury.runway !== null && treasury.runway <= 3 ? "#c0392b" : "#484848"}`, borderRadius: 12, padding: "16px 18px" }}>
+                        <p style={{ fontSize: 11, color: "#999", fontWeight: 600, margin: "0 0 8px" }}>Runway</p>
+                        {treasury.runway !== null ? (
+                          <>
+                            <p style={{ fontSize: 26, fontWeight: 800, color: treasury.runway <= 3 ? "#e74c3c" : "#f0f0f0", margin: "0 0 4px" }}>≈ {treasury.runway} {treasury.unit}{treasury.runway === 1 ? "" : "s"}</p>
+                            <span style={{ fontSize: 12, color: "#888" }}>of funds at the current burn rate</span>
+                          </>
+                        ) : treasury.avgNetFlow !== null && treasury.avgNetFlow >= 0 ? (
+                          <>
+                            <p style={{ fontSize: 20, fontWeight: 800, color: "#4caf50", margin: "0 0 4px" }}>Net positive</p>
+                            <span style={{ fontSize: 12, color: "#888" }}>building reserves, not drawing down</span>
+                          </>
+                        ) : (
+                          <p style={{ fontSize: 13, color: "#777", margin: "6px 0 0", lineHeight: 1.5 }}>Map balance and income/expenses to estimate runway.</p>
+                        )}
+                      </div>
+
+                      {/* Net flow + projection */}
+                      <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "16px 18px" }}>
+                        <p style={{ fontSize: 11, color: "#999", fontWeight: 600, margin: "0 0 8px" }}>Net cash flow / {treasury.unit}</p>
+                        {treasury.avgNetFlow !== null ? (
+                          <>
+                            <p style={{ fontSize: 26, fontWeight: 800, color: treasury.avgNetFlow >= 0 ? "#4caf50" : "#e74c3c", margin: "0 0 4px" }}>{treasury.avgNetFlow >= 0 ? "+" : "−"}{fmtCompact(Math.abs(treasury.avgNetFlow))}</p>
+                            {treasury.projectedBalance !== null && (
+                              <span style={{ fontSize: 12, color: "#888" }}>projected next {treasury.unit}: <strong style={{ color: "#ccc" }}>{fmtCompact(treasury.projectedBalance)}</strong></span>
+                            )}
+                          </>
+                        ) : (
+                          <p style={{ fontSize: 13, color: "#777", margin: "6px 0 0", lineHeight: 1.5 }}>Map income and expenses to track net flow.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Income vs expense / net flow chart */}
+                    {flowData.some(d => d.Income !== null || d.Expenses !== null) ? (
+                      <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "18px 20px 12px", height: 240 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={flowData} margin={{ top: 5, right: 16, left: 6, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
+                            <XAxis dataKey="period" tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#484848" }} tickLine={false} />
+                            <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#484848" }} tickLine={false} width={52} tickFormatter={(v) => fmtCompact(Number(v))} />
+                            <Tooltip contentStyle={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8 }} labelStyle={{ color: "#f0f0f0", fontWeight: 700 }} />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                            <Bar dataKey="Income" fill="#27ae60" radius={[3, 3, 0, 0]} />
+                            <Bar dataKey="Expenses" fill="#e74c3c" radius={[3, 3, 0, 0]} />
+                            <Line type="monotone" dataKey="Net" stroke="#CC5500" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : flowData.some(d => d.Net !== null) ? (
+                      <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "18px 20px 12px", height: 220 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={flowData} margin={{ top: 5, right: 16, left: 6, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
+                            <XAxis dataKey="period" tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#484848" }} tickLine={false} />
+                            <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#484848" }} tickLine={false} width={52} tickFormatter={(v) => fmtCompact(Number(v))} />
+                            <Tooltip contentStyle={{ background: "#2d2d2d", border: "1px solid #484848", borderRadius: 8 }} labelStyle={{ color: "#f0f0f0", fontWeight: 700 }} />
+                            <Bar dataKey="Net" name="Net change" radius={[3, 3, 0, 0]} fill="#CC5500" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div style={{ background: "#2d2d2d", border: "1px dashed #484848", borderRadius: 12, padding: "20px", textAlign: "center" }}>
+                    <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Map a cash balance and income/expense metrics to unlock balance, runway, and net-flow tracking.</p>
+                  </div>
+                )}
+              </div>
+
               {/* KPI cards */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#CC5500", letterSpacing: 1, margin: 0 }}>KEY METRICS</p>

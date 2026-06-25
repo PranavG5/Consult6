@@ -43,6 +43,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if (typeof body.name === "string" && body.name.trim()) update.name = body.name.trim().slice(0, 200);
   if (typeof body.sector === "string" && body.sector.trim()) update.sector = body.sector.trim().slice(0, 200);
+  if (body.metric_roles && typeof body.metric_roles === "object" && !Array.isArray(body.metric_roles)) {
+    // Only persist the three known roles, each pointing at a string metric name.
+    const roles: Record<string, string> = {};
+    for (const r of ["balance", "income", "expense"]) {
+      const v = (body.metric_roles as Record<string, unknown>)[r];
+      if (typeof v === "string" && v.trim()) roles[r] = v.trim().slice(0, 200);
+    }
+    update.metric_roles = roles;
+  }
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });

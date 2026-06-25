@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { detectRoles, sanitizeRoles, type MetricRoles } from "@/lib/treasury";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: profileId } = await params;
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data: profile } = await supabase
     .from("company_profiles")
-    .select("id, name, key_metrics")
+    .select("id, name, key_metrics, metric_roles")
     .eq("id", profileId)
     .eq("user_id", user.id)
     .single();
@@ -76,6 +77,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const pinned: string[] = Array.isArray(profile.key_metrics) ? profile.key_metrics : [];
   const keyMetrics = pinned.filter(m => seriesMap[m]);
 
+  // Treasurer roles: keep the user's stored mapping (validated against existing
+  // metrics) and also offer an auto-detected suggestion for unset roles.
+  const metricNames = Object.keys(seriesMap);
+  const storedRoles = sanitizeRoles((profile.metric_roles ?? {}) as MetricRoles, metricNames);
+  const suggestedRoles = detectRoles(metricNames);
+
   const contextLines: string[] = [`Historical data for ${profile.name}:`];
   for (const [metricName, periodValues] of Object.entries(seriesMap)) {
     const entries = periods.map(p => `${p}: ${periodValues[p] ?? "N/A"}`).join(", ");
@@ -83,5 +90,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
   const historicalContext = contextLines.join("\n");
 
-  return NextResponse.json({ periods, periodTypes, series, keyMetrics, historicalContext });
+  return NextResponse.json({ periods, periodTypes, series, keyMetrics, roles: storedRoles, suggestedRoles, historicalContext });
 }

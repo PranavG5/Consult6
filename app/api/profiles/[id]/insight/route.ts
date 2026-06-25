@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase-server";
+import { detectRoles, sanitizeRoles, computeTreasury, type MetricRoles } from "@/lib/treasury";
 
 export const maxDuration = 60;
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: profile } = await supabase
     .from("company_profiles")
-    .select("id, name, sector")
+    .select("id, name, sector, metric_roles")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -44,15 +45,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Rebuild the ordered series exactly as the dashboard sees them.
   const { data: uploads } = await supabase
     .from("profile_uploads")
-    .select("period_label, sort_order")
+    .select("period_label, period_type, sort_order")
     .eq("profile_id", id)
     .order("sort_order", { ascending: true })
     .order("uploaded_at", { ascending: true });
 
   const seen = new Set<string>();
   const periods: string[] = [];
+  const periodTypes: Record<string, string> = {};
   for (const u of uploads ?? []) {
-    if (!seen.has(u.period_label)) { seen.add(u.period_label); periods.push(u.period_label); }
+    if (!seen.has(u.period_label)) { seen.add(u.period_label); periods.push(u.period_label); periodTypes[u.period_label] = u.period_type; }
   }
 
   const { data: metrics } = await supabase
@@ -78,13 +80,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     lines.push(`${name}: ${periods.map(p => `${p}=${values[p] ?? "N/A"}`).join(", ")}`);
   }
 
-  const userMessage = `Organization: ${profile.name} (${profile.sector})
+  // Derive the treasurer-facing numbers (balance, runway, net flow, projection)
+  // so the model reasons about trajectory rather than only describing the past.
+  const metricNames = Object.keys(seriesMap);
+  const roles: MetricRoles = (() => {
+    const stored = sanitizeRoles((profile.metric_roles ?? {}) as MetricRoles, metricNames);
+    const suggested = detectRoles(metricNames);
+    return { balance: stored.balance ?? suggested.balance, income: stored.income ?? suggested.income, expense: stored.expense ?? suggested.expense };
+  })();
+  const t = computeTreasury(periods, seriesMap, roles, periodTypes);
+
+  const treasuryLines: string[] = [];
+  if (t.balance !== null) treasuryLines.push(`Current balance (${t.balancePeriod}): ${Math.round(t.balance).toLocaleString()}${t.balanceChange !== null ? ` (change vs prior: ${t.balanceChange >= 0 ? "+" : ""}${Math.round(t.balanceChange).toLocaleString()})` : ""}`);
+  if (t.avgNetFlow !== null) treasuryLines.push(`Average net cash flow per ${t.unit}: ${t.avgNetFlow >= 0 ? "+" : ""}${Math.round(t.avgNetFlow).toLocaleString()}`);
+  if (t.runway !== null) treasuryLines.push(`Estimated runway at current burn: about ${t.runway} ${t.unit}${t.runway === 1 ? "" : "s"} of funds remaining`);
+  if (t.projectedBalance !== null) treasuryLines.push(`Projected balance next ${t.unit} at current trend: ${Math.round(t.projectedBalance).toLocaleString()}`);
+
+  const userMessage = `You are advising the treasurer of: ${profile.name} (${profile.sector}).
 Periods in chronological order: ${periods.join(" → ")}
 
 Tracked metrics across those periods:
 ${lines.join("\n")}
+${treasuryLines.length ? `\nDerived treasury position:\n${treasuryLines.join("\n")}` : ""}
 
-Write a tight financial readout of what changed across these periods. 2-3 sentences, plain English, first-person plural ("we see", "we'd watch"). Name the specific metrics and the direction/magnitude of their movement. Call out the single most important trend first. Do not invent metrics that are not listed. Do not use raw underscore field names — translate to plain English. No preamble, no markdown, no headings.`;
+Write a short, forward-looking treasury readout for the club's exec board. Requirements:
+- 3-4 sentences, plain English, first-person plural ("we", "we'd").
+- Lead with the trajectory: where the club's money is heading (growing, stable, or being drawn down) and, if a runway figure is given, how long the funds last at the current rate.
+- Then name the single biggest driver (which income or expense moved most, and by roughly how much).
+- End with ONE concrete, reasonable suggestion a student treasurer could act on this term.
+- Only use the numbers given. Do not invent metrics. Translate any underscore field names into plain English. No preamble, no markdown, no headings.`;
 
   let insight = "";
   try {
