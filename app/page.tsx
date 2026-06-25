@@ -138,8 +138,6 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="landing-hero" style={{ position: "relative", overflow: "hidden", textAlign: "center", padding: "92px 24px 72px" }}>
-        {/* ambient aurora glow — orange + cool, deliberately not flat */}
-        <div aria-hidden style={{ position: "absolute", top: -160, left: "50%", transform: "translateX(-50%)", width: 900, height: 520, pointerEvents: "none", background: "radial-gradient(closest-side, rgba(242,106,44,0.22), transparent 70%), radial-gradient(closest-side, rgba(111,139,255,0.14), transparent 70%)", backgroundPosition: "30% 30%, 75% 40%", backgroundRepeat: "no-repeat", filter: "blur(8px)" }} />
         <div style={{ position: "relative", maxWidth: 760, margin: "0 auto" }}>
           <Reveal>
             <span className="chip" style={{ marginBottom: 26, color: "var(--brand-2)" }}>
@@ -330,20 +328,20 @@ export default function LandingPage() {
 
             {/* Enterprise */}
             <Reveal delay={200} className="ds-card" style={{ padding: 28 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "var(--cool)", margin: "0 0 12px", letterSpacing: 1 }}>ENTERPRISE</p>
-              <p style={{ fontSize: 12.5, color: "var(--ink-2)", margin: "0 0 20px", background: "rgba(111,139,255,0.08)", border: "1px solid rgba(111,139,255,0.2)", borderRadius: 8, padding: "10px 12px", lineHeight: 1.55 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "var(--good)", margin: "0 0 12px", letterSpacing: 1 }}>ENTERPRISE</p>
+              <p style={{ fontSize: 12.5, color: "var(--ink-2)", margin: "0 0 20px", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.22)", borderRadius: 8, padding: "10px 12px", lineHeight: 1.55 }}>
                 Need custom limits or a team deal?{" "}
-                <Link href="/contact" style={{ color: "var(--cool)", fontWeight: 600, textDecoration: "none" }}>Contact us</Link>{" "}to discuss pricing and usage packages.
+                <Link href="/contact" style={{ color: "var(--good)", fontWeight: 600, textDecoration: "none" }}>Contact us</Link>{" "}to discuss pricing and usage packages.
               </p>
               <div style={{ borderTop: "1px solid var(--line)", paddingTop: 20, marginBottom: 28 }}>
                 {enterpriseFeatures.map(f => (
                   <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 11 }}>
-                    <Check size={15} style={{ color: "var(--cool)", flexShrink: 0, marginTop: 2 }} />
+                    <Check size={15} style={{ color: "var(--good)", flexShrink: 0, marginTop: 2 }} />
                     <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{f}</span>
                   </div>
                 ))}
               </div>
-              <Link href="/contact" className="btn btn-ghost" style={{ display: "flex", padding: "12px 0", fontSize: 14, color: "var(--cool)", borderColor: "rgba(111,139,255,0.35)" }}>Discuss Custom Pricing <ArrowRight size={15} /></Link>
+              <Link href="/contact" className="btn btn-ghost" style={{ display: "flex", padding: "12px 0", fontSize: 14, color: "var(--good)", borderColor: "rgba(52,211,153,0.35)" }}>Discuss Custom Pricing <ArrowRight size={15} /></Link>
             </Reveal>
           </div>
         </div>
