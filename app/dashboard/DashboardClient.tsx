@@ -770,7 +770,7 @@ export default function Home() {
                 )}
               </span>
               <span className="dash-nav-desktop" style={{ color: "#888", fontSize: 12 }}>{user?.email}</span>
-              <Link href="/profiles" className="dash-nav-desktop" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Profiles</Link>
+              <Link href="/profiles" className="dash-nav-desktop" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Companies</Link>
               <Link href="/settings" className="dash-nav-desktop" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12, textDecoration: "none" }}>Settings</Link>
               <button onClick={handleSignOut} className="dash-nav-desktop" style={{ background: "none", border: "1px solid #484848", color: "#aaa", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>Sign out</button>
 
@@ -790,7 +790,7 @@ export default function Home() {
             {/* Mobile dropdown menu */}
             {mobileMenuOpen && (
               <div className="dash-nav-mobile" style={{ position: "absolute", top: 56, right: 16, background: "#1e1e1e", border: "1px solid #3a3a3a", borderRadius: 10, padding: "8px 0", minWidth: 160, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
-                <Link href="/profiles" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Profiles</Link>
+                <Link href="/profiles" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Companies</Link>
                 <Link href="/settings" onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 20px", fontSize: 14, color: "#f0f0f0", textDecoration: "none" }}>Settings</Link>
                 <div style={{ height: 1, background: "#2d2d2d", margin: "6px 0" }} />
                 <button onClick={() => { setMobileMenuOpen(false); handleSignOut(); }} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 20px", fontSize: 14, color: "#f87171", background: "none", border: "none" }}>Sign out</button>
@@ -876,6 +876,43 @@ export default function Home() {
             </div>
           );
         })()}
+
+        {/* Your companies — prominent quick access to each company's dashboard.
+            Keeps the consult engine central while making the client files easy
+            to reach without hunting for the nav link. */}
+        {!profilesLoading && profiles.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: 1, margin: 0 }}>YOUR COMPANIES</p>
+              <Link href="/profiles" style={{ fontSize: 12, color: "#CC5500", textDecoration: "none" }}>View all →</Link>
+            </div>
+            <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+              {profiles.map(p => (
+                <Link key={p.id} href={`/profiles/${p.id}`} style={{ textDecoration: "none", flexShrink: 0 }}>
+                  <div
+                    style={{ minWidth: 158, maxWidth: 210, background: "#333333", border: "1px solid #484848", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "border-color 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = "#CC5500")}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = "#484848")}>
+                    <div style={{ width: 30, height: 30, flexShrink: 0, background: "#2a1800", border: "1px solid #CC5500", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🏢</div>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#f0f0f0", margin: "0 0 1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
+                      <p style={{ fontSize: 11, color: "#888", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.sector}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              <Link href="/profiles" style={{ textDecoration: "none", flexShrink: 0 }}>
+                <div
+                  style={{ height: "100%", minWidth: 104, background: "#2d2d2d", border: "1px dashed #5a5a5a", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", color: "#aaa", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "#CC5500"; e.currentTarget.style.color = "#CC5500"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "#5a5a5a"; e.currentTarget.style.color = "#aaa"; }}>
+                  <span style={{ fontSize: 16, fontWeight: 700 }}>+</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>New</span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Mode selector */}
         <div style={{ marginBottom: 24 }}>
