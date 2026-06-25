@@ -237,7 +237,9 @@ export default function TryPage() {
         throw new Error(detail || "Analysis failed on server.");
       }
 
-      setDeepDiveResult(raw.trim());
+      // Strip the dedup stats marker the server appends to the deep-dive stream.
+      const dedupIdx = raw.indexOf("\n__DEDUP__:");
+      setDeepDiveResult((dedupIdx !== -1 ? raw.slice(0, dedupIdx) : raw).trim());
       localStorage.setItem(GUEST_USED_KEY, "1");
       setAlreadyUsed(true);
       stopProgress();
