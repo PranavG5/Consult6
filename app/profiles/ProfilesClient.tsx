@@ -5,30 +5,6 @@ import { createClient } from "@/lib/supabase-browser";
 
 export const metadata = { title: "Companies | Consult6" };
 
-const SPARK_COLORS = ["#CC5500", "#2980b9", "#27ae60", "#d4a017"];
-
-function fmtCompact(v: number | null): string {
-  if (v === null || v === undefined || isNaN(v)) return "—";
-  const abs = Math.abs(v);
-  const sign = v < 0 ? "-" : "";
-  if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1)}B`;
-  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
-  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}K`;
-  return `${sign}${abs % 1 === 0 ? abs.toLocaleString() : abs.toFixed(2)}`;
-}
-
-function CardSparkline({ values, color = "#CC5500", width = 92, height = 30 }: { values: (number | null)[]; color?: string; width?: number; height?: number }) {
-  const pts = values.map((v, i) => ({ v, i })).filter((p): p is { v: number; i: number } => p.v !== null);
-  if (pts.length < 2) return <div style={{ width, height }} />;
-  const xs = pts.map(p => p.i), ys = pts.map(p => p.v);
-  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = 2;
-  const sx = (x: number) => maxX === minX ? width / 2 : pad + ((x - minX) / (maxX - minX)) * (width - pad * 2);
-  const sy = (y: number) => maxY === minY ? height / 2 : height - pad - ((y - minY) / (maxY - minY)) * (height - pad * 2);
-  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.i).toFixed(1)},${sy(p.v).toFixed(1)}`).join(" ");
-  return <svg width={width} height={height} style={{ display: "block" }}><path d={d} fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" /></svg>;
-}
-
 function SkeletonCard() {
   return (
     <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "20px 20px 16px" }}>
@@ -51,9 +27,6 @@ interface Profile {
   upload_count: number;
   metric_count: number;
   latest_period: string | null;
-  primary_metric: string | null;
-  primary_latest: number | null;
-  spark: (number | null)[];
 }
 
 export default function ProfilesPage() {
@@ -186,7 +159,7 @@ export default function ProfilesPage() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
-            {profiles.map((p, idx) => (
+            {profiles.map((p) => (
               <Link key={p.id} href={`/profiles/${p.id}`} style={{ textDecoration: "none" }}>
                 <div style={{ background: "#333333", border: "1px solid #484848", borderRadius: 12, padding: "18px 20px 16px", cursor: "pointer", transition: "border-color 0.15s" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = "#CC5500")}
@@ -201,25 +174,15 @@ export default function ProfilesPage() {
                     </div>
                   </div>
 
-                  {p.primary_metric ? (
-                    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, background: "#2d2d2d", border: "1px solid #3a3a3a", borderRadius: 9, padding: "12px 14px", marginBottom: 12 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: 10, color: "#888", margin: "0 0 3px", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.primary_metric}</p>
-                        <p style={{ fontSize: 20, fontWeight: 800, color: "#f0f0f0", margin: 0 }}>{fmtCompact(p.primary_latest)}</p>
-                      </div>
-                      <CardSparkline values={p.spark} color={SPARK_COLORS[idx % SPARK_COLORS.length]} />
+                  {p.metric_count > 0 ? (
+                    <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#666" }}>
+                      <span>{p.metric_count} metric{p.metric_count === 1 ? "" : "s"}</span>
+                      <span>{p.upload_count} period{p.upload_count === 1 ? "" : "s"}</span>
+                      {p.latest_period && <span style={{ marginLeft: "auto", color: "#888" }}>{p.latest_period}</span>}
                     </div>
                   ) : (
-                    <div style={{ background: "#2d2d2d", border: "1px dashed #3a3a3a", borderRadius: 9, padding: "14px", marginBottom: 12, textAlign: "center" }}>
-                      <p style={{ fontSize: 12, color: "#666", margin: 0 }}>No data yet — open to upload</p>
-                    </div>
+                    <div style={{ fontSize: 11, color: "#666" }}>No data yet — open to upload</div>
                   )}
-
-                  <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#666" }}>
-                    <span>{p.metric_count} metric{p.metric_count === 1 ? "" : "s"}</span>
-                    <span>{p.upload_count} period{p.upload_count === 1 ? "" : "s"}</span>
-                    {p.latest_period && <span style={{ marginLeft: "auto", color: "#888" }}>{p.latest_period}</span>}
-                  </div>
                 </div>
               </Link>
             ))}

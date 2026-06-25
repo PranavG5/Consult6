@@ -56,26 +56,12 @@ export async function GET() {
 
   const profilesWithSnapshot = profiles.map(p => {
     const periods = periodsByProfile[p.id] ?? [];
-    const byMetric = valuesByProfile[p.id] ?? {};
-    const metricNames = Object.keys(byMetric);
-    const pinned: string[] = Array.isArray(p.key_metrics) ? p.key_metrics : [];
-    // Featured metric = first pinned KPI that has data, else first tracked metric.
-    const primaryName = pinned.find(m => byMetric[m]) ?? metricNames[0] ?? null;
-    let spark: (number | null)[] = [];
-    let latest: number | null = null;
-    if (primaryName) {
-      spark = periods.map(per => byMetric[primaryName][per] ?? null);
-      const populated = spark.filter((v): v is number => v !== null);
-      latest = populated.length ? populated[populated.length - 1] : null;
-    }
+    const metricNames = Object.keys(valuesByProfile[p.id] ?? {});
     return {
       ...p,
       upload_count: uploadCount[p.id] ?? 0,
       metric_count: metricNames.length,
       latest_period: periods.length ? periods[periods.length - 1] : null,
-      primary_metric: primaryName,
-      primary_latest: latest,
-      spark,
     };
   });
 
