@@ -146,7 +146,7 @@ Rules:
 - trajectoryNote: 1-2 sentences grounded in actual trends from the data.
 - trendData: Exactly 6 labels and 6 values per series. Use real date/period labels from the data. 2 series max (e.g. Revenue vs Expenses). Values must reflect actual data. Do not fabricate.
 - industryComparisons: 3 entries benchmarked to this org's specific sector. Use realistic industry averages for the sector. For nonprofits, only include "Program Expense Ratio" if there is a column explicitly named "program_expenses", "program_costs", or "direct_service_costs". Never substitute "operating_expenses", "admin_expenses", or general overhead columns as a proxy for program expenses. If no clearly labeled program expense column is present, omit this benchmark entirely and substitute a more appropriate metric.
-- scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.
+- scenarios: Provide all three (optimistic, base, pessimistic), 2 sentences each. The base case is required and should describe the most likely outcome if current trends continue. Ground every scenario in actual identified risks and opportunities.
 - riskMatrix: 3 risks, each under 30 words. Based on actual flags found in the data.
 - caseStudies: 1-2 entries. Do NOT fabricate specific named organizations or invent outcomes. Use a real documented case with a verifiable citation (e.g. "HBR, 2019"), OR set organization to "Illustrative example" and omit the source field entirely. Never invent organization names, challenge details, or outcomes. Keep challenge/solution/outcome under 20 words each.
 - actionPlan: 2 items per phase (immediate/shortTerm/longTerm), each under 25 words. Specific to this org.
@@ -400,7 +400,7 @@ Also include trend chart data (field: "trendData"): Exactly 6 labels and 6 value
           if (sections.trajectory) {
             sectionInstructions.push(`WHERE THIS IS HEADING (fields: "trajectoryNote" and "scenarios"):
 trajectoryNote: 1-2 sentences grounded in actual trends from the data.
-scenarios: 2 sentences each. Ground optimistic/pessimistic in actual identified risks and opportunities.`);
+scenarios: Provide all three (optimistic, base, pessimistic), 2 sentences each. The base case is required and should describe the most likely outcome if current trends continue. Ground every scenario in actual identified risks and opportunities.`);
             jsonFields.push(`"trajectoryNote": "string"`);
             jsonFields.push(`"scenarios": {"optimistic":"string","base":"string","pessimistic":"string"}`);
           }

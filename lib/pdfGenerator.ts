@@ -116,7 +116,12 @@ function drawFooter(
   doc.setFont("helvetica", "normal");
   doc.setTextColor(C.textLight);
   doc.text(orgName, MARGIN, FOOTER_Y);
-  doc.text(`Page ${pageNum} of ${totalPages}`, PAGE_W / 2, FOOTER_Y, { align: "center" });
+  // totalPages is 0 while sections are first drawn; the page count is only
+  // known in the back-fill pass. Skip the "Page X of 0" text until then so it
+  // never lingers in the text layer beneath the corrected footer.
+  if (totalPages > 0) {
+    doc.text(`Page ${pageNum} of ${totalPages}`, PAGE_W / 2, FOOTER_Y, { align: "center" });
+  }
   doc.text("Consult6", MARGIN + CONTENT_W, FOOTER_Y, { align: "right" });
 }
 
@@ -582,7 +587,9 @@ function drawScenarios(
   const colXs = [MARGIN, MARGIN + colW + 4, MARGIN + (colW + 4) * 2];
   const colors = [C.orange, "#6B7280", C.critical];
   const labels = ["Optimistic", "Base Case", "Pessimistic"];
-  const texts = [scenarios.optimistic, scenarios.base, scenarios.pessimistic];
+  // Coerce missing fields to "" so a gap in the model output never renders the
+  // literal string "undefined" (splitTextToSize stringifies undefined).
+  const texts = [scenarios.optimistic, scenarios.base, scenarios.pessimistic].map(t => t ?? "");
 
   let fontSize = BODY_SIZE;
   doc.setFontSize(fontSize);
