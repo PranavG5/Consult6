@@ -80,18 +80,24 @@ export default function TryPage() {
     }
   }, []);
 
+  // The progress interval runs until explicitly stopped; clear it on unmount.
+  useEffect(() => () => {
+    if (progressRef.current) clearInterval(progressRef.current);
+  }, []);
+
+  // Time-based crawl from `from` toward `to`: covers ~95% of the distance in
+  // `ms`, then keeps creeping asymptotically so the bar never visibly stalls.
+  // Runs until stopProgress() is called.
   function startProgress(from: number, to: number, ms: number) {
     if (progressRef.current) clearInterval(progressRef.current);
     setProgress(from);
-    const steps = 60;
-    const stepMs = ms / steps;
-    let step = 0;
+    const tickMs = 150;
+    const tau = ms / 3; // exp decay constant: ~95% of the way at t = ms
+    let elapsed = 0;
     progressRef.current = setInterval(() => {
-      step++;
-      const t = step / steps;
-      setProgress(from + (to - from) * (1 - Math.pow(1 - t, 2)));
-      if (step >= steps) clearInterval(progressRef.current!);
-    }, stepMs);
+      elapsed += tickMs;
+      setProgress(to - (to - from) * Math.exp(-elapsed / tau));
+    }, tickMs);
   }
   function stopProgress() {
     if (progressRef.current) clearInterval(progressRef.current);
@@ -131,7 +137,7 @@ export default function TryPage() {
     try {
       const parsed = await parseFile(files[0]);
       setState("analyzing");
-      setProgress(5);
+      startProgress(5, 90, 25000);
 
       const fd = new FormData();
       fd.append("data", parsed.rawText);
@@ -147,15 +153,13 @@ export default function TryPage() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
-      const estimatedTotal = 1200; // chars for guest basic analysis
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
-        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
-        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      stopProgress();
       setProgress(95);
       if (raw.includes("__STREAM_ERROR__")) throw new Error("__ANTHROPIC_ERROR__");
 
@@ -202,7 +206,7 @@ export default function TryPage() {
     try {
       const parsed = await parseFile(files[0]);
       setState("analyzing");
-      setProgress(5);
+      startProgress(5, 90, 30000);
 
       const fd = new FormData();
       fd.append("data", parsed.rawText);
@@ -219,15 +223,13 @@ export default function TryPage() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
-      const estimatedTotal = 1500;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
-        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
-        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      stopProgress();
       setProgress(95);
 
       if (raw.includes("__STREAM_ERROR__")) {

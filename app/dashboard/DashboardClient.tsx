@@ -128,6 +128,11 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
+  // The progress interval runs until explicitly stopped; clear it on unmount.
+  useEffect(() => () => {
+    if (progressRef.current) clearInterval(progressRef.current);
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
@@ -330,19 +335,19 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
+  // Time-based crawl from `from` toward `to`: covers ~95% of the distance in
+  // `ms`, then keeps creeping asymptotically so the bar never visibly stalls.
+  // Runs until stopProgress() is called.
   function startProgress(from: number, to: number, ms: number) {
     if (progressRef.current) clearInterval(progressRef.current);
     setProgress(from);
-    const steps = 60;
-    const stepMs = ms / steps;
-    let step = 0;
+    const tickMs = 150;
+    const tau = ms / 3; // exp decay constant: ~95% of the way at t = ms
+    let elapsed = 0;
     progressRef.current = setInterval(() => {
-      step++;
-      const t = step / steps;
-      const eased = 1 - Math.pow(1 - t, 2);
-      setProgress(from + (to - from) * eased);
-      if (step >= steps) clearInterval(progressRef.current!);
-    }, stepMs);
+      elapsed += tickMs;
+      setProgress(to - (to - from) * Math.exp(-elapsed / tau));
+    }, tickMs);
   }
 
   function stopProgress() {
@@ -440,7 +445,7 @@ export default function Home() {
       ).join("\n\n");
 
       setState("analyzing");
-      setProgress(5);
+      startProgress(5, 90, mode === "advanced" ? 60000 : 25000);
 
       const fd = new FormData();
       fd.append("data", combinedRawText);
@@ -473,21 +478,18 @@ export default function Home() {
         throw new Error(err.error ?? "Analysis failed");
       }
 
-      // Read stream - drive progress from chunk arrival
+      // Read stream; the progress bar crawls on its own timer, unsynced
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
-      const estimatedTotal = mode === "advanced" ? 6000 : 1500; // chars
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
-        // Drive progress from 5% → 90% based on accumulated content
-        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
-        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      stopProgress();
       setProgress(95);
 
       if (raw.includes("__STREAM_ERROR__")) {
@@ -638,7 +640,7 @@ export default function Home() {
       ).join("\n\n");
 
       setState("analyzing");
-      setProgress(5);
+      startProgress(5, 90, 30000);
 
       const fd = new FormData();
       fd.append("data", combinedRawText);
@@ -661,15 +663,13 @@ export default function Home() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let raw = "";
-      const estimatedTotal = 2000; // chars for deep-dive
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
-        const chunkProgress = Math.min(90, 5 + (raw.length / estimatedTotal) * 85);
-        setProgress(chunkProgress);
       }
       raw += decoder.decode();
+      stopProgress();
       setProgress(95);
 
       if (raw.includes("__STREAM_ERROR__")) {
